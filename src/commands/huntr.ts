@@ -349,7 +349,8 @@ export function registerHuntrCommand(program: Command): void {
 
       if (!existsSync(opts.output)) mkdirSync(opts.output, { recursive: true });
 
-      const slug = slugify(companyName);
+      const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
+      const slug = slugify(slugParts);
       const resumeOut = join(opts.output, `resume-${slug}.md`);
       const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
