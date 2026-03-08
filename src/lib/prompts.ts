@@ -21,6 +21,10 @@ Only claim what is explicitly stated in the resume or bio.
 }
 
 export function resumeUserPrompt(input: TailorInput): string {
+  const supplementalSection = input.resumeSupplemental
+    ? `\n## Supplemental Resume Detail (factual reference only — do not reproduce verbatim)\n${input.resumeSupplemental}\n`
+    : '';
+
   return `## Company
 ${input.company}
 
@@ -35,7 +39,7 @@ ${input.bio}
 
 ## Base Resume
 ${input.resume}
-
+${supplementalSection}
 Now produce the tailored resume.`;
 }
 

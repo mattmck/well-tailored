@@ -71,6 +71,12 @@ export function registerTailorCommand(program: Command): void {
         baseCoverLetter = readFile(coverLetterPath);
       } catch { /* optional */ }
 
+      let resumeSupplemental: string | undefined;
+      try {
+        const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+        resumeSupplemental = readFile(supplementalPath);
+      } catch { /* optional */ }
+
       const config = loadConfig();
       const client = createOpenAIClient(config.apiKey);
 
@@ -83,6 +89,7 @@ export function registerTailorCommand(program: Command): void {
         resume,
         bio,
         baseCoverLetter,
+        resumeSupplemental,
         company: opts.company,
         jobTitle: opts.title,
         jobDescription,

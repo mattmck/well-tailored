@@ -12,6 +12,8 @@ export interface TailorInput {
   jobDescription: string;
   /** Optional base cover letter to use as a style/tone reference. */
   baseCoverLetter?: string;
+  /** Optional supplemental resume detail for AI reference (do not reproduce verbatim). */
+  resumeSupplemental?: string;
 }
 
 /** Outputs from the tailoring workflow. */
