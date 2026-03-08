@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { tailorDocuments } from '../src/lib/tailor.js';
+import { tailorDocuments, tailorResume } from '../src/lib/tailor.js';
 import { TailorInput } from '../src/types/index.js';
 import * as aiModule from '../src/lib/ai.js';
 import type OpenAI from 'openai';
@@ -36,5 +36,28 @@ describe('tailorDocuments', () => {
       .mockImplementationOnce(async () => 'Cover letter');
 
     await expect(tailorDocuments({} as OpenAI, 'gpt-4o', sampleInput)).rejects.toThrow('API timeout');
+  });
+});
+
+describe('tailorResume', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('calls complete exactly once and returns the resume string', async () => {
+    const completeSpy = vi
+      .spyOn(aiModule, 'complete')
+      .mockResolvedValueOnce('# Stack-Tailored Resume');
+
+    const result = await tailorResume({} as OpenAI, 'gpt-4o', sampleInput);
+
+    expect(completeSpy).toHaveBeenCalledTimes(1);
+    expect(result).toBe('# Stack-Tailored Resume');
+  });
+
+  it('propagates errors from the AI call', async () => {
+    vi.spyOn(aiModule, 'complete').mockRejectedValueOnce(new Error('API timeout'));
+
+    await expect(tailorResume({} as OpenAI, 'gpt-4o', sampleInput)).rejects.toThrow('API timeout');
   });
 });
