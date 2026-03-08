@@ -35,7 +35,6 @@ interface HuntrJob {
   rootDomain?: string;
   htmlDescription?: string;
   _list?: string;   // which list (wishlist, applied, etc.) this job belongs to
-  _board?: string;  // which board this job belongs to
   _company?: string;
   company?: HuntrCompany;
 }
