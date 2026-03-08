@@ -135,9 +135,11 @@ async function requireHuntrToken(): Promise<string> {
 
 /** Fetch all active boards. */
 async function getBoards(client: HuntrApiClient): Promise<HuntrBoard[]> {
-  const res = await client.get<HuntrBoard[] | { data: HuntrBoard[] }>('/user/boards');
-  const all = Array.isArray(res) ? res : res.data;
-  return all.filter((b) => !b.isArchived);
+  // API returns a keyed object: { boardId: { _id?, isArchived, ... } }
+  const res = await client.get<Record<string, { _id?: string; name?: string; isArchived: boolean }>>('/user/boards');
+  return Object.entries(res)
+    .map(([key, board]) => ({ ...board, id: board._id ?? key }))
+    .filter((b) => !b.isArchived);
 }
 
 /** Fetch all jobs for a board as a flat array. */
