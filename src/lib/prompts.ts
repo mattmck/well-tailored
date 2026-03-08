@@ -11,6 +11,9 @@ employer heading. These are the authoritative list of technologies used at that 
 Do NOT attribute any technology to an employer that isn't in its tech comment.
 - NEVER upgrade the candidate's actual experience level with a technology or domain. If the \
 base resume shows adjacent or limited experience, reflect that honestly.
+- NEVER infer or extrapolate experience from related experience. "High-volume systems" does \
+NOT imply payment processing. "Healthcare data" does NOT imply HIPAA compliance expertise. \
+Only claim what is explicitly stated in the resume or bio.
 - You MAY reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
 - You MAY rewrite the summary to lead with the most relevant experience for this role.
 - Keep the same section structure (Summary, Experience, Education, Skills, etc.).
@@ -54,7 +57,12 @@ When referencing tech across multiple roles, keep it general ("across several ro
 "in production systems") rather than naming a specific company.
 - Paragraph 3: name a specific mission, product, or technical challenge from this company \
 and job description — not a generic compliment.
-- If experience is adjacent rather than exact, be honest but phrase it strongly.
+- NEVER invent or infer experience that isn't explicitly in the resume or bio. Do NOT \
+extrapolate — "high-volume systems" does NOT imply payment processing, ERP integration, \
+or any other specific domain unless it is explicitly stated. If a required skill is missing, \
+acknowledge the gap honestly rather than manufacturing a bridge.
+- If experience is adjacent rather than exact, say so plainly and move on. Do not dress up \
+the gap as a strength.
 - No buzzword soup.
 - Speak in first person.
 - Return ONLY the finished cover letter text. No subject line, no markdown headers, no commentary.`;
