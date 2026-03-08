@@ -22,6 +22,6 @@ export interface TailorOutput {
 
 /** Config loaded from env / options. */
 export interface Config {
-  openaiApiKey: string;
-  openaiModel: string;
+  apiKey: string;
+  model: string;
 }

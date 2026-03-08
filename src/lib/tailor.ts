@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { complete } from './ai.js';
 import {
   resumeSystemPrompt,
@@ -13,7 +13,7 @@ import { TailorInput, TailorOutput } from '../types/index.js';
  * Returns both strings once both API calls complete.
  */
 export async function tailorDocuments(
-  client: OpenAI,
+  client: Anthropic,
   model: string,
   input: TailorInput,
 ): Promise<TailorOutput> {
@@ -30,7 +30,7 @@ export async function tailorDocuments(
  * Use this when a cover letter is not required (e.g. stack profiles).
  */
 export async function tailorResume(
-  client: OpenAI,
+  client: Anthropic,
   model: string,
   input: TailorInput,
 ): Promise<string> {
