@@ -112,9 +112,45 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+const JOB_BOARD_DOMAINS = new Set([
+  'linkedin.com', 'indeed.com', 'glassdoor.com', 'ziprecruiter.com',
+  'dice.com', 'monster.com', 'simplyhired.com', 'careerbuilder.com',
+]);
+
+/**
+ * Try to extract the hiring company name from a plain-text job description.
+ * Matches patterns like "At Acme," / "Acme is hiring" / "About Acme\n".
+ */
+function extractCompanyFromDescription(text: string): string | null {
+  const snippet = text.slice(0, 800);
+  // Company name: 1-4 words, starts with capital, no common sentence starters
+  const NAME = '([A-Z][A-Za-z0-9&]+(?:[\\s-][A-Za-z0-9&]+){0,3}?)';
+  const NOT_COMMON = '(?!The |This |Our |We |You |All |With |When |As |If )';
+  const patterns = [
+    new RegExp(`\\bAt ${NOT_COMMON}${NAME},`),
+    new RegExp(`\\b${NOT_COMMON}${NAME} is (?:hiring|a leading|a platform|building|an )`),
+    new RegExp(`^About ${NAME}\\s*$`, 'm'),
+    new RegExp(`\\bJoin ${NOT_COMMON}${NAME} (?:in|and|if|to)\\b`),
+  ];
+  for (const re of patterns) {
+    const m = snippet.match(re);
+    if (m?.[1]) return m[1].trim().replace(/[,.]$/, '');
+  }
+  return null;
+}
+
 function extractCompanyName(job: HuntrJob): string {
   if (job.company?.name) return job.company.name;
-  if (job.rootDomain) return job.rootDomain;
+
+  // If the URL is from a job board, the rootDomain is useless — dig into the description
+  const isJobBoard = job.rootDomain && JOB_BOARD_DOMAINS.has(job.rootDomain);
+  if (isJobBoard && job.htmlDescription) {
+    const plain = stripHtml(job.htmlDescription);
+    const extracted = extractCompanyFromDescription(plain);
+    if (extracted) return extracted;
+  }
+
+  if (job.rootDomain && !isJobBoard) return job.rootDomain;
   if (job.url) {
     try { return new URL(job.url).hostname.replace(/^www\./, ''); } catch { /* fall through */ }
   }
