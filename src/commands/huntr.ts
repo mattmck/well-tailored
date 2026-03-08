@@ -231,9 +231,15 @@ export function registerHuntrCommand(program: Command): void {
       const job = await huntrClient.get<HuntrJob>(`/board/${opts.board}/jobs/${jobId}`);
 
       const companyName = extractCompanyName(job);
-      const jobDescription = job.htmlDescription
-        ? stripHtml(job.htmlDescription)
-        : `Job title: ${job.title}`;
+      let jobDescription: string;
+      if (job.htmlDescription) {
+        jobDescription = stripHtml(job.htmlDescription);
+      } else {
+        console.warn('\nWarning: No job description was found for this Huntr job.');
+        console.warn('The tool will fall back to using only the job title, which may lead to lower-quality results.');
+        console.warn('Consider providing a more complete job description manually if possible.\n');
+        jobDescription = `Job title: ${job.title}`;
+      }
 
       const config = loadConfig();
       const aiClient = createOpenAIClient(config.openaiApiKey);
