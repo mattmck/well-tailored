@@ -65,6 +65,12 @@ export function registerTailorCommand(program: Command): void {
       const resume = readFile(resumePath);
       const bio = readFile(bioPath);
 
+      let baseCoverLetter: string | undefined;
+      try {
+        const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+        baseCoverLetter = readFile(coverLetterPath);
+      } catch { /* optional */ }
+
       const config = loadConfig();
       const client = createOpenAIClient(config.openaiApiKey);
 
@@ -76,6 +82,7 @@ export function registerTailorCommand(program: Command): void {
       const output = await tailorDocuments(client, config.openaiModel, {
         resume,
         bio,
+        baseCoverLetter,
         company: opts.company,
         jobTitle: opts.title,
         jobDescription,

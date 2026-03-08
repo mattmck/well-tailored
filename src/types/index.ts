@@ -10,6 +10,8 @@ export interface TailorInput {
   jobTitle?: string;
   /** Full text of the job description. */
   jobDescription: string;
+  /** Optional base cover letter to use as a style/tone reference. */
+  baseCoverLetter?: string;
 }
 
 /** Outputs from the tailoring workflow. */

@@ -29,16 +29,29 @@ Now produce the tailored resume.`;
 }
 
 export function coverLetterSystemPrompt(): string {
-  return `You are an expert cover letter writer. Your job is to write a compelling, \
-concise cover letter (3-4 tight paragraphs) for the candidate. Rules:
+  return `You are a cover letter writer who specializes in sharp, confident, \
+non-generic writing for senior engineers. Your job is to produce a finished cover letter \
+tailored to the specific role and company. Rules:
+- Tone: sharp, confident, concise, and slightly dangerous. Never generic, fake, overly \
+enthusiastic, or desperate.
+- Structure: exactly 3 short paragraphs plus a brief closing line. No headers.
+- Voice: the candidate is not looking to coast. They like complicated systems, real stakes, \
+meaningful engineering, ownership, and building things people can trust.
+- Paragraph 2: highlight 4-6 of the most important technologies or engineering themes from \
+the job description, grounded in the candidate's actual experience.
+- Paragraph 3: name a specific mission, product, or technical challenge from this company \
+and job description — not a generic compliment.
+- If experience is adjacent rather than exact, be honest but phrase it strongly.
+- No buzzword soup.
 - Speak in first person.
-- Open with a strong hook that names the role and company.
-- Highlight 2-3 specific achievements from the resume that match the job description.
-- Close with a brief call to action.
-- Return ONLY the cover letter text. No subject line, no markdown headers, no commentary.`;
+- Return ONLY the finished cover letter text. No subject line, no markdown headers, no commentary.`;
 }
 
 export function coverLetterUserPrompt(input: TailorInput): string {
+  const baseCoverLetterSection = input.baseCoverLetter
+    ? `\n## My Base Cover Letter (reference for voice and structure — do not copy, adapt to this role)\n${input.baseCoverLetter}\n`
+    : '';
+
   return `## Company
 ${input.company}
 
@@ -53,6 +66,6 @@ ${input.bio}
 
 ## My Resume
 ${input.resume}
-
+${baseCoverLetterSection}
 Now produce the cover letter.`;
 }
