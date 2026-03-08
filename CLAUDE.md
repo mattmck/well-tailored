@@ -16,11 +16,10 @@ Run a single test file: `npx vitest run tests/files.test.ts`
 
 ## Architecture
 
-Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Three top-level commands:
+Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level commands:
 
-- **`tailor`** — one-off tailoring: `job-shit tailor --company "Acme" --job jd.txt`
-- **`huntr`** — Huntr.co integration: `job-shit huntr jobs`, `job-shit huntr tailor <jobId> --board <boardId>`
-- **`release`** — batch mode: reads all `jobs/<slug>/config.yml` and `stacks/<slug>.yml`, generates outputs for all of them
+- **`tailor`** — one-off tailoring from a local JD file: `job-shit tailor --company "Acme" --job jd.txt`
+- **`huntr`** — Huntr.co integration subcommands (see below)
 
 ### Core lib (`src/lib/`)
 
@@ -32,17 +31,22 @@ Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Three top-level comm
 ### Commands (`src/commands/`)
 
 - `tailor.ts` — CLI flags → `tailorDocuments()` → writes `output/resume-<slug>.md` + `output/cover-letter-<slug>.md`
-- `huntr.ts` — fetches job from Huntr API (inlined HTTP client, no huntr-cli import), strips HTML description, then calls `tailorDocuments()`
-- `release.ts` — reads `jobs/*/config.yml` (YAML) and `stacks/*.yml`, calls `tailorDocuments()` for each job (resume + cover letter) and resume-only for stacks; writes to `output/jobs/<slug>/` and `output/stacks/<slug>/`
+- `huntr.ts` — all Huntr subcommands; inlined HTTP client (huntr-cli has no library exports)
+  - `huntr wishlist` — list jobs in the Wishlist stage
+  - `huntr jobs` — list all jobs with their current stage
+  - `huntr tailor <jobId>` — tailor one job (board auto-detected)
+  - `huntr tailor-all` — tailor every wishlist job in one shot
 
-### Config resolution
+### Config
 
 `src/config.ts` — loads `OPENAI_API_KEY` / `OPENAI_MODEL`. `resolveHuntrToken()` checks env → `~/.huntr/config.json` → system keychain (keytar), matching huntr-cli's credential chain.
 
-### Directory layout for release
+### Output
 
-```
-jobs/<slug>/config.yml    # company, title, description, url?, notes?
-stacks/<slug>.yml         # name, technologies[], emphasis?
-output/                   # generated files (gitignored except .gitkeep)
-```
+All generated files go under `output/` (gitignored). Naming: `resume-<company>-<title>-<jobId>.md` / `cover-letter-<company>-<title>-<jobId>.md`.
+
+## Conventions
+
+- TypeScript ESM (`"type": "module"`). Use `.js` extensions in imports.
+- Tests in `tests/` with Vitest. OpenAI client is injected so tests never hit the network.
+- Run `npm run typecheck` and `npm test` before committing.

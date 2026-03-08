@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { registerTailorCommand } from './commands/tailor.js';
 import { registerHuntrCommand } from './commands/huntr.js';
-import { registerReleaseCommand } from './commands/release.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,6 +29,5 @@ program
 
 registerTailorCommand(program);
 registerHuntrCommand(program);
-registerReleaseCommand(program);
 
 program.parse(process.argv);

@@ -287,21 +287,7 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      // Resolve resume + bio
-      let resumePath: string;
-      let bioPath: string;
-      try {
-        resumePath = findFile({ explicit: opts.resume, prefix: 'resume', label: 'Resume' });
-      } catch (err) {
-        console.error(`Error: ${(err as Error).message}`);
-        process.exit(1);
-      }
-      try {
-        bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
-      } catch (err) {
-        console.error(`Error: ${(err as Error).message}`);
-        process.exit(1);
-      }
+      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
 
       // Resolve job — use explicit board or search all boards
       let job: HuntrJob;
@@ -320,44 +306,140 @@ export function registerHuntrCommand(program: Command): void {
         ({ job, boardId } = found);
       }
 
-      const companyName = extractCompanyName(job);
-      const jobDescription = job.htmlDescription
-        ? stripHtml(job.htmlDescription)
-        : `Job title: ${job.title}`;
+      console.log(`\nUsing resume: ${resumePath}`);
+      console.log(`Using bio:    ${bioPath}`);
 
-      if (!job.htmlDescription) {
-        console.warn('\nWarning: No job description found — tailoring from title only.\n');
-      }
-
-      const resume = readFile(resumePath);
-      const bio = readFile(bioPath);
       const config = loadConfig();
       const aiClient = createOpenAIClient(config.openaiApiKey);
 
-      console.log(`\nUsing resume: ${resumePath}`);
-      console.log(`Using bio:    ${bioPath}`);
-      console.log(`\nFetched job: ${job.title} @ ${companyName} (board: ${boardId})`);
-      console.log('Generating resume and cover letter in parallel...\n');
-
-      const output = await tailorDocuments(aiClient, config.openaiModel, {
-        resume,
-        bio,
-        company: companyName,
-        jobTitle: job.title,
-        jobDescription,
-      });
-
-      if (!existsSync(opts.output)) mkdirSync(opts.output, { recursive: true });
-
-      const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
-      const slug = slugify(slugParts);
-      const resumeOut = join(opts.output, `resume-${slug}.md`);
-      const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
-
-      writeFileSync(resumeOut, output.resume, 'utf8');
-      writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
-
-      console.log(`✓ Tailored resume   → ${resumeOut}`);
-      console.log(`✓ Cover letter      → ${coverLetterOut}`);
+      await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
     });
+
+  // huntr tailor-all — tailor every wishlist job at once
+  huntr
+    .command('tailor-all')
+    .description('Generate tailored resume + cover letter for every job in your Wishlist.')
+    .option('--board <boardId>', 'Limit to a specific board ID')
+    .option(
+      '-r, --resume <file>',
+      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
+    .option(
+      '-b, --bio <file>',
+      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
+    .option('-o, --output <dir>', 'Output directory', 'output')
+    .action(async (opts: {
+      board?: string;
+      resume?: string;
+      bio?: string;
+      output: string;
+    }) => {
+      const token = await requireHuntrToken();
+      const client = createHuntrClient(token);
+
+      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      console.log(`\nUsing resume: ${resumePath}`);
+      console.log(`Using bio:    ${bioPath}\n`);
+
+      const boards = opts.board
+        ? [{ id: opts.board, isArchived: false }]
+        : await getBoards(client);
+
+      // Collect all wishlist jobs across boards
+      const wishlistJobs: HuntrJob[] = [];
+      for (const board of boards) {
+        const wishlistId = await findWishlistId(client, board.id);
+        if (!wishlistId) continue;
+        const jobs = await getJobsForBoard(client, board.id);
+        wishlistJobs.push(...jobs.filter((j) => j._list === wishlistId));
+      }
+
+      if (wishlistJobs.length === 0) {
+        console.log('No wishlist jobs found.');
+        return;
+      }
+
+      console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
+
+      const config = loadConfig();
+      const aiClient = createOpenAIClient(config.openaiApiKey);
+
+      let done = 0;
+      for (const job of wishlistJobs) {
+        await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+        done++;
+        if (done < wishlistJobs.length) console.log('');
+      }
+
+      console.log(`\n✅  Done — ${done} job(s) tailored.`);
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
+function resolveBaseFiles(
+  explicitResume?: string,
+  explicitBio?: string,
+): { resume: string; bio: string; resumePath: string; bioPath: string } {
+  let resumePath: string;
+  let bioPath: string;
+  try {
+    resumePath = findFile({ explicit: explicitResume, prefix: 'resume', label: 'Resume' });
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+  try {
+    bioPath = findFile({ explicit: explicitBio, prefix: 'bio', label: 'Bio' });
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+  return { resume: readFile(resumePath), bio: readFile(bioPath), resumePath, bioPath };
+}
+
+async function tailorAndWrite(args: {
+  job: HuntrJob;
+  resume: string;
+  bio: string;
+  aiClient: ReturnType<typeof createOpenAIClient>;
+  model: string;
+  outputDir: string;
+}): Promise<void> {
+  const { job, resume, bio, aiClient, model, outputDir } = args;
+  const companyName = extractCompanyName(job);
+  const jobDescription = job.htmlDescription
+    ? stripHtml(job.htmlDescription)
+    : `Job title: ${job.title}`;
+
+  if (!job.htmlDescription) {
+    console.warn(`Warning: No job description for "${job.title}" — tailoring from title only.`);
+  }
+
+  console.log(`🎯  ${job.title} @ ${companyName}`);
+  console.log('    Generating resume and cover letter in parallel...');
+
+  const output = await tailorDocuments(aiClient, model, {
+    resume,
+    bio,
+    company: companyName,
+    jobTitle: job.title,
+    jobDescription,
+  });
+
+  if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
+
+  const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
+  const slug = slugify(slugParts);
+  const resumeOut = join(outputDir, `resume-${slug}.md`);
+  const coverLetterOut = join(outputDir, `cover-letter-${slug}.md`);
+
+  writeFileSync(resumeOut, output.resume, 'utf8');
+  writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
+
+  console.log(`    ✓ resume       → ${resumeOut}`);
+  console.log(`    ✓ cover letter → ${coverLetterOut}`);
 }
