@@ -283,7 +283,7 @@ async function processStacks(args: {
 
     if (dryRun) {
       console.log('     (dry-run, skipping AI call)');
-      results.push({ type: 'stack', slug, generatedAt: new Date().toISOString() });
+      results.push({ type: 'stack', slug, generatedAt: new Date().toISOString(), skipped: true });
       continue;
     }
 
