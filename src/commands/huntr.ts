@@ -6,11 +6,20 @@ import { createOpenAIClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 
-// Huntr API types (inlined to avoid a hard dependency on huntr-cli)
+// ---------------------------------------------------------------------------
+// Huntr API types (inlined — huntr-cli has no library exports)
+// ---------------------------------------------------------------------------
+
 interface HuntrBoard {
   id: string;
   name?: string;
   isArchived: boolean;
+}
+
+interface HuntrBoardList {
+  id: string;
+  name: string;
+  _jobs: string[];
 }
 
 interface HuntrCompany {
@@ -25,27 +34,24 @@ interface HuntrJob {
   url?: string;
   rootDomain?: string;
   htmlDescription?: string;
+  _list?: string;   // which list (wishlist, applied, etc.) this job belongs to
   _company?: string;
-  _board?: string;
   company?: HuntrCompany;
 }
 
+// ---------------------------------------------------------------------------
+// HTTP client
+// ---------------------------------------------------------------------------
+
 interface HuntrApiClient {
-  get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T>;
+  get<T>(endpoint: string): Promise<T>;
 }
 
 function createHuntrClient(token: string): HuntrApiClient {
   const baseURL = 'https://api.huntr.co/api';
-
   return {
-    async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
-      const url = new URL(baseURL + endpoint);
-      if (params) {
-        for (const [key, val] of Object.entries(params)) {
-          url.searchParams.set(key, String(val));
-        }
-      }
-      const response = await fetch(url.toString(), {
+    async get<T>(endpoint: string): Promise<T> {
+      const response = await fetch(baseURL + endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -59,16 +65,16 @@ function createHuntrClient(token: string): HuntrApiClient {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 /**
  * Convert HTML job descriptions to plain text for the AI prompt.
- * This runs in a CLI context — output is written to files, never rendered
- * in a browser, so there is no XSS exposure.
- *
- * Uses a character-level parser to strip tags so that no `<`-starting
- * sequence can survive in the output.
+ * CLI context only — output is written to files, never rendered in a browser.
+ * Uses a character-level parser so no < sequence survives in the output.
  */
 function stripHtml(html: string): string {
-  // Character-level tag stripper: never leaves any < > in the output
   const chars: string[] = [];
   let inTag = false;
   let tagBuf = '';
@@ -88,49 +94,29 @@ function stripHtml(html: string): string {
       chars.push(ch);
     }
   }
-  // If inTag is still true here, the tag was never closed — just discard tagBuf
 
-  // Decode common entities in a single lookup pass (no chained replacements)
   const entities: Record<string, string> = {
-    '&amp;': '&',
-    '&nbsp;': ' ',
-    '&quot;': '"',
-    '&#39;': "'",
-    '&apos;': "'",
-    '&lt;': '<',
-    '&gt;': '>',
+    '&amp;': '&', '&nbsp;': ' ', '&quot;': '"',
+    '&#39;': "'", '&apos;': "'", '&lt;': '<', '&gt;': '>',
   };
-  const text = chars
+
+  return chars
     .join('')
     .replace(/&[a-z#0-9]+;/gi, (e) => entities[e.toLowerCase()] ?? e)
-    // Strip any angle brackets introduced by entity decoding (&lt;/&gt;)
     .replace(/[<>]/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-
-  return text;
 }
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/**
- * Extract a human-readable company name from a Huntr job object.
- * The API may populate company inline or only as an ID reference.
- */
 function extractCompanyName(job: HuntrJob): string {
   if (job.company?.name) return job.company.name;
   if (job.rootDomain) return job.rootDomain;
   if (job.url) {
-    try {
-      return new URL(job.url).hostname.replace(/^www\./, '');
-    } catch {
-      // malformed URL — fall through
-    }
+    try { return new URL(job.url).hostname.replace(/^www\./, ''); } catch { /* fall through */ }
   }
   return 'Unknown Company';
 }
@@ -140,22 +126,112 @@ async function requireHuntrToken(): Promise<string> {
   if (!token) {
     console.error(
       'Error: No Huntr credentials found.\n' +
-        'Run `huntr login` in huntr-cli, or set HUNTR_API_TOKEN in your environment.',
+      'Run `huntr login` in huntr-cli, or set HUNTR_API_TOKEN in your environment.',
     );
     process.exit(1);
   }
   return token;
 }
 
+/** Fetch all active boards. */
+async function getBoards(client: HuntrApiClient): Promise<HuntrBoard[]> {
+  const res = await client.get<HuntrBoard[] | { data: HuntrBoard[] }>('/user/boards');
+  const all = Array.isArray(res) ? res : res.data;
+  return all.filter((b) => !b.isArchived);
+}
+
+/** Fetch all jobs for a board as a flat array. */
+async function getJobsForBoard(client: HuntrApiClient, boardId: string): Promise<HuntrJob[]> {
+  const res = await client.get<{ jobs: Record<string, HuntrJob> }>(`/board/${boardId}/jobs`);
+  return Object.values(res.jobs ?? {});
+}
+
+/** Fetch lists for a board, keyed by list ID. */
+async function getListsForBoard(
+  client: HuntrApiClient,
+  boardId: string,
+): Promise<Record<string, HuntrBoardList>> {
+  return client.get<Record<string, HuntrBoardList>>(`/board/${boardId}/lists`);
+}
+
+/**
+ * Find the wishlist list ID for a board.
+ * Huntr's built-in "Wishlist" list has no fixed ID, so we match by name.
+ */
+async function findWishlistId(
+  client: HuntrApiClient,
+  boardId: string,
+): Promise<string | null> {
+  const lists = await getListsForBoard(client, boardId);
+  const entry = Object.entries(lists).find(
+    ([, list]) => list.name.toLowerCase() === 'wishlist',
+  );
+  return entry ? entry[0] : null;
+}
+
+/**
+ * Find a specific job by ID across all active boards.
+ * Returns the job and the board ID it was found in, or null.
+ */
+async function findJobAcrossBoards(
+  client: HuntrApiClient,
+  jobId: string,
+): Promise<{ job: HuntrJob; boardId: string } | null> {
+  const boards = await getBoards(client);
+  for (const board of boards) {
+    const jobs = await getJobsForBoard(client, board.id);
+    const job = jobs.find((j) => j.id === jobId);
+    if (job) return { job, boardId: board.id };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Commands
+// ---------------------------------------------------------------------------
+
 export function registerHuntrCommand(program: Command): void {
   const huntr = program
     .command('huntr')
     .description(
       'Interact with your Huntr.co job board. ' +
-        'Uses credentials from huntr-cli (run `huntr login`) or HUNTR_API_TOKEN env var.',
+      'Uses credentials from huntr-cli (`huntr login`) or HUNTR_API_TOKEN env var.',
     );
 
-  // huntr jobs — list all jobs
+  // huntr wishlist — jobs you haven't applied to yet
+  huntr
+    .command('wishlist')
+    .description('List jobs in your Huntr Wishlist (not yet applied to).')
+    .option('--board <boardId>', 'Limit to a specific board ID')
+    .action(async (opts: { board?: string }) => {
+      const token = await requireHuntrToken();
+      const client = createHuntrClient(token);
+
+      const boards = opts.board
+        ? [{ id: opts.board, isArchived: false }]
+        : await getBoards(client);
+
+      let found = 0;
+      for (const board of boards) {
+        const wishlistId = await findWishlistId(client, board.id);
+        if (!wishlistId) continue;
+
+        const jobs = await getJobsForBoard(client, board.id);
+        const wishlistJobs = jobs.filter((j) => j._list === wishlistId);
+        if (wishlistJobs.length === 0) continue;
+
+        found += wishlistJobs.length;
+        for (const job of wishlistJobs) {
+          const company = extractCompanyName(job);
+          const url = job.url ? `  ${job.url}` : '';
+          console.log(`${job.id}  ${job.title}  @ ${company}${url}`);
+        }
+      }
+
+      if (found === 0) console.log('No wishlist jobs found.');
+    });
+
+  // huntr jobs — all jobs across boards (with list name)
   huntr
     .command('jobs')
     .description('List all jobs in your Huntr boards.')
@@ -164,59 +240,62 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      let boardIds: string[];
-      if (opts.board) {
-        boardIds = [opts.board];
-      } else {
-        const boards = await client.get<HuntrBoard[] | { data: HuntrBoard[] }>('/user/boards');
-        const boardList = Array.isArray(boards) ? boards : boards.data;
-        boardIds = boardList.filter((b) => !b.isArchived).map((b) => b.id);
-      }
+      const boards = opts.board
+        ? [{ id: opts.board, isArchived: false }]
+        : await getBoards(client);
 
-      for (const boardId of boardIds) {
-        const res = await client.get<{ jobs: Record<string, HuntrJob> }>(`/board/${boardId}/jobs`);
-        const jobs = Object.values(res.jobs ?? {});
+      for (const board of boards) {
+        const [jobs, lists] = await Promise.all([
+          getJobsForBoard(client, board.id),
+          getListsForBoard(client, board.id),
+        ]);
         if (jobs.length === 0) continue;
-        console.log(`\nBoard: ${boardId}`);
+
+        console.log(`\nBoard: ${board.id}`);
         for (const job of jobs) {
           const company = extractCompanyName(job);
-          console.log(`  ${job.id}  ${job.title}  @ ${company}${job.url ? `  (${job.url})` : ''}`);
+          const listName = job._list ? (lists[job._list]?.name ?? '?') : '?';
+          const url = job.url ? `  ${job.url}` : '';
+          console.log(`  ${job.id}  [${listName}]  ${job.title}  @ ${company}${url}`);
         }
       }
     });
 
-  // huntr tailor <jobId> — fetch job from huntr and tailor
+  // huntr tailor <jobId> — fetch job and generate tailored docs
   huntr
     .command('tailor <jobId>')
-    .description('Fetch a job from Huntr and generate a tailored resume + cover letter.')
-    .requiredOption('--board <boardId>', 'Huntr board ID that contains the job')
+    .description(
+      'Fetch a job from Huntr and generate a tailored resume + cover letter. ' +
+      'Board is auto-detected if --board is omitted.',
+    )
+    .option('--board <boardId>', 'Huntr board ID (auto-detected if omitted)')
     .option(
       '-r, --resume <file>',
-      `Path to base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Path to personal bio/background file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
     )
     .option('-o, --output <dir>', 'Output directory', 'output')
     .action(async (jobId: string, opts: {
-      board: string;
+      board?: string;
       resume?: string;
       bio?: string;
       output: string;
     }) => {
       const token = await requireHuntrToken();
+      const client = createHuntrClient(token);
 
+      // Resolve resume + bio
       let resumePath: string;
       let bioPath: string;
-
       try {
         resumePath = findFile({ explicit: opts.resume, prefix: 'resume', label: 'Resume' });
       } catch (err) {
         console.error(`Error: ${(err as Error).message}`);
         process.exit(1);
       }
-
       try {
         bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
       } catch (err) {
@@ -224,29 +303,40 @@ export function registerHuntrCommand(program: Command): void {
         process.exit(1);
       }
 
-      const resume = readFile(resumePath);
-      const bio = readFile(bioPath);
+      // Resolve job — use explicit board or search all boards
+      let job: HuntrJob;
+      let boardId: string;
 
-      const huntrClient = createHuntrClient(token);
-      const job = await huntrClient.get<HuntrJob>(`/board/${opts.board}/jobs/${jobId}`);
-
-      const companyName = extractCompanyName(job);
-      let jobDescription: string;
-      if (job.htmlDescription) {
-        jobDescription = stripHtml(job.htmlDescription);
+      if (opts.board) {
+        boardId = opts.board;
+        job = await client.get<HuntrJob>(`/board/${boardId}/jobs/${jobId}`);
       } else {
-        console.warn('\nWarning: No job description was found for this Huntr job.');
-        console.warn('The tool will fall back to using only the job title, which may lead to lower-quality results.');
-        console.warn('Consider providing a more complete job description manually if possible.\n');
-        jobDescription = `Job title: ${job.title}`;
+        console.log('Board not specified — searching all boards...');
+        const found = await findJobAcrossBoards(client, jobId);
+        if (!found) {
+          console.error(`Error: Job ${jobId} not found in any active board.`);
+          process.exit(1);
+        }
+        ({ job, boardId } = found);
       }
 
+      const companyName = extractCompanyName(job);
+      const jobDescription = job.htmlDescription
+        ? stripHtml(job.htmlDescription)
+        : `Job title: ${job.title}`;
+
+      if (!job.htmlDescription) {
+        console.warn('\nWarning: No job description found — tailoring from title only.\n');
+      }
+
+      const resume = readFile(resumePath);
+      const bio = readFile(bioPath);
       const config = loadConfig();
       const aiClient = createOpenAIClient(config.openaiApiKey);
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
-      console.log(`\nFetched job: ${job.title} @ ${companyName}`);
+      console.log(`\nFetched job: ${job.title} @ ${companyName} (board: ${boardId})`);
       console.log('Generating resume and cover letter in parallel...\n');
 
       const output = await tailorDocuments(aiClient, config.openaiModel, {
@@ -257,10 +347,10 @@ export function registerHuntrCommand(program: Command): void {
         jobDescription,
       });
 
-      if (!existsSync(opts.output)) {
-        mkdirSync(opts.output, { recursive: true });
-      }
-      const slug = slugify(job.title);
+      if (!existsSync(opts.output)) mkdirSync(opts.output, { recursive: true });
+
+      const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
+      const slug = slugify(slugParts);
       const resumeOut = join(opts.output, `resume-${slug}.md`);
       const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
