@@ -1,0 +1,80 @@
+name: Release Tailored Resumes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "resume/**"
+      - "jobs/**"
+      - "stacks/**"
+      - "src/**"
+      - "package.json"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — show what would be generated without calling the AI"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      job:
+        description: "Limit to a single job slug (leave blank for all)"
+        required: false
+      stack:
+        description: "Limit to a single stack slug (leave blank for all)"
+        required: false
+
+jobs:
+  generate:
+    name: Generate tailored resumes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run release pipeline
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          if [ -n "${{ github.event.inputs.job }}" ]; then
+            ARGS="$ARGS --job ${{ github.event.inputs.job }}"
+          fi
+          if [ -n "${{ github.event.inputs.stack }}" ]; then
+            ARGS="$ARGS --stack ${{ github.event.inputs.stack }}"
+          fi
+          npm run release -- $ARGS
+
+      - name: Upload tailored resumes as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tailored-resumes-${{ github.run_number }}
+          path: output/
+          if-no-files-found: warn
+
+      - name: Commit tailored resumes back to repo
+        if: github.event.inputs.dry_run != 'true' && github.event_name != 'workflow_dispatch'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add output/
+          git diff --staged --quiet || git commit -m "chore: regenerate tailored resumes [skip ci]"
+          git push

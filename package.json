@@ -1,0 +1,24 @@
+{
+  "name": "job-shit",
+  "version": "1.0.0",
+  "description": "Automated resume tailoring pipeline — base resume + job/stack configs → AI-tailored resumes",
+  "type": "module",
+  "bin": {
+    "job-shit": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "release": "tsx src/index.ts release"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "js-yaml": "^4.1.0",
+    "openai": "^4.87.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,24 @@
+company: Example Company
+title: Staff Software Engineer
+url: https://jobs.example.com/staff-swe-123
+
+description: |
+  Example Company is building the next generation of fintech infrastructure.
+  We are looking for a Staff Software Engineer to lead the design and delivery
+  of our core payments platform.
+
+  Responsibilities:
+  - Own the architecture and roadmap for our payments microservices (Java/Spring Boot)
+  - Partner with product and infrastructure teams to define reliability SLOs
+  - Drive a culture of quality: code review, on-call, and incident retrospectives
+  - Mentor senior and mid-level engineers across two squads
+
+  Requirements:
+  - 8+ years of professional software engineering experience
+  - Deep expertise in Java or Kotlin (Spring Boot preferred)
+  - Experience with AWS (ECS, RDS, SQS/SNS) at production scale
+  - Strong communication skills; experience influencing without authority
+
+notes: |
+  I like their approach to payments infra. The role aligns well with my
+  event-driven architecture work at Acme Corp.
