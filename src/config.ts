@@ -39,6 +39,12 @@ async function readKeychainApiToken(): Promise<string | undefined> {
   }
 }
 
+/** Clerk JS version sent to the FAPI token endpoint — matches huntr-cli's pinned version. */
+const CLERK_JS_VERSION = '4.73.14';
+
+/** Timeout (ms) for the Clerk FAPI token request. */
+const CLERK_REQUEST_TIMEOUT_MS = 10_000;
+
 /**
  * Try to get a fresh JWT from huntr-cli's Clerk session (stored by `huntr login`).
  * Replicates huntr-cli's ClerkSessionManager.getFreshToken() logic.
@@ -59,9 +65,16 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
 
     const uat = clientUat?.trim() || '1';
     const cookieHeader = `__session=${raw}; __client_uat=${uat}`;
-    const path = `/v1/client/sessions/${sessionId}/tokens?_clerk_js_version=4.73.14`;
+    const path = `/v1/client/sessions/${sessionId}/tokens?_clerk_js_version=${CLERK_JS_VERSION}`;
 
     return new Promise<string | undefined>((resolve) => {
+      let settled = false;
+      const finish = (value: string | undefined): void => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
       const req = https.request(
         {
           hostname: 'clerk.huntr.co',
@@ -79,21 +92,26 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
         (res) => {
           let body = '';
           res.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+          res.on('error', () => finish(undefined));
           res.on('end', () => {
             if (res.statusCode === 200 || res.statusCode === 201) {
               try {
                 const data = JSON.parse(body) as { jwt?: string };
-                resolve(data.jwt ?? undefined);
+                finish(data.jwt ?? undefined);
               } catch {
-                resolve(undefined);
+                finish(undefined);
               }
             } else {
-              resolve(undefined);
+              finish(undefined);
             }
           });
         },
       );
-      req.on('error', () => resolve(undefined));
+      req.setTimeout(CLERK_REQUEST_TIMEOUT_MS, () => {
+        req.destroy();
+        finish(undefined);
+      });
+      req.on('error', () => finish(undefined));
       req.end();
     });
   } catch {
@@ -107,6 +125,7 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
  *   2. ~/.huntr/config.json (static token set via `huntr config set-token`)
  *   3. Keychain static api-token (set via `huntr config set-token --keychain`)
  *   4. Clerk session (set via `huntr login`) — refreshes automatically
+ *   5. HUNTR_TOKEN env var (job-shit backward compat)
  */
 export async function resolveHuntrToken(): Promise<string | undefined> {
   if (process.env.HUNTR_API_TOKEN) return process.env.HUNTR_API_TOKEN;
@@ -120,7 +139,7 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
   const clerkToken = await resolveHuntrClerkToken();
   if (clerkToken) return clerkToken;
 
-  return undefined;
+  return process.env.HUNTR_TOKEN ?? undefined;
 }
 
 export function loadConfig(): Config {
