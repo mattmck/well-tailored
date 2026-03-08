@@ -3,8 +3,13 @@ import { TailorInput } from '../types/index.js';
 export function resumeSystemPrompt(): string {
   return `You are an expert resume writer. Your job is to tailor the candidate's base resume \
 for a specific role at a specific company. Rules:
-- Preserve all true facts; do NOT invent experience or credentials.
-- Reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
+- NEVER invent, fabricate, or exaggerate experience, credentials, or achievements.
+- NEVER move a fact, metric, or achievement from one employer to another. Stats and \
+accomplishments belong to the employer they appear under in the base resume — do not reassign them.
+- NEVER upgrade the candidate's actual experience level with a technology or domain. If the \
+base resume shows adjacent or limited experience, reflect that honestly.
+- You MAY reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
+- You MAY rewrite the summary to lead with the most relevant experience for this role.
 - Keep the same section structure (Summary, Experience, Education, Skills, etc.).
 - Return ONLY the tailored resume in markdown. No preamble, no commentary.`;
 }
