@@ -366,13 +366,22 @@ export function registerHuntrCommand(program: Command): void {
       const aiClient = createOpenAIClient(config.openaiApiKey);
 
       let done = 0;
+      let failed = 0;
       for (const job of wishlistJobs) {
-        await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
-        done++;
-        if (done < wishlistJobs.length) console.log('');
+        try {
+          await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+          done++;
+        } catch (err) {
+          failed++;
+          console.error(`  ❌  Failed to tailor ${job.title ?? 'unknown'} @ ${extractCompanyName(job)}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+        if (done + failed < wishlistJobs.length) console.log('');
       }
 
-      console.log(`\n✅  Done — ${done} job(s) tailored.`);
+      const summary = failed > 0
+        ? `${done} job(s) tailored, ${failed} failed.`
+        : `${done} job(s) tailored.`;
+      console.log(`\n✅  Done — ${summary}`);
     });
 }
 
