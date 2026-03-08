@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { existsSync, readFileSync } from 'fs';
+import https from 'https';
 import { join } from 'path';
 import { homedir } from 'os';
 import { Config } from './types/index.js';
@@ -13,7 +14,6 @@ interface HuntrCliConfig {
 
 /**
  * Read the static token from ~/.huntr/config.json (huntr-cli's config file).
- * Returns undefined if the file doesn't exist or has no token.
  */
 function readHuntrCliConfigToken(): string | undefined {
   const configPath = join(homedir(), '.huntr', 'config.json');
@@ -27,29 +27,86 @@ function readHuntrCliConfigToken(): string | undefined {
 }
 
 /**
- * Try to read the static API token from the system keychain.
- * Uses the same service/account names as huntr-cli's KeychainManager.
- * Returns undefined if keytar is unavailable or no token is stored.
+ * Try to read the static API token from the keychain (huntr-cli's KeychainManager).
  */
-async function readHuntrCliKeychainToken(): Promise<string | undefined> {
+async function readKeychainApiToken(): Promise<string | undefined> {
   try {
-    // Dynamic import so we fail gracefully on systems without a native keyring
-    // (e.g., Linux without libsecret, CI environments, etc.)
     const { default: keytar } = await import('keytar');
     const token = await keytar.getPassword('huntr-cli', 'api-token');
     return token ?? undefined;
   } catch {
-    // keytar unavailable or no keyring present — not an error, just skip
     return undefined;
   }
 }
 
 /**
- * Resolve the Huntr token using the same precedence as huntr-cli's TokenManager:
- *   1. HUNTR_API_TOKEN env var  (same name as huntr-cli)
- *   2. ~/.huntr/config.json     (huntr-cli config file)
- *   3. system keychain          (huntr-cli keytar entry)
- *   4. HUNTR_TOKEN env var      (job-shit backward compat)
+ * Try to get a fresh JWT from huntr-cli's Clerk session (stored by `huntr login`).
+ * Replicates huntr-cli's ClerkSessionManager.getFreshToken() logic.
+ */
+async function resolveHuntrClerkToken(): Promise<string | undefined> {
+  try {
+    const { default: keytar } = await import('keytar');
+    const sessionCookie = await keytar.getPassword('huntr-cli', 'clerk-session-cookie');
+    const sessionId = await keytar.getPassword('huntr-cli', 'clerk-session-id');
+    const clientUat = await keytar.getPassword('huntr-cli', 'clerk-client-uat');
+
+    if (!sessionCookie || !sessionId) return undefined;
+
+    // Strip prefix if present
+    const raw = sessionCookie.startsWith('__session=')
+      ? sessionCookie.slice('__session='.length)
+      : sessionCookie;
+
+    const uat = clientUat?.trim() || '1';
+    const cookieHeader = `__session=${raw}; __client_uat=${uat}`;
+    const path = `/v1/client/sessions/${sessionId}/tokens?_clerk_js_version=4.73.14`;
+
+    return new Promise<string | undefined>((resolve) => {
+      const req = https.request(
+        {
+          hostname: 'clerk.huntr.co',
+          path,
+          method: 'POST',
+          headers: {
+            'Cookie': cookieHeader,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': '0',
+            'Accept': 'application/json',
+            'Origin': 'https://huntr.co',
+            'Referer': 'https://huntr.co/',
+          },
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+          res.on('end', () => {
+            if (res.statusCode === 200 || res.statusCode === 201) {
+              try {
+                const data = JSON.parse(body) as { jwt?: string };
+                resolve(data.jwt ?? undefined);
+              } catch {
+                resolve(undefined);
+              }
+            } else {
+              resolve(undefined);
+            }
+          });
+        },
+      );
+      req.on('error', () => resolve(undefined));
+      req.end();
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve the Huntr token, checking all credential sources in order:
+ *   1. HUNTR_API_TOKEN env var
+ *   2. ~/.huntr/config.json (static token set via `huntr config set-token`)
+ *   3. Keychain static api-token (set via `huntr config set-token --keychain`)
+ *   4. Clerk session (set via `huntr login`) — refreshes automatically
  */
 export async function resolveHuntrToken(): Promise<string | undefined> {
   if (process.env.HUNTR_API_TOKEN) return process.env.HUNTR_API_TOKEN;
@@ -57,10 +114,13 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
   const configToken = readHuntrCliConfigToken();
   if (configToken) return configToken;
 
-  const keychainToken = await readHuntrCliKeychainToken();
+  const keychainToken = await readKeychainApiToken();
   if (keychainToken) return keychainToken;
 
-  return process.env.HUNTR_TOKEN ?? undefined;
+  const clerkToken = await resolveHuntrClerkToken();
+  if (clerkToken) return clerkToken;
+
+  return undefined;
 }
 
 export function loadConfig(): Config {
@@ -72,6 +132,5 @@ export function loadConfig(): Config {
   return {
     openaiApiKey,
     openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4o',
-    // huntrToken is resolved asynchronously via resolveHuntrToken()
   };
 }
