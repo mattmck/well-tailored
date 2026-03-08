@@ -256,7 +256,8 @@ export function registerHuntrCommand(program: Command): void {
         for (const job of jobs) {
           const company = extractCompanyName(job);
           const listName = job._list ? (lists[job._list]?.name ?? '?') : '?';
-          console.log(`  ${job.id}  [${listName}]  ${job.title}  @ ${company}`);
+          const url = job.url ? `  ${job.url}` : '';
+          console.log(`  ${job.id}  [${listName}]  ${job.title}  @ ${company}${url}`);
         }
       }
     });
