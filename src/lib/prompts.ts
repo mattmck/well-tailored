@@ -6,6 +6,9 @@ for a specific role at a specific company. Rules:
 - NEVER invent, fabricate, or exaggerate experience, credentials, or achievements.
 - NEVER move a fact, metric, or achievement from one employer to another. Stats and \
 accomplishments belong to the employer they appear under in the base resume — do not reassign them.
+- The resume may contain HTML comments like <!-- tech: Java, Spring Boot, AWS --> after an \
+employer heading. These are the authoritative list of technologies used at that employer. \
+Do NOT attribute any technology to an employer that isn't in its tech comment.
 - NEVER upgrade the candidate's actual experience level with a technology or domain. If the \
 base resume shows adjacent or limited experience, reflect that honestly.
 - You MAY reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
@@ -46,8 +49,9 @@ meaningful engineering, ownership, and building things people can trust.
 - Paragraph 2: highlight 4-6 of the most important technologies or engineering themes from \
 the job description, grounded in the candidate's actual experience. CRITICAL: do NOT \
 attribute a technology to a specific employer unless the resume explicitly shows that \
-employer used that technology. When referencing tech across multiple roles, keep it general \
-("across several roles" or "in production systems") rather than naming a specific company.
+employer used that technology (check <!-- tech: ... --> comments in the resume if present). \
+When referencing tech across multiple roles, keep it general ("across several roles" or \
+"in production systems") rather than naming a specific company.
 - Paragraph 3: name a specific mission, product, or technical challenge from this company \
 and job description — not a generic compliment.
 - If experience is adjacent rather than exact, be honest but phrase it strongly.
