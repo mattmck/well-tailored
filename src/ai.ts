@@ -10,15 +10,24 @@ Rules:
 - Do NOT invent experience or qualifications that are not present in the base resume.
 - Return ONLY the tailored resume in Markdown, with no preamble, explanation, or commentary.`;
 
+// Lazy singleton — created on first AI call so dotenv has already run and
+// dry-run mode never triggers an unnecessary client construction.
+let _client: OpenAI | undefined;
+function getClient(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI();
+  }
+  return _client;
+}
+
 export async function tailorResume(
   context: TailoringContext,
   model = process.env.OPENAI_MODEL ?? "gpt-4o"
 ): Promise<string> {
-  const client = new OpenAI();
 
   const userPrompt = buildUserPrompt(context);
 
-  const response = await client.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },

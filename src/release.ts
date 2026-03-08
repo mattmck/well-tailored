@@ -90,6 +90,7 @@ async function processJobs(args: {
   const { baseResume, jobsDir, outputDir, dryRun, onlySlug } = args;
 
   const slugs = await readDirSlugs(jobsDir, onlySlug);
+  slugs.sort();
   if (slugs.length === 0) {
     console.log("ℹ️   No job configs found — skipping job tailoring.");
     return [];
@@ -100,13 +101,30 @@ async function processJobs(args: {
   for (const slug of slugs) {
     const configPath = path.join(jobsDir, slug, "config.yml");
 
-    let config: JobConfig;
+    let rawConfig: unknown;
     try {
-      config = yaml.load(await fs.readFile(configPath, "utf-8")) as JobConfig;
+      rawConfig = yaml.load(await fs.readFile(configPath, "utf-8"));
     } catch {
       console.warn(`⚠️   Skipping ${slug}: could not read ${configPath}`);
       continue;
     }
+
+    if (!rawConfig || typeof rawConfig !== "object") {
+      console.warn(
+        `⚠️   Skipping ${slug}: job config in ${configPath} is not an object`
+      );
+      continue;
+    }
+
+    const maybeConfig = rawConfig as { [key: string]: unknown };
+    if (typeof maybeConfig.company !== "string" || typeof maybeConfig.title !== "string") {
+      console.warn(
+        `⚠️   Skipping ${slug}: job config in ${configPath} is missing required 'company' or 'title' fields`
+      );
+      continue;
+    }
+
+    const config = rawConfig as JobConfig;
 
     console.log(`\n🎯  [job] ${config.company} — ${config.title}`);
 
@@ -153,6 +171,8 @@ async function processStacks(args: {
   if (onlySlug) {
     files = files.filter((f) => f.replace(/\.yml$/, "") === onlySlug);
   }
+
+  files.sort();
 
   if (files.length === 0) {
     console.log("ℹ️   No stack configs found — skipping stack tailoring.");

@@ -39,6 +39,8 @@ cp .env.example .env
 # edit .env and fill in OPENAI_API_KEY
 ```
 
+The CLI automatically loads `.env` via `dotenv`, so `npm run release` will pick up the key without any extra steps.
+
 Add `OPENAI_API_KEY` as a repository secret in GitHub → Settings → Secrets → Actions for the CI workflow.
 
 ### 3. Fill in your base resume

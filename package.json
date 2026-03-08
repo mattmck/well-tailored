@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "commander": "^12.1.0",
+    "dotenv": "^17.3.1",
     "js-yaml": "^4.1.0",
     "openai": "^4.87.0"
   },
