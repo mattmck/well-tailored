@@ -156,13 +156,13 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
 }
 
 export function loadConfig(): Config {
-  const openaiApiKey = process.env.OPENAI_API_KEY ?? '';
-  if (!openaiApiKey) {
-    throw new Error('OPENAI_API_KEY is not set. Add it to .env or export it in your shell.');
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set. Add it to .env or export it in your shell.');
   }
 
   return {
-    openaiApiKey,
-    openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4o',
+    apiKey,
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5',
   };
 }

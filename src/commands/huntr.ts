@@ -312,9 +312,9 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Using bio:    ${bioPath}`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.openaiApiKey);
+      const aiClient = createOpenAIClient(config.apiKey);
 
-      await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.openaiModel, outputDir: opts.output });
+      await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.model, outputDir: opts.output });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -365,13 +365,13 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.openaiApiKey);
+      const aiClient = createOpenAIClient(config.apiKey);
 
       let done = 0;
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.openaiModel, outputDir: opts.output });
+          await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.model, outputDir: opts.output });
           done++;
         } catch (err) {
           failed++;
@@ -424,7 +424,7 @@ async function tailorAndWrite(args: {
   resume: string;
   bio: string;
   baseCoverLetter?: string;
-  aiClient: ReturnType<typeof createOpenAIClient>;
+  aiClient: Awaited<ReturnType<typeof createOpenAIClient>>;
   model: string;
   outputDir: string;
 }): Promise<void> {

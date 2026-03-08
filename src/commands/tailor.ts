@@ -72,14 +72,14 @@ export function registerTailorCommand(program: Command): void {
       } catch { /* optional */ }
 
       const config = loadConfig();
-      const client = createOpenAIClient(config.openaiApiKey);
+      const client = createOpenAIClient(config.apiKey);
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
-      const output = await tailorDocuments(client, config.openaiModel, {
+      const output = await tailorDocuments(client, config.model, {
         resume,
         bio,
         baseCoverLetter,
