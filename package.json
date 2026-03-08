@@ -28,7 +28,7 @@
   "author": "Matt McKnight <mcknight.matthew@gmail.com>",
   "license": "ISC",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "bugs": {
     "url": "https://github.com/mattmck/job-shit/issues"
