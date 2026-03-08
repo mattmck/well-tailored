@@ -42,8 +42,7 @@ describe('findFile', () => {
   it('finds the only matching file in the given directory via prefix match', () => {
     const file = join(dir, 'resume.md');
     writeFileSync(file, '# Resume');
-    // Inject dir as CWD equivalent by using explicit path with exact name
-    const result = findFile({ explicit: file, prefix: 'resume', label: 'Resume' });
+    const result = findFile({ prefix: 'resume', label: 'Resume', cwd: dir });
     expect(result).toBe(file);
   });
 
