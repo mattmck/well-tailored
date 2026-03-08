@@ -289,7 +289,7 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
 
       // Resolve job — use explicit board or search all boards
       let job: HuntrJob;
@@ -314,7 +314,7 @@ export function registerHuntrCommand(program: Command): void {
       const config = loadConfig();
       const aiClient = createOpenAIClient(config.openaiApiKey);
 
-      await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+      await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.openaiModel, outputDir: opts.output });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -340,7 +340,7 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}\n`);
 
@@ -371,7 +371,7 @@ export function registerHuntrCommand(program: Command): void {
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+          await tailorAndWrite({ job, resume, bio, baseCoverLetter, aiClient, model: config.openaiModel, outputDir: opts.output });
           done++;
         } catch (err) {
           failed++;
@@ -394,7 +394,7 @@ export function registerHuntrCommand(program: Command): void {
 function resolveBaseFiles(
   explicitResume?: string,
   explicitBio?: string,
-): { resume: string; bio: string; resumePath: string; bioPath: string } {
+): { resume: string; bio: string; baseCoverLetter?: string; resumePath: string; bioPath: string } {
   let resumePath: string;
   let bioPath: string;
   try {
@@ -409,18 +409,26 @@ function resolveBaseFiles(
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);
   }
-  return { resume: readFile(resumePath), bio: readFile(bioPath), resumePath, bioPath };
+
+  let baseCoverLetter: string | undefined;
+  try {
+    const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+    baseCoverLetter = readFile(coverLetterPath);
+  } catch { /* optional — no base cover letter is fine */ }
+
+  return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumePath, bioPath };
 }
 
 async function tailorAndWrite(args: {
   job: HuntrJob;
   resume: string;
   bio: string;
+  baseCoverLetter?: string;
   aiClient: ReturnType<typeof createOpenAIClient>;
   model: string;
   outputDir: string;
 }): Promise<void> {
-  const { job, resume, bio, aiClient, model, outputDir } = args;
+  const { job, resume, bio, baseCoverLetter, aiClient, model, outputDir } = args;
   const companyName = extractCompanyName(job);
   const jobDescription = job.htmlDescription
     ? stripHtml(job.htmlDescription)
@@ -436,6 +444,7 @@ async function tailorAndWrite(args: {
   const output = await tailorDocuments(aiClient, model, {
     resume,
     bio,
+    baseCoverLetter,
     company: companyName,
     jobTitle: job.title,
     jobDescription,
