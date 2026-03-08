@@ -24,3 +24,15 @@ export async function tailorDocuments(
 
   return { resume, coverLetter };
 }
+
+/**
+ * Generate a tailored resume only (no cover letter, single AI call).
+ * Use this when a cover letter is not required (e.g. stack profiles).
+ */
+export async function tailorResume(
+  client: OpenAI,
+  model: string,
+  input: TailorInput,
+): Promise<string> {
+  return complete(client, model, resumeSystemPrompt(), resumeUserPrompt(input));
+}

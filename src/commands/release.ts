@@ -4,7 +4,7 @@ import { join } from 'path';
 import yaml from 'js-yaml';
 import { loadConfig } from '../config.js';
 import { createOpenAIClient } from '../lib/ai.js';
-import { tailorDocuments } from '../lib/tailor.js';
+import { tailorDocuments, tailorResume } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import type {
   JobConfig,
@@ -86,9 +86,8 @@ export function registerReleaseCommand(program: Command): void {
       const dryRun = opts.dryRun ?? false;
       const startedAt = new Date().toISOString();
 
-      // Resolve base files
+      // Resolve resume (always needed)
       let resumePath: string;
-      let bioPath: string;
 
       try {
         resumePath = findFile({ explicit: opts.resume, prefix: 'resume', label: 'Resume' });
@@ -97,25 +96,41 @@ export function registerReleaseCommand(program: Command): void {
         process.exit(1);
       }
 
-      try {
-        bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
-      } catch (err) {
-        console.error(`Error: ${(err as Error).message}`);
-        process.exit(1);
+      const resume = readFile(resumePath);
+      console.log(`\nUsing resume: ${resumePath}`);
+
+      // Bio is only needed when job cover letters will actually be generated:
+      // not in dry-run mode, and not when only stacks are being processed.
+      const willProcessJobs = !dryRun && (opts.job !== undefined || opts.stack === undefined);
+      let bio = '';
+
+      if (willProcessJobs) {
+        let bioPath: string;
+        try {
+          bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
+        } catch (err) {
+          console.error(`Error: ${(err as Error).message}`);
+          process.exit(1);
+        }
+        bio = readFile(bioPath);
+        console.log(`Using bio:    ${bioPath}`);
       }
 
-      const resume = readFile(resumePath);
-      const bio = readFile(bioPath);
+      console.log('');
 
-      console.log(`\nUsing resume: ${resumePath}`);
-      console.log(`Using bio:    ${bioPath}\n`);
+      // Only load OpenAI config / create client when AI calls will actually be made.
+      let client: ReturnType<typeof createOpenAIClient> | undefined;
+      let model = '';
 
-      const config = loadConfig();
-      const client = createOpenAIClient(config.openaiApiKey);
+      if (!dryRun) {
+        const config = loadConfig();
+        client = createOpenAIClient(config.openaiApiKey);
+        model = config.openaiModel;
+      }
 
       const jobResults = await processJobs({
         client,
-        model: config.openaiModel,
+        model,
         resume,
         bio,
         jobsDir: opts.jobsDir,
@@ -126,7 +141,7 @@ export function registerReleaseCommand(program: Command): void {
 
       const stackResults = await processStacks({
         client,
-        model: config.openaiModel,
+        model,
         resume,
         stacksDir: opts.stacksDir,
         outputDir: opts.output,
@@ -166,7 +181,7 @@ export function registerReleaseCommand(program: Command): void {
 // ---------------------------------------------------------------------------
 
 async function processJobs(args: {
-  client: ReturnType<typeof createOpenAIClient>;
+  client: ReturnType<typeof createOpenAIClient> | undefined;
   model: string;
   resume: string;
   bio: string;
@@ -214,6 +229,8 @@ async function processJobs(args: {
       continue;
     }
 
+    if (!client) throw new Error('OpenAI client not initialized');
+
     const output = await tailorDocuments(client, model, {
       resume,
       bio,
@@ -241,7 +258,7 @@ async function processJobs(args: {
 // ---------------------------------------------------------------------------
 
 async function processStacks(args: {
-  client: ReturnType<typeof createOpenAIClient>;
+  client: ReturnType<typeof createOpenAIClient> | undefined;
   model: string;
   resume: string;
   stacksDir: string;
@@ -287,13 +304,15 @@ async function processStacks(args: {
       continue;
     }
 
-    // Stack tailoring reuses the resume prompt with a synthetic job description
+    // Stack tailoring uses resume-only (no cover letter, single AI call)
     const stackJd =
       `Target stack: ${raw.name}\n` +
       `Technologies: ${raw.technologies.join(', ')}\n` +
       (raw.emphasis ? `\nEmphasis: ${raw.emphasis}` : '');
 
-    const output = await tailorDocuments(client, model, {
+    if (!client) throw new Error('OpenAI client not initialized');
+
+    const tailoredResume = await tailorResume(client, model, {
       resume,
       bio: '',
       company: raw.name,
@@ -302,7 +321,7 @@ async function processStacks(args: {
 
     const outDir = join(outputDir, 'stacks', slug);
     mkdirSync(outDir, { recursive: true });
-    writeFileSync(join(outDir, 'resume.md'), output.resume, 'utf8');
+    writeFileSync(join(outDir, 'resume.md'), tailoredResume, 'utf8');
 
     console.log(`     ✏️   ${join(outDir, 'resume.md')}`);
 
