@@ -1,9 +1,10 @@
 import { Command } from 'commander';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { resolve, join } from 'path';
-import { loadConfig } from '../config.js';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
+import { loadConfig, resolveHuntrToken } from '../config.js';
 import { createOpenAIClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
+import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 
 // Huntr API types (inlined to avoid a hard dependency on huntr-cli)
 interface HuntrBoard {
@@ -12,13 +13,21 @@ interface HuntrBoard {
   isArchived: boolean;
 }
 
+interface HuntrCompany {
+  _id?: string;
+  id?: string;
+  name?: string;
+}
+
 interface HuntrJob {
   id: string;
   title: string;
   url?: string;
+  rootDomain?: string;
   htmlDescription?: string;
   _company?: string;
   _board?: string;
+  company?: HuntrCompany;
 }
 
 interface HuntrApiClient {
@@ -109,14 +118,42 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function readFile(filePath: string): string {
-  return readFileSync(resolve(filePath), 'utf8').trim();
+/**
+ * Extract a human-readable company name from a Huntr job object.
+ * The API may populate company inline or only as an ID reference.
+ */
+function extractCompanyName(job: HuntrJob): string {
+  if (job.company?.name) return job.company.name;
+  if (job.rootDomain) return job.rootDomain;
+  if (job.url) {
+    try {
+      return new URL(job.url).hostname.replace(/^www\./, '');
+    } catch {
+      // malformed URL — fall through
+    }
+  }
+  return 'Unknown Company';
+}
+
+async function requireHuntrToken(): Promise<string> {
+  const token = await resolveHuntrToken();
+  if (!token) {
+    console.error(
+      'Error: No Huntr credentials found.\n' +
+        'Run `huntr login` in huntr-cli, or set HUNTR_API_TOKEN in your environment.',
+    );
+    process.exit(1);
+  }
+  return token;
 }
 
 export function registerHuntrCommand(program: Command): void {
   const huntr = program
     .command('huntr')
-    .description('Interact with your Huntr.co job board (requires HUNTR_TOKEN in .env).');
+    .description(
+      'Interact with your Huntr.co job board. ' +
+        'Uses credentials from huntr-cli (run `huntr login`) or HUNTR_API_TOKEN env var.',
+    );
 
   // huntr jobs — list all jobs
   huntr
@@ -124,12 +161,8 @@ export function registerHuntrCommand(program: Command): void {
     .description('List all jobs in your Huntr boards.')
     .option('--board <boardId>', 'Limit to a specific board ID')
     .action(async (opts: { board?: string }) => {
-      const config = loadConfig();
-      if (!config.huntrToken) {
-        console.error('Error: HUNTR_TOKEN is not set in .env.');
-        process.exit(1);
-      }
-      const client = createHuntrClient(config.huntrToken);
+      const token = await requireHuntrToken();
+      const client = createHuntrClient(token);
 
       let boardIds: string[];
       if (opts.board) {
@@ -146,7 +179,8 @@ export function registerHuntrCommand(program: Command): void {
         if (jobs.length === 0) continue;
         console.log(`\nBoard: ${boardId}`);
         for (const job of jobs) {
-          console.log(`  ${job.id}  ${job.title}${job.url ? `  (${job.url})` : ''}`);
+          const company = extractCompanyName(job);
+          console.log(`  ${job.id}  ${job.title}  @ ${company}${job.url ? `  (${job.url})` : ''}`);
         }
       }
     });
@@ -156,54 +190,63 @@ export function registerHuntrCommand(program: Command): void {
     .command('tailor <jobId>')
     .description('Fetch a job from Huntr and generate a tailored resume + cover letter.')
     .requiredOption('--board <boardId>', 'Huntr board ID that contains the job')
-    .option('-r, --resume <file>', 'Path to base resume file (markdown)', 'resume.md')
-    .option('-b, --bio <file>', 'Path to personal bio/background file', 'bio.md')
+    .option(
+      '-r, --resume <file>',
+      `Path to base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
+    .option(
+      '-b, --bio <file>',
+      `Path to personal bio/background file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
     .option('-o, --output <dir>', 'Output directory', 'output')
     .action(async (jobId: string, opts: {
       board: string;
-      resume: string;
-      bio: string;
+      resume?: string;
+      bio?: string;
       output: string;
     }) => {
-      const config = loadConfig();
-      if (!config.huntrToken) {
-        console.error('Error: HUNTR_TOKEN is not set in .env.');
-        process.exit(1);
-      }
+      const token = await requireHuntrToken();
 
-      let resume: string;
-      let bio: string;
+      let resumePath: string;
+      let bioPath: string;
 
       try {
-        resume = readFile(opts.resume);
-      } catch {
-        console.error(`Error: Could not read resume file: ${opts.resume}`);
+        resumePath = findFile({ explicit: opts.resume, prefix: 'resume', label: 'Resume' });
+      } catch (err) {
+        console.error(`Error: ${(err as Error).message}`);
         process.exit(1);
       }
 
       try {
-        bio = readFile(opts.bio);
-      } catch {
-        console.error(`Error: Could not read bio file: ${opts.bio}`);
+        bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
+      } catch (err) {
+        console.error(`Error: ${(err as Error).message}`);
         process.exit(1);
       }
 
-      const huntrClient = createHuntrClient(config.huntrToken);
+      const resume = readFile(resumePath);
+      const bio = readFile(bioPath);
+
+      const huntrClient = createHuntrClient(token);
       const job = await huntrClient.get<HuntrJob>(`/board/${opts.board}/jobs/${jobId}`);
 
+      const companyName = extractCompanyName(job);
       const jobDescription = job.htmlDescription
         ? stripHtml(job.htmlDescription)
         : `Job title: ${job.title}`;
 
+      const config = loadConfig();
       const aiClient = createOpenAIClient(config.openaiApiKey);
 
-      console.log(`\nFetched job: ${job.title}`);
+      console.log(`\nUsing resume: ${resumePath}`);
+      console.log(`Using bio:    ${bioPath}`);
+      console.log(`\nFetched job: ${job.title} @ ${companyName}`);
       console.log('Generating resume and cover letter in parallel...\n');
 
       const output = await tailorDocuments(aiClient, config.openaiModel, {
         resume,
         bio,
-        company: job._company ?? 'Unknown Company',
+        company: companyName,
         jobTitle: job.title,
         jobDescription,
       });
@@ -212,13 +255,13 @@ export function registerHuntrCommand(program: Command): void {
         mkdirSync(opts.output, { recursive: true });
       }
       const slug = slugify(job.title);
-      const resumePath = join(opts.output, `resume-${slug}.md`);
-      const clPath = join(opts.output, `cover-letter-${slug}.md`);
+      const resumeOut = join(opts.output, `resume-${slug}.md`);
+      const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
-      writeFileSync(resumePath, output.resume, 'utf8');
-      writeFileSync(clPath, output.coverLetter, 'utf8');
+      writeFileSync(resumeOut, output.resume, 'utf8');
+      writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
-      console.log(`✓ Tailored resume   → ${resumePath}`);
-      console.log(`✓ Cover letter      → ${clPath}`);
+      console.log(`✓ Tailored resume   → ${resumeOut}`);
+      console.log(`✓ Cover letter      → ${coverLetterOut}`);
     });
 }

@@ -1,13 +1,10 @@
 import { Command } from 'commander';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { resolve, join } from 'path';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
 import { loadConfig } from '../config.js';
 import { createOpenAIClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
-
-function readFile(filePath: string): string {
-  return readFileSync(resolve(filePath), 'utf8').trim();
-}
+import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 
 function slugify(text: string): string {
   return text
@@ -25,39 +22,43 @@ export function registerTailorCommand(program: Command): void {
     )
     .requiredOption('-c, --company <name>', 'Company name')
     .requiredOption('-j, --job <file>', 'Path to job description file (plain text or markdown)')
-    .option('-r, --resume <file>', 'Path to base resume file (markdown)', 'resume.md')
-    .option('-b, --bio <file>', 'Path to personal bio/background file', 'bio.md')
+    .option(
+      '-r, --resume <file>',
+      `Path to base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
+    .option(
+      '-b, --bio <file>',
+      `Path to personal bio/background file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
     .option('-t, --title <title>', 'Job title (inferred from JD if omitted)')
     .option('-o, --output <dir>', 'Output directory', 'output')
     .action(async (opts: {
       company: string;
       job: string;
-      resume: string;
-      bio: string;
+      resume?: string;
+      bio?: string;
       title?: string;
       output: string;
     }) => {
-      // Load and validate inputs
-      let resume: string;
-      let bio: string;
+      // Resolve input files
+      let resumePath: string;
+      let bioPath: string;
+
+      try {
+        resumePath = findFile({ explicit: opts.resume, prefix: 'resume', label: 'Resume' });
+      } catch (err) {
+        console.error(`Error: ${(err as Error).message}`);
+        process.exit(1);
+      }
+
+      try {
+        bioPath = findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' });
+      } catch (err) {
+        console.error(`Error: ${(err as Error).message}`);
+        process.exit(1);
+      }
+
       let jobDescription: string;
-
-      try {
-        resume = readFile(opts.resume);
-      } catch {
-        console.error(`Error: Could not read resume file: ${opts.resume}`);
-        console.error('Create a resume.md in the current directory, or pass --resume <file>.');
-        process.exit(1);
-      }
-
-      try {
-        bio = readFile(opts.bio);
-      } catch {
-        console.error(`Error: Could not read bio file: ${opts.bio}`);
-        console.error('Create a bio.md in the current directory, or pass --bio <file>.');
-        process.exit(1);
-      }
-
       try {
         jobDescription = readFile(opts.job);
       } catch {
@@ -65,9 +66,14 @@ export function registerTailorCommand(program: Command): void {
         process.exit(1);
       }
 
+      const resume = readFile(resumePath);
+      const bio = readFile(bioPath);
+
       const config = loadConfig();
       const client = createOpenAIClient(config.openaiApiKey);
 
+      console.log(`\nUsing resume: ${resumePath}`);
+      console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
@@ -84,13 +90,13 @@ export function registerTailorCommand(program: Command): void {
         mkdirSync(opts.output, { recursive: true });
       }
       const slug = slugify(opts.company);
-      const resumePath = join(opts.output, `resume-${slug}.md`);
-      const clPath = join(opts.output, `cover-letter-${slug}.md`);
+      const resumeOut = join(opts.output, `resume-${slug}.md`);
+      const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
-      writeFileSync(resumePath, output.resume, 'utf8');
-      writeFileSync(clPath, output.coverLetter, 'utf8');
+      writeFileSync(resumeOut, output.resume, 'utf8');
+      writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
-      console.log(`✓ Tailored resume   → ${resumePath}`);
-      console.log(`✓ Cover letter      → ${clPath}`);
+      console.log(`✓ Tailored resume   → ${resumeOut}`);
+      console.log(`✓ Cover letter      → ${coverLetterOut}`);
     });
 }

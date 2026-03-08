@@ -22,5 +22,4 @@ export interface TailorOutput {
 export interface Config {
   openaiApiKey: string;
   openaiModel: string;
-  huntrToken?: string;
 }
