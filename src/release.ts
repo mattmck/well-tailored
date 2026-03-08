@@ -165,16 +165,41 @@ async function processStacks(args: {
     const slug = file.replace(/\.yml$/, "");
     const stackPath = path.join(stacksDir, file);
 
-    let profile: StackProfile;
+    let rawProfile: unknown;
     try {
-      profile = yaml.load(
-        await fs.readFile(stackPath, "utf-8")
-      ) as StackProfile;
+      rawProfile = yaml.load(await fs.readFile(stackPath, "utf-8"));
     } catch {
       console.warn(`⚠️   Skipping ${slug}: could not read ${stackPath}`);
       continue;
     }
 
+    if (!rawProfile || typeof rawProfile !== "object") {
+      console.warn(
+        `⚠️   Skipping ${slug}: stack profile in ${stackPath} is not an object`
+      );
+      continue;
+    }
+
+    const maybeProfile = rawProfile as { [key: string]: unknown };
+    if (typeof maybeProfile.name !== "string") {
+      console.warn(
+        `⚠️   Skipping ${slug}: stack profile in ${stackPath} is missing a valid 'name'`
+      );
+      continue;
+    }
+
+    const technologies = maybeProfile.technologies;
+    if (
+      !Array.isArray(technologies) ||
+      !technologies.every((t) => typeof t === "string")
+    ) {
+      console.warn(
+        `⚠️   Skipping ${slug}: stack profile in ${stackPath} has an invalid 'technologies' field`
+      );
+      continue;
+    }
+
+    const profile = rawProfile as StackProfile;
     console.log(`\n🔧  [stack] ${profile.name}`);
 
     if (dryRun) {
