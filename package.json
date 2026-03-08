@@ -1,0 +1,53 @@
+{
+  "name": "job-shit",
+  "version": "1.0.0",
+  "description": "Resume and cover letter tailoring workflow. Base resume + company info + job description → tailored resume + cover letter, in parallel.",
+  "type": "module",
+  "bin": {
+    "job-shit": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattmck/job-shit.git"
+  },
+  "keywords": [
+    "resume",
+    "cover-letter",
+    "job-search",
+    "tailoring",
+    "ai",
+    "openai"
+  ],
+  "author": "Matt McKnight <mcknight.matthew@gmail.com>",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/mattmck/job-shit/issues"
+  },
+  "homepage": "https://github.com/mattmck/job-shit#readme",
+  "dependencies": {
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "openai": "^6.27.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
