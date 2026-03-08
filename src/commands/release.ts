@@ -210,7 +210,7 @@ async function processJobs(args: {
 
     if (dryRun) {
       console.log('     (dry-run, skipping AI call)');
-      results.push({ type: 'job', slug, generatedAt: new Date().toISOString() });
+      results.push({ type: 'job', slug, generatedAt: new Date().toISOString(), skipped: true });
       continue;
     }
 
