@@ -5,13 +5,7 @@ import { loadConfig } from '../config.js';
 import { createOpenAIClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
+import slugify from 'slugify';
 
 export function registerTailorCommand(program: Command): void {
   program
