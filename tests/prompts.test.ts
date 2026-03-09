@@ -18,7 +18,7 @@ const sampleInput: TailorInput = {
 describe('prompts', () => {
   describe('resumeSystemPrompt', () => {
     it('instructs not to invent credentials', () => {
-      expect(resumeSystemPrompt()).toContain('do NOT invent');
+      expect(resumeSystemPrompt()).toContain('NEVER invent');
     });
 
     it('asks for markdown output only', () => {
@@ -59,7 +59,7 @@ describe('prompts', () => {
     });
 
     it('asks for cover letter text only', () => {
-      expect(coverLetterSystemPrompt()).toContain('ONLY the cover letter text');
+      expect(coverLetterSystemPrompt()).toContain('ONLY the finished cover letter text');
     });
   });
 
