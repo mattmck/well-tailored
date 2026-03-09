@@ -94,8 +94,8 @@ So if you've already run `huntr login` or `huntr config set-token` in huntr-cli,
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | ✅ | — | Anthropic API key |
-| `ANTHROPIC_MODEL` | ❌ | `claude-sonnet-4-5` | Model to use |
+| `ANTHROPIC_API_KEY` | ✅ | — | Anthropic API key (falls back to `OPENAI_API_KEY` for backward compatibility) |
+| `ANTHROPIC_MODEL` | ❌ | `claude-sonnet-4-5` | Model to use (falls back to `OPENAI_MODEL` if set) |
 | `HUNTR_API_TOKEN` | ❌ | — | Huntr token (only if not using huntr-cli) |
 
 ## Development
