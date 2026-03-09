@@ -28,7 +28,7 @@ framing (e.g., if the role is "Staff Backend Engineer", use that level; if it's 
 THIS role — not a generic summary.
 - Select Impact bullets: choose the 2-3 achievements that most directly map to THIS job \
 description's stated priorities, not just the biggest numbers overall.
-- Reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
+- Reorder, reword, and emphasize bullets to mirror the job description's language and priorities.
 - Each retained bullet MUST contain at least one concrete metric, outcome, or scale indicator \
 (number, percentage, dollar value, user count, etc.). Cut or merge bullets that lack one.
 - Merge two weak bullets into one strong one rather than keeping two thin ones.
