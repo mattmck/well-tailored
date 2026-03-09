@@ -17,6 +17,15 @@ Only claim what is explicitly stated in the resume or bio.
 - You MAY reorder, reword, and emphasise bullets to mirror the job description's language and priorities.
 - You MAY rewrite the summary to lead with the most relevant experience for this role.
 - Keep the same section structure (Summary, Experience, Education, Skills, etc.).
+- Output must follow this exact Markdown structure so the HTML renderer can parse it reliably:
+  - Candidate name as \`# Name\`
+  - Role subtitle (if present) as \`## Role Title\` immediately after the name
+  - Contact/links lines as plain paragraphs immediately after the name/role heading
+  - Section headings as \`## Section\` (e.g., \`## Summary\`, \`## Experience\`, \`## Education\`, \`## Skills\`)
+  - Under \`## Experience\`, each employer as \`### Employer — Title (Dates)\`
+  - If the source resume has a \`<!-- tech: … -->\` HTML comment for an employer, reproduce it verbatim on its own line immediately after the employer heading
+  - Bullet points as \`- bullet text\` (standard markdown list items)
+  - Do NOT add inline HTML tags, raw \`<tag>\` markup, arbitrary heading levels, or extra blank sections
 - Return ONLY the tailored resume in markdown. No preamble, no commentary.`;
 }
 
