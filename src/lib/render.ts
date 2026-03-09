@@ -1,4 +1,5 @@
 import { Marked } from 'marked';
+import sanitizeHtmlLib from 'sanitize-html';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -6,6 +7,33 @@ import { Marked } from 'marked';
 
 function looksLikeDate(html: string): boolean {
   return /^\d{4}/.test(html.replace(/<[^>]*>/g, '').trim());
+}
+
+/** Escape special HTML characters in a plain-text string. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Strip dangerous HTML from Marked output using an allowlist-based sanitizer.
+ * Only the tags our custom renderer emits are allowed; attributes are restricted
+ * to href on <a> and the semantic CSS classes emitted by makeRenderer().
+ */
+function sanitizeHtml(html: string): string {
+  return sanitizeHtmlLib(html, {
+    allowedTags: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'hr', 'a', 'strong', 'em', 'code', 'br'],
+    allowedAttributes: { a: ['href'] },
+    allowedClasses: {
+      h2: ['role', 'section'],
+      p: ['contact', 'links', 'date'],
+    },
+    allowedSchemes: ['mailto', 'https', 'http'],
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -244,14 +272,15 @@ export function renderResumeHtml(markdown: string, pageTitle = 'Resume'): string
     .trim();
 
   const m = new Marked({ renderer: makeRenderer() });
-  const body = m.parse(cleaned) as string;
+  const body = sanitizeHtml(m.parse(cleaned) as string);
+  const safeTitle = escapeHtml(pageTitle);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${pageTitle}</title>
+  <title>${safeTitle}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

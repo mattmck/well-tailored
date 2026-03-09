@@ -124,14 +124,18 @@ const JOB_BOARD_DOMAINS = new Set([
  */
 function extractCompanyFromDescription(text: string): string | null {
   const snippet = text.slice(0, 800);
-  // Company name: 1-4 words, starts with capital, no common sentence starters
-  const NAME = '([A-Z][A-Za-z0-9&]+(?:[\\s-][A-Za-z0-9&]+){0,3}?)';
-  const NOT_COMMON = '(?!The |This |Our |We |You |All |With |When |As |If )';
+  // Company name: 1-4 words, may start with digit (1Password), lowercase (eBay),
+  // or capital; allow apostrophes (O'Reilly) and periods (e.g. Inc.) in words;
+  // each word must end on an alphanumeric to avoid trailing punctuation;
+  // optionally preceded by "The " (The New York Times).
+  const NAME = '((?:The )?[A-Za-z0-9][A-Za-z0-9&\'.]*[A-Za-z0-9](?:[\\s-][A-Za-z0-9&\'.]*[A-Za-z0-9]){0,3}?)';
+  const NOT_COMMON = '(?!This |Our |We |You |All |With |When |As |If )';
   const patterns = [
     new RegExp(`\\bAt ${NOT_COMMON}${NAME},`),
     new RegExp(`\\b${NOT_COMMON}${NAME} is (?:hiring|a leading|a platform|building|an )`),
     new RegExp(`^About ${NAME}\\s*$`, 'm'),
     new RegExp(`\\bJoin ${NOT_COMMON}${NAME} (?:in|and|if|to)\\b`),
+    new RegExp(`\\b${NOT_COMMON}${NAME}\\b (?:is |,|\\(|-)`),
   ];
   for (const re of patterns) {
     const m = snippet.match(re);

@@ -21,9 +21,11 @@ export async function complete(
     messages: [{ role: 'user', content: userPrompt }],
   });
 
-  const content = response.content[0];
-  if (!content || content.type !== 'text') {
+  const textBlocks = response.content.filter(
+    (block): block is Anthropic.TextBlock => block.type === 'text',
+  );
+  if (textBlocks.length === 0) {
     throw new Error('Claude returned an empty response.');
   }
-  return content.text.trim();
+  return textBlocks.map(block => block.text).join('').trim();
 }

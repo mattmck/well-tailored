@@ -156,13 +156,13 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
 }
 
 export function loadConfig(): Config {
-  const apiKey = process.env.ANTHROPIC_API_KEY ?? '';
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY ?? '';
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not set. Add it to .env or export it in your shell.');
+    throw new Error('ANTHROPIC_API_KEY (or OPENAI_API_KEY) is not set. Add it to .env or export it in your shell.');
   }
 
   return {
     apiKey,
-    model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5',
+    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'claude-sonnet-4-5',
   };
 }
