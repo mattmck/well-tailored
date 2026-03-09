@@ -1,5 +1,31 @@
-I am a senior software engineer who tends to do my best work in ambiguous environments where a team needs someone to bring structure without adding drama. I enjoy taking half-defined product ideas, legacy systems, or messy operational workflows and turning them into software that is easier to understand and easier to trust.
+# Sample bio template
 
-Over the last decade, I have worked across backend services, internal tools, frontend applications, and cloud infrastructure. I am strongest when I can connect technical execution to business outcomes: improving reliability, shortening delivery cycles, reducing manual work, and helping teams make better decisions with clearer systems.
+This file is a **sample** bio, provided only as a template. To use a bio with this tool:
 
-I usually gravitate toward teams that value ownership, clear writing, practical architecture, and collaboration across engineering, product, and design. I am especially energized by roles where I can combine hands-on coding with technical leadership, mentorship, and product judgment.
+1. Create your own file (for example, `bio.md`) alongside this one.
+2. Copy this template into that file.
+3. Replace all placeholder text with your own information.
+
+---
+
+## About me
+
+Write a short paragraph (3–5 sentences) that describes:
+
+- Your role and level (e.g., "mid-level backend engineer", "staff product designer").
+- The kinds of problems or environments where you do your best work.
+- A sentence about what you enjoy most in your day-to-day work.
+
+## Experience focus
+
+In a second paragraph, summarize:
+
+- The main areas you’ve worked in (e.g., backend services, data platforms, mobile apps, infrastructure).
+- How your work has connected to business outcomes (reliability, speed of delivery, cost savings, user impact, etc.).
+
+## What I look for
+
+In a final paragraph, describe:
+
+- The team cultures and values that bring out your best work.
+- The responsibilities and growth areas you’re most excited about (hands-on building, leadership, collaboration, etc.).
