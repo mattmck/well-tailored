@@ -23,7 +23,7 @@ Both documents are generated simultaneously via a single `job-shit tailor` call.
 
 ```bash
 cp .env.example .env
-# Add your OpenAI API key
+# Add your Anthropic API key
 npm install
 ```
 
@@ -57,6 +57,8 @@ Outputs:
 |------|---------|--------------------------|
 | `resume*.md` | Your base resume (markdown). | CWD, then `~/.job-shit/` |
 | `bio*.md` | Plain-English background blurb. | CWD, then `~/.job-shit/` |
+| `cover-letter*.md` | Base cover letter (voice/style reference, optional). | CWD, then `~/.job-shit/` |
+| `resume-supplemental*.md` | Extra resume detail (factual reference, optional). | CWD, then `~/.job-shit/` |
 | `jd.txt` | The job description (copy-paste). | Must be explicit (`--job`) |
 
 Within each location the **most recently modified** matching file is used automatically, so saving `resume-2026-03.md` will pick it up without changing any flags.
@@ -66,6 +68,9 @@ Starter templates are in the [`examples/`](examples/) directory — copy and ren
 ```bash
 cp examples/resume.sample.md resume.md
 cp examples/bio.sample.md bio.md
+# Optional but recommended:
+cp examples/cover-letter.sample.md cover-letter.md
+cp examples/resume-supplemental.sample.md resume-supplemental.md
 ```
 
 ### Huntr.co integration (bonus)
@@ -89,8 +94,8 @@ So if you've already run `huntr login` or `huntr config set-token` in huntr-cli,
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | ✅ | — | OpenAI API key |
-| `OPENAI_MODEL` | ❌ | `gpt-4o` | Model to use |
+| `ANTHROPIC_API_KEY` | ✅ | — | Anthropic API key |
+| `ANTHROPIC_MODEL` | ❌ | `claude-sonnet-4-5` | Model to use |
 | `HUNTR_API_TOKEN` | ❌ | — | Huntr token (only if not using huntr-cli) |
 
 ## Development

@@ -51,6 +51,18 @@ describe('prompts', () => {
       const input = { ...sampleInput, jobTitle: undefined };
       expect(resumeUserPrompt(input)).toContain('(see job description)');
     });
+
+    it('includes supplemental section when resumeSupplemental is provided', () => {
+      const input = { ...sampleInput, resumeSupplemental: 'Led a 10-person team at Startup X.' };
+      const prompt = resumeUserPrompt(input);
+      expect(prompt).toContain('Supplemental Resume Detail');
+      expect(prompt).toContain('Led a 10-person team at Startup X.');
+    });
+
+    it('omits supplemental section when resumeSupplemental is absent', () => {
+      const prompt = resumeUserPrompt(sampleInput);
+      expect(prompt).not.toContain('Supplemental Resume Detail');
+    });
   });
 
   describe('coverLetterSystemPrompt', () => {
@@ -70,6 +82,18 @@ describe('prompts', () => {
 
     it('includes job title', () => {
       expect(coverLetterUserPrompt(sampleInput)).toContain('Senior Software Engineer');
+    });
+
+    it('includes base cover letter section when baseCoverLetter is provided', () => {
+      const input = { ...sampleInput, baseCoverLetter: 'Dear Hiring Manager, I bring deep experience...' };
+      const prompt = coverLetterUserPrompt(input);
+      expect(prompt).toContain('My Base Cover Letter');
+      expect(prompt).toContain('Dear Hiring Manager, I bring deep experience...');
+    });
+
+    it('omits base cover letter section when baseCoverLetter is absent', () => {
+      const prompt = coverLetterUserPrompt(sampleInput);
+      expect(prompt).not.toContain('My Base Cover Letter');
     });
   });
 });

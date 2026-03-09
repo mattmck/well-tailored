@@ -78,3 +78,23 @@ export function findFile(opts: {
 export function readFile(filePath: string): string {
   return readFileSync(resolve(filePath), 'utf8').trim();
 }
+
+/**
+ * Discover optional supporting files (base cover letter and supplemental resume detail).
+ * Both are auto-detected from CWD or ~/.job-shit/; absence is not an error.
+ */
+export function findOptionalFiles(): { baseCoverLetter?: string; resumeSupplemental?: string } {
+  let baseCoverLetter: string | undefined;
+  try {
+    const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+    baseCoverLetter = readFile(coverLetterPath);
+  } catch { /* optional */ }
+
+  let resumeSupplemental: string | undefined;
+  try {
+    const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+    resumeSupplemental = readFile(supplementalPath);
+  } catch { /* optional */ }
+
+  return { baseCoverLetter, resumeSupplemental };
+}
