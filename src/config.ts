@@ -163,6 +163,6 @@ export function loadConfig(): Config {
 
   return {
     apiKey,
-    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'claude-sonnet-4-5',
+    model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5',
   };
 }
