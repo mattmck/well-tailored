@@ -88,13 +88,32 @@ export function findOptionalFiles(): { baseCoverLetter?: string; resumeSupplemen
   try {
     const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
     baseCoverLetter = readFile(coverLetterPath);
-  } catch { /* optional */ }
+  } catch (error) {
+    // Absence is optional; other errors (e.g., permission issues) should surface.
+    if (
+      !(error instanceof Error) ||
+      !error.message.startsWith('No Cover letter file found')
+    ) {
+      throw error;
+    }
+  }
 
   let resumeSupplemental: string | undefined;
   try {
-    const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+    const supplementalPath = findFile({
+      prefix: 'resume-supplemental',
+      label: 'Resume supplemental',
+    });
     resumeSupplemental = readFile(supplementalPath);
-  } catch { /* optional */ }
+  } catch (error) {
+    // Absence is optional; other errors (e.g., permission issues) should surface.
+    if (
+      !(error instanceof Error) ||
+      !error.message.startsWith('No Resume supplemental file found')
+    ) {
+      throw error;
+    }
+  }
 
   return { baseCoverLetter, resumeSupplemental };
 }
