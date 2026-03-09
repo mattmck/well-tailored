@@ -56,10 +56,4 @@ Example State University - B.S., Computer Science
 
 ## Technical Skills
 
-### Core Technologies
-
-TypeScript, Node.js, React, C#, .NET, PostgreSQL, MySQL, AWS, Azure, Terraform, Docker, GitHub Actions
-
-### Keywords
-
-Backend Engineering, Platform Engineering, Internal Tools, API Design, Cloud Infrastructure, Observability, Developer Experience, Cross-Functional Delivery
+TypeScript, Node.js, React, C#, .NET, PostgreSQL, MySQL, AWS, Azure, Terraform, Docker, GitHub Actions, Backend Engineering, Platform Engineering, Internal Tools, API Design, Cloud Infrastructure, Observability, Developer Experience, Cross-Functional Delivery
