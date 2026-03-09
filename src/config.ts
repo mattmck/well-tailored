@@ -158,7 +158,9 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
 export function loadConfig(): Config {
   const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY ?? '';
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not set. Add it to .env or export it in your shell.');
+    throw new Error(
+      'ANTHROPIC_API_KEY is not set (OPENAI_API_KEY is also accepted as a fallback). Add it to .env or export it in your shell.',
+    );
   }
 
   return {
