@@ -4,3 +4,9 @@ dist/
 *.env.local
 output/*
 !output/.gitkeep
+
+# Personal files — use *.sample.md versions as templates
+resume.md
+resume-supplemental.md
+cover-letter.md
+bio.md
