@@ -6,7 +6,11 @@ import sanitizeHtmlLib from 'sanitize-html';
 // ---------------------------------------------------------------------------
 
 function looksLikeDate(html: string): boolean {
-  return /^\d{4}/.test(html.replace(/<[^>]*>/g, '').trim());
+  const text = sanitizeHtmlLib(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+  }).trim();
+  return /^\d{4}/.test(text);
 }
 
 /** Escape special HTML characters in a plain-text string. */
