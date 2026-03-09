@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
-import { createOpenAIClient } from '../lib/ai.js';
+import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { renderResumeHtml } from '../lib/render.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -348,7 +349,7 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Using bio:    ${bioPath}`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.apiKey);
+      const aiClient = createAnthropicClient(config.apiKey);
 
       await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model: config.model, outputDir: opts.output });
     });
@@ -401,7 +402,7 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.apiKey);
+      const aiClient = createAnthropicClient(config.apiKey);
 
       let done = 0;
       let failed = 0;
@@ -467,7 +468,7 @@ async function tailorAndWrite(args: {
   bio: string;
   baseCoverLetter?: string;
   resumeSupplemental?: string;
-  aiClient: Awaited<ReturnType<typeof createOpenAIClient>>;
+  aiClient: Awaited<ReturnType<typeof createAnthropicClient>>;
   model: string;
   outputDir: string;
 }): Promise<void> {
@@ -504,6 +505,10 @@ async function tailorAndWrite(args: {
   writeFileSync(resumeOut, output.resume, 'utf8');
   writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
+  const resumeHtmlOut = join(outputDir, `resume-${slug}.html`);
+  writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume — ${companyName}`), 'utf8');
+
   console.log(`    ✓ resume       → ${resumeOut}`);
+  console.log(`    ✓ resume (html)→ ${resumeHtmlOut}`);
   console.log(`    ✓ cover letter → ${coverLetterOut}`);
 }
