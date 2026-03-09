@@ -18,7 +18,7 @@ const sampleInput: TailorInput = {
 describe('prompts', () => {
   describe('resumeSystemPrompt', () => {
     it('instructs not to invent credentials', () => {
-      expect(resumeSystemPrompt()).toContain('NEVER invent');
+      expect(resumeSystemPrompt()).toContain('NEVER invent, fabricate');
     });
 
     it('asks for markdown output only', () => {
