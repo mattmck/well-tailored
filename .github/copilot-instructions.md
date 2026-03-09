@@ -23,7 +23,7 @@ Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level comman
 
 ### Core lib (`src/lib/`)
 
-- `ai.ts` — thin OpenAI wrapper (`complete()`, takes an injected client)
+- `ai.ts` — thin Anthropic/Claude wrapper (`complete()`, takes an injected client)
 - `tailor.ts` — `tailorDocuments()` fans out resume + cover letter calls via `Promise.all`
 - `prompts.ts` — system/user prompts for resume and cover letter, kept separate
 - `files.ts` — `findFile()` auto-discovers `resume*.md` / `bio*.md` from CWD then `~/.job-shit/`
@@ -39,7 +39,7 @@ Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level comman
 
 ### Config
 
-`src/config.ts` — loads `OPENAI_API_KEY` / `OPENAI_MODEL`. `resolveHuntrToken()` checks env → `~/.huntr/config.json` → system keychain (keytar), matching huntr-cli's credential chain.
+`src/config.ts` — loads `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` (falls back to `OPENAI_API_KEY` / `OPENAI_MODEL`, defaults to `claude-sonnet-4-5`). `resolveHuntrToken()` checks env → `~/.huntr/config.json` → system keychain (keytar), matching huntr-cli's credential chain.
 
 ### Output
 
@@ -48,7 +48,7 @@ All generated files go under `output/` (gitignored). Naming: `resume-<company>-<
 ## Conventions
 
 - **Language**: TypeScript (ESM, `"type": "module"` in package.json). Always use `.js` extensions in imports.
-- **Tests**: Vitest. Test files live in `tests/`. Mock OpenAI via dependency injection — `tailorDocuments()` and `complete()` accept an injected client so tests never hit the network.
+- **Tests**: Vitest. Test files live in `tests/`. Mock Anthropic client via dependency injection — `tailorDocuments()` and `complete()` accept an injected client so tests never hit the network.
 - **Linting**: ESLint with `@typescript-eslint`. Run `npm run lint` before committing.
 - **Type checking**: Run `npm run typecheck` before committing.
 - **Node version**: Requires Node.js >=20.19.0.

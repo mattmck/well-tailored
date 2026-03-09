@@ -96,7 +96,11 @@ export function registerTailorCommand(program: Command): void {
       writeFileSync(resumeOut, output.resume, 'utf8');
       writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
+      const resumeHtmlOut = join(opts.output, `resume-${slug}.html`);
+      writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume — ${opts.company}`), 'utf8');
+
       console.log(`✓ Tailored resume   → ${resumeOut}`);
+      console.log(`✓ Resume (HTML)     → ${resumeHtmlOut}`);
       console.log(`✓ Cover letter      → ${coverLetterOut}`);
     });
 }
