@@ -25,9 +25,10 @@ export async function complete(
   const text = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === 'text')
     .map((block) => block.text)
-    .join('');
+    .join('')
+    .trim();
   if (!text) {
     throw new Error('Claude returned an empty response.');
   }
-  return text.trim();
+  return text;
 }
