@@ -1,31 +1,31 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 
-export function createOpenAIClient(apiKey: string): OpenAI {
-  return new OpenAI({ apiKey });
+export function createAnthropicClient(apiKey: string): Anthropic {
+  return new Anthropic({ apiKey });
 }
 
 /**
- * Send a single chat-completion request and return the text.
+ * Send a single Messages API request and return the text.
  * Throws if the API returns no content.
  */
 export async function complete(
-  client: OpenAI,
+  client: Anthropic,
   model: string,
   systemPrompt: string,
   userPrompt: string,
 ): Promise<string> {
-  const response = await client.chat.completions.create({
+  const response = await client.messages.create({
     model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature: 0.4,
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }],
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('OpenAI returned an empty response.');
+  const textBlocks = response.content.filter(
+    (block): block is Anthropic.TextBlock => block.type === 'text',
+  );
+  if (textBlocks.length === 0) {
+    throw new Error('Claude returned an empty response.');
   }
-  return content.trim();
+  return textBlocks.map(block => block.text).join('').trim();
 }

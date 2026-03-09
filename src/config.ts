@@ -55,6 +55,7 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
     const sessionCookie = await keytar.getPassword('huntr-cli', 'clerk-session-cookie');
     const sessionId = await keytar.getPassword('huntr-cli', 'clerk-session-id');
     const clientUat = await keytar.getPassword('huntr-cli', 'clerk-client-uat');
+    const extraCookiesRaw = await keytar.getPassword('huntr-cli', 'clerk-extra-cookies');
 
     if (!sessionCookie || !sessionId) return undefined;
 
@@ -64,7 +65,19 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
       : sessionCookie;
 
     const uat = clientUat?.trim() || '1';
-    const cookieHeader = `__session=${raw}; __client_uat=${uat}`;
+    const cookieParts = [`__session=${raw}`, `__client_uat=${uat}`];
+
+    // Include extra cookies (e.g. __client JWT) stored by huntr-cli
+    if (extraCookiesRaw) {
+      try {
+        const extraCookies = JSON.parse(extraCookiesRaw) as Record<string, string>;
+        for (const [name, value] of Object.entries(extraCookies)) {
+          cookieParts.push(`${name}=${value}`);
+        }
+      } catch { /* ignore malformed extra cookies */ }
+    }
+
+    const cookieHeader = cookieParts.join('; ');
     const path = `/v1/client/sessions/${sessionId}/tokens?_clerk_js_version=${CLERK_JS_VERSION}`;
 
     return new Promise<string | undefined>((resolve) => {
@@ -143,13 +156,13 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
 }
 
 export function loadConfig(): Config {
-  const openaiApiKey = process.env.OPENAI_API_KEY ?? '';
-  if (!openaiApiKey) {
-    throw new Error('OPENAI_API_KEY is not set. Add it to .env or export it in your shell.');
+  const apiKey = process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY ?? '';
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY (or OPENAI_API_KEY) is not set. Add it to .env or export it in your shell.');
   }
 
   return {
-    openaiApiKey,
-    openaiModel: process.env.OPENAI_MODEL ?? 'gpt-4o',
+    apiKey,
+    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'claude-sonnet-4-5',
   };
 }

@@ -10,6 +10,10 @@ export interface TailorInput {
   jobTitle?: string;
   /** Full text of the job description. */
   jobDescription: string;
+  /** Optional base cover letter to use as a style/tone reference. */
+  baseCoverLetter?: string;
+  /** Optional supplemental resume detail for AI reference (do not reproduce verbatim). */
+  resumeSupplemental?: string;
 }
 
 /** Outputs from the tailoring workflow. */
@@ -20,6 +24,6 @@ export interface TailorOutput {
 
 /** Config loaded from env / options. */
 export interface Config {
-  openaiApiKey: string;
-  openaiModel: string;
+  apiKey: string;
+  model: string;
 }

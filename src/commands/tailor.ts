@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from '../config.js';
-import { createOpenAIClient } from '../lib/ai.js';
+import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { renderResumeHtml } from '../lib/render.js';
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -65,17 +66,31 @@ export function registerTailorCommand(program: Command): void {
       const resume = readFile(resumePath);
       const bio = readFile(bioPath);
 
+      let baseCoverLetter: string | undefined;
+      try {
+        const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+        baseCoverLetter = readFile(coverLetterPath);
+      } catch { /* optional */ }
+
+      let resumeSupplemental: string | undefined;
+      try {
+        const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+        resumeSupplemental = readFile(supplementalPath);
+      } catch { /* optional */ }
+
       const config = loadConfig();
-      const client = createOpenAIClient(config.openaiApiKey);
+      const client = createAnthropicClient(config.apiKey);
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
-      const output = await tailorDocuments(client, config.openaiModel, {
+      const output = await tailorDocuments(client, config.model, {
         resume,
         bio,
+        baseCoverLetter,
+        resumeSupplemental,
         company: opts.company,
         jobTitle: opts.title,
         jobDescription,
@@ -92,7 +107,11 @@ export function registerTailorCommand(program: Command): void {
       writeFileSync(resumeOut, output.resume, 'utf8');
       writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
+      const resumeHtmlOut = join(opts.output, `resume-${slug}.html`);
+      writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume — ${opts.company}`), 'utf8');
+
       console.log(`✓ Tailored resume   → ${resumeOut}`);
+      console.log(`✓ Resume (HTML)     → ${resumeHtmlOut}`);
       console.log(`✓ Cover letter      → ${coverLetterOut}`);
     });
 }

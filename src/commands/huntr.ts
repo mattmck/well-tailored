@@ -2,9 +2,10 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
-import { createOpenAIClient } from '../lib/ai.js';
+import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { renderResumeHtml } from '../lib/render.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -112,9 +113,49 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+const JOB_BOARD_DOMAINS = new Set([
+  'linkedin.com', 'indeed.com', 'glassdoor.com', 'ziprecruiter.com',
+  'dice.com', 'monster.com', 'simplyhired.com', 'careerbuilder.com',
+]);
+
+/**
+ * Try to extract the hiring company name from a plain-text job description.
+ * Matches patterns like "At Acme," / "Acme is hiring" / "About Acme\n".
+ */
+function extractCompanyFromDescription(text: string): string | null {
+  const snippet = text.slice(0, 800);
+  // Company name: 1-4 words, may start with digit (1Password), lowercase (eBay),
+  // or capital; allow apostrophes (O'Reilly) and periods (e.g. Inc.) in words;
+  // each word must end on an alphanumeric to avoid trailing punctuation;
+  // optionally preceded by "The " (The New York Times).
+  const NAME = '((?:The )?[A-Za-z0-9][A-Za-z0-9&\'.]*[A-Za-z0-9](?:[\\s-][A-Za-z0-9&\'.]*[A-Za-z0-9]){0,3}?)';
+  const NOT_COMMON = '(?!This |Our |We |You |All |With |When |As |If )';
+  const patterns = [
+    new RegExp(`\\bAt ${NOT_COMMON}${NAME},`),
+    new RegExp(`\\b${NOT_COMMON}${NAME} is (?:hiring|a leading|a platform|building|an )`),
+    new RegExp(`^About ${NAME}\\s*$`, 'm'),
+    new RegExp(`\\bJoin ${NOT_COMMON}${NAME} (?:in|and|if|to)\\b`),
+    new RegExp(`\\b${NOT_COMMON}${NAME}\\b (?:is |,|\\(|-)`),
+  ];
+  for (const re of patterns) {
+    const m = snippet.match(re);
+    if (m?.[1]) return m[1].trim().replace(/[,.]$/, '');
+  }
+  return null;
+}
+
 function extractCompanyName(job: HuntrJob): string {
   if (job.company?.name) return job.company.name;
-  if (job.rootDomain) return job.rootDomain;
+
+  // If the URL is from a job board, the rootDomain is useless — dig into the description
+  const isJobBoard = job.rootDomain && JOB_BOARD_DOMAINS.has(job.rootDomain);
+  if (isJobBoard && job.htmlDescription) {
+    const plain = stripHtml(job.htmlDescription);
+    const extracted = extractCompanyFromDescription(plain);
+    if (extracted) return extracted;
+  }
+
+  if (job.rootDomain && !isJobBoard) return job.rootDomain;
   if (job.url) {
     try { return new URL(job.url).hostname.replace(/^www\./, ''); } catch { /* fall through */ }
   }
@@ -135,9 +176,11 @@ async function requireHuntrToken(): Promise<string> {
 
 /** Fetch all active boards. */
 async function getBoards(client: HuntrApiClient): Promise<HuntrBoard[]> {
-  const res = await client.get<HuntrBoard[] | { data: HuntrBoard[] }>('/user/boards');
-  const all = Array.isArray(res) ? res : res.data;
-  return all.filter((b) => !b.isArchived);
+  // API returns a keyed object: { boardId: { _id?, isArchived, ... } }
+  const res = await client.get<Record<string, { _id?: string; name?: string; isArchived: boolean }>>('/user/boards');
+  return Object.entries(res)
+    .map(([key, board]) => ({ ...board, id: board._id ?? key }))
+    .filter((b) => !b.isArchived);
 }
 
 /** Fetch all jobs for a board as a flat array. */
@@ -287,7 +330,7 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
 
       // Resolve job — use explicit board or search all boards
       let job: HuntrJob;
@@ -310,9 +353,9 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Using bio:    ${bioPath}`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.openaiApiKey);
+      const aiClient = createAnthropicClient(config.apiKey);
 
-      await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model: config.model, outputDir: opts.output });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -338,7 +381,7 @@ export function registerHuntrCommand(program: Command): void {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}\n`);
 
@@ -363,13 +406,13 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
 
       const config = loadConfig();
-      const aiClient = createOpenAIClient(config.openaiApiKey);
+      const aiClient = createAnthropicClient(config.apiKey);
 
       let done = 0;
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, aiClient, model: config.openaiModel, outputDir: opts.output });
+          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model: config.model, outputDir: opts.output });
           done++;
         } catch (err) {
           failed++;
@@ -392,7 +435,7 @@ export function registerHuntrCommand(program: Command): void {
 function resolveBaseFiles(
   explicitResume?: string,
   explicitBio?: string,
-): { resume: string; bio: string; resumePath: string; bioPath: string } {
+): { resume: string; bio: string; baseCoverLetter?: string; resumeSupplemental?: string; resumePath: string; bioPath: string } {
   let resumePath: string;
   let bioPath: string;
   try {
@@ -407,18 +450,33 @@ function resolveBaseFiles(
     console.error(`Error: ${(err as Error).message}`);
     process.exit(1);
   }
-  return { resume: readFile(resumePath), bio: readFile(bioPath), resumePath, bioPath };
+
+  let baseCoverLetter: string | undefined;
+  try {
+    const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+    baseCoverLetter = readFile(coverLetterPath);
+  } catch { /* optional */ }
+
+  let resumeSupplemental: string | undefined;
+  try {
+    const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+    resumeSupplemental = readFile(supplementalPath);
+  } catch { /* optional */ }
+
+  return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumeSupplemental, resumePath, bioPath };
 }
 
 async function tailorAndWrite(args: {
   job: HuntrJob;
   resume: string;
   bio: string;
-  aiClient: ReturnType<typeof createOpenAIClient>;
+  baseCoverLetter?: string;
+  resumeSupplemental?: string;
+  aiClient: ReturnType<typeof createAnthropicClient>;
   model: string;
   outputDir: string;
 }): Promise<void> {
-  const { job, resume, bio, aiClient, model, outputDir } = args;
+  const { job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model, outputDir } = args;
   const companyName = extractCompanyName(job);
   const jobDescription = job.htmlDescription
     ? stripHtml(job.htmlDescription)
@@ -434,6 +492,8 @@ async function tailorAndWrite(args: {
   const output = await tailorDocuments(aiClient, model, {
     resume,
     bio,
+    baseCoverLetter,
+    resumeSupplemental,
     company: companyName,
     jobTitle: job.title,
     jobDescription,
@@ -449,6 +509,10 @@ async function tailorAndWrite(args: {
   writeFileSync(resumeOut, output.resume, 'utf8');
   writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
+  const resumeHtmlOut = join(outputDir, `resume-${slug}.html`);
+  writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume — ${companyName}`), 'utf8');
+
   console.log(`    ✓ resume       → ${resumeOut}`);
+  console.log(`    ✓ resume (html)→ ${resumeHtmlOut}`);
   console.log(`    ✓ cover letter → ${coverLetterOut}`);
 }
