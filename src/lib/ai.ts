@@ -5,8 +5,8 @@ export function createAnthropicClient(apiKey: string): Anthropic {
 }
 
 /**
- * Send a single chat-completion request and return the text.
- * Throws if the API returns no content.
+ * Send a single Anthropic messages request and return the text.
+ * Throws if the API returns no text content.
  */
 export async function complete(
   client: Anthropic,
@@ -17,13 +17,18 @@ export async function complete(
   const response = await client.messages.create({
     model,
     max_tokens: 4096,
+    temperature: 0.4,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   });
 
-  const content = response.content[0];
-  if (!content || content.type !== 'text') {
+  const text = response.content
+    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('')
+    .trim();
+  if (!text) {
     throw new Error('Claude returned an empty response.');
   }
-  return content.text.trim();
+  return text;
 }

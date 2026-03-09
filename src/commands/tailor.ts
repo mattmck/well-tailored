@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from '../config.js';
-import { createOpenAIClient } from '../lib/ai.js';
+import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 function slugify(text: string): string {
@@ -78,7 +78,7 @@ export function registerTailorCommand(program: Command): void {
       } catch { /* optional */ }
 
       const config = loadConfig();
-      const client = createOpenAIClient(config.apiKey);
+      const client = createAnthropicClient(config.apiKey);
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
