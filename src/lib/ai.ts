@@ -5,7 +5,7 @@ export function createAnthropicClient(apiKey: string): Anthropic {
 }
 
 /**
- * Send a single chat-completion request and return the text.
+ * Send a single Messages API request and return the text.
  * Throws if the API returns no content.
  */
 export async function complete(
