@@ -4,7 +4,7 @@ import { join } from 'path';
 import { loadConfig } from '../config.js';
 import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
-import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { findFile, readFile, findOptionalFiles, JOB_SHIT_DIR } from '../lib/files.js';
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -65,17 +65,7 @@ export function registerTailorCommand(program: Command): void {
       const resume = readFile(resumePath);
       const bio = readFile(bioPath);
 
-      let baseCoverLetter: string | undefined;
-      try {
-        const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
-        baseCoverLetter = readFile(coverLetterPath);
-      } catch { /* optional */ }
-
-      let resumeSupplemental: string | undefined;
-      try {
-        const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
-        resumeSupplemental = readFile(supplementalPath);
-      } catch { /* optional */ }
+      const { baseCoverLetter, resumeSupplemental } = findOptionalFiles();
 
       const config = loadConfig();
       const client = createAnthropicClient(config.apiKey);

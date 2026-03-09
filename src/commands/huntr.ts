@@ -4,7 +4,7 @@ import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
 import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
-import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { findFile, readFile, findOptionalFiles, JOB_SHIT_DIR } from '../lib/files.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -446,17 +446,7 @@ function resolveBaseFiles(
     process.exit(1);
   }
 
-  let baseCoverLetter: string | undefined;
-  try {
-    const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
-    baseCoverLetter = readFile(coverLetterPath);
-  } catch { /* optional */ }
-
-  let resumeSupplemental: string | undefined;
-  try {
-    const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
-    resumeSupplemental = readFile(supplementalPath);
-  } catch { /* optional */ }
+  const { baseCoverLetter, resumeSupplemental } = findOptionalFiles();
 
   return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumeSupplemental, resumePath, bioPath };
 }

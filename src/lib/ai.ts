@@ -18,7 +18,6 @@ export async function complete(
     model,
     max_tokens: 4096,
     temperature: 0.4,
-    temperature: 0.4,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   });
