@@ -157,6 +157,6 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
 
 export function loadConfig(): Config {
   return {
-    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'claude-sonnet-4-5',
+    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'auto',
   };
 }

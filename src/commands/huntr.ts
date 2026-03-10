@@ -358,6 +358,7 @@ export function registerHuntrCommand(program: Command): void {
     )
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')
+    .option('-m, --model <model>', 'AI model to use (overrides ANTHROPIC_MODEL / OPENAI_MODEL env vars)')
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .action(async (jobId: string, opts: {
       board?: string;
@@ -365,6 +366,7 @@ export function registerHuntrCommand(program: Command): void {
       bio?: string;
       supplemental?: string;
       output: string;
+      model?: string;
       verbose?: boolean;
     }) => {
       const token = await requireHuntrToken();
@@ -394,8 +396,9 @@ export function registerHuntrCommand(program: Command): void {
       if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
 
       const config = loadConfig();
+      const model = opts.model ?? config.model;
 
-      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model: config.model, outputDir: opts.output, verbose: opts.verbose });
+      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir: opts.output, verbose: opts.verbose });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -413,6 +416,7 @@ export function registerHuntrCommand(program: Command): void {
     )
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')
+    .option('-m, --model <model>', 'AI model to use (overrides ANTHROPIC_MODEL / OPENAI_MODEL env vars)')
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .action(async (opts: {
       board?: string;
@@ -420,6 +424,7 @@ export function registerHuntrCommand(program: Command): void {
       bio?: string;
       supplemental?: string;
       output: string;
+      model?: string;
       verbose?: boolean;
     }) => {
       const token = await requireHuntrToken();
@@ -452,12 +457,13 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
 
       const config = loadConfig();
+      const model = opts.model ?? config.model;
 
       let done = 0;
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model: config.model, outputDir: opts.output, verbose: opts.verbose });
+          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir: opts.output, verbose: opts.verbose });
           done++;
         } catch (err) {
           failed++;

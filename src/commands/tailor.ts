@@ -30,6 +30,7 @@ export function registerTailorCommand(program: Command): void {
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-t, --title <title>', 'Job title (inferred from JD if omitted)')
     .option('-o, --output <dir>', 'Output directory', 'output')
+    .option('-m, --model <model>', 'AI model to use (overrides ANTHROPIC_MODEL / OPENAI_MODEL env vars)')
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .action(async (opts: {
       company: string;
@@ -39,6 +40,7 @@ export function registerTailorCommand(program: Command): void {
       supplemental?: string;
       title?: string;
       output: string;
+      model?: string;
       verbose?: boolean;
     }) => {
       // Resolve input files
@@ -89,13 +91,14 @@ export function registerTailorCommand(program: Command): void {
       }
 
       const config = loadConfig();
+      const model = opts.model ?? config.model;
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
-      const output = await tailorDocuments(config.model, {
+      const output = await tailorDocuments(model, {
         resume,
         bio,
         baseCoverLetter,
