@@ -96,4 +96,10 @@ describe('renderResumeHtml', () => {
     const html = renderResumeHtml(SAMPLE, 'Resume — Acme Corp');
     expect(html).toContain('<title>Resume — Acme Corp</title>');
   });
+
+  it('includes Google Fonts Inter stylesheet', () => {
+    const html = renderResumeHtml(SAMPLE);
+    expect(html).toContain('fonts.googleapis.com');
+    expect(html).toContain('family=Inter');
+  });
 });
