@@ -116,6 +116,14 @@ function slugify(text: string): string {
 const JOB_BOARD_DOMAINS = new Set([
   'linkedin.com', 'indeed.com', 'glassdoor.com', 'ziprecruiter.com',
   'dice.com', 'monster.com', 'simplyhired.com', 'careerbuilder.com',
+  'greenhouse.io', 'boards.greenhouse.io',
+  'lever.co', 'jobs.lever.co',
+]);
+
+// Job boards where the company slug is the first path segment, not a subdomain.
+const PATH_BASED_JOB_BOARDS = new Set([
+  'greenhouse.io', 'boards.greenhouse.io',
+  'lever.co', 'jobs.lever.co',
 ]);
 
 /**
@@ -177,14 +185,14 @@ function extractCompanyName(job: HuntrJob): string {
     try {
       const url = new URL(job.url);
       const hostname = url.hostname.replace(/^www\./, '');
-      
-      // If it's not a job board, the hostname is likely the company
-      if (!JOB_BOARD_DOMAINS.has(hostname)) {
-        // Handle greenhouse/lever specific board names
-        if (hostname.includes('greenhouse.io') || hostname.includes('lever.co')) {
-          const parts = hostname.split('.');
-          if (parts.length > 2) return parts[0];
-        }
+
+      if (PATH_BASED_JOB_BOARDS.has(hostname)) {
+        // For boards like boards.greenhouse.io/<company>/... or jobs.lever.co/<company>/...
+        // the company slug is the first non-empty path segment.
+        const pathParts = url.pathname.split('/').filter(Boolean);
+        if (pathParts.length > 0) return decodeURIComponent(pathParts[0]);
+      } else if (!JOB_BOARD_DOMAINS.has(hostname)) {
+        // For company-hosted career sites the hostname itself identifies the company.
         return hostname;
       }
     } catch { /* fall through */ }
