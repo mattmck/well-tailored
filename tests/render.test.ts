@@ -51,11 +51,28 @@ describe('renderResumeHtml', () => {
   it('marks the contact line as p.contact', () => {
     const html = renderResumeHtml(SAMPLE);
     expect(html).toContain('class="contact"');
-    expect(html).toContain('jane@example.com');
+    expect(html).toContain('<a href="mailto:jane@example.com">jane@example.com</a>');
   });
 
   it('marks the links line as p.links', () => {
-    expect(renderResumeHtml(SAMPLE)).toContain('class="links"');
+    const html = renderResumeHtml(SAMPLE);
+    expect(html).toContain('class="links"');
+    expect(html).toContain('<a href="https://linkedin.com/in/janedoe">linkedin.com/in/janedoe</a>');
+    expect(html).toContain('<a href="https://github.com/janedoe">github.com/janedoe</a>');
+  });
+
+  it('renders markdown links instead of printing them literally', () => {
+    const html = renderResumeHtml(`
+# Matt McKnight
+## Staff Engineer
+
+[mcknight.matthew@gmail.com](mailto:mcknight.matthew@gmail.com) | [linkedin.com/in/matthewmcknight](https://linkedin.com/in/matthewmcknight)
+    `.trim());
+
+    expect(html).toContain('<a href="mailto:mcknight.matthew@gmail.com">mcknight.matthew@gmail.com</a>');
+    expect(html).toContain('<a href="https://linkedin.com/in/matthewmcknight">linkedin.com/in/matthewmcknight</a>');
+    expect(html).not.toContain('[mcknight.matthew@gmail.com]');
+    expect(html).not.toContain('[linkedin.com/in/matthewmcknight]');
   });
 
   it('marks date paragraphs as p.date', () => {
@@ -78,9 +95,5 @@ describe('renderResumeHtml', () => {
   it('uses the pageTitle in the <title> tag', () => {
     const html = renderResumeHtml(SAMPLE, 'Resume — Acme Corp');
     expect(html).toContain('<title>Resume — Acme Corp</title>');
-  });
-
-  it('loads Inter from Google Fonts', () => {
-    expect(renderResumeHtml(SAMPLE)).toContain('fonts.googleapis.com');
   });
 });

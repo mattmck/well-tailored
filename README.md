@@ -2,39 +2,53 @@
 
 Stop suffering. Pipe your base resume + company info + job description through AI and get a tailored resume **and** cover letter back — in parallel — without touching them yourself.
 
-## The workflow
+## How it works
+
+See [`docs/generation-flow.html`](docs/generation-flow.html) for a full architecture diagram (also in [landscape](docs/generation-flow-landscape.html)).
+
+Two entry points, one pipeline:
 
 ```
-base resume (resume*.md — auto-detected)
-+ personal bio (bio*.md — auto-detected)
-+ company name
-+ job description (jd.txt)
-          │
-          ▼
-    [AI — parallel]
-   ┌──────┴───────┐
-   ▼              ▼
-resume-acme.md   cover-letter-acme.md
+  [manual]  resume.md + bio.md + job.txt + --company
+  [huntr]   Wishlist jobs pulled automatically via Huntr API
+       │
+       ▼
+  Provider (first matching env var wins)
+  Gemini → Azure OpenAI → OpenAI → Anthropic
+       │
+       ▼
+  Generate (Promise.all — concurrent)
+  ┌─────────────────┬──────────────────┐
+  │  resume         │  cover letter    │
+  │  systemPrompt() │  systemPrompt()  │
+  │  userPrompt()   │  userPrompt()    │
+  └─────────────────┴──────────────────┘
+       │
+       ▼
+  Render: markdown → marked → sanitize-html → HTML → Chrome headless → PDF
+       │
+       ▼
+  output/resume-<slug>.{md,html,pdf}
+  output/cover-letter-<slug>.{md,html,pdf}
 ```
 
-Both documents are generated simultaneously via a single `job-shit tailor` call.
+Stack resume maintenance runs as a separate track using `tailorResume()` — single AI call, no cover letter.
 
 ## Setup
 
 ```bash
 cp .env.example .env
-# Add your OpenAI API key
+# Add at least one AI provider key (see Environment variables below)
 npm install
+npm run build
 ```
 
 ## Usage
 
-### Tailor resume + cover letter
+### Tailor resume + cover letter for a job
 
 ```bash
-# Minimal — company name and job description file required.
-# Resume and bio are auto-detected from the current directory
-# or ~/.job-shit/ (most recently modified matching file wins).
+# Minimal — resume and bio are auto-detected from CWD or ~/.job-shit/
 job-shit tailor --company "Acme Corp" --job jd.txt
 
 # Full options
@@ -42,57 +56,79 @@ job-shit tailor \
   --company "Acme Corp" \
   --job jd.txt \
   --title "Senior Software Engineer" \
-  --resume path/to/resume.md \   # optional — auto-detected if omitted
-  --bio path/to/bio.md \         # optional — auto-detected if omitted
-  --output output/               # default: output/
+  --resume path/to/resume.md \
+  --bio path/to/bio.md \
+  --supplemental path/to/resume-supplemental.md \
+  --output output/
 ```
 
-Outputs:
-- `output/resume-acme-corp.md`
-- `output/cover-letter-acme-corp.md`
+Outputs (written to `output/`, gitignored):
+- `resume-acme-corp.md` / `.html` / `.pdf`
+- `cover-letter-acme-corp.md` / `.html` / `.pdf`
+
+PDF generation requires Google Chrome installed.
 
 ### Base files
 
-| File | Purpose | Default search locations |
-|------|---------|--------------------------|
-| `resume*.md` | Your base resume (markdown). | CWD, then `~/.job-shit/` |
-| `bio*.md` | Plain-English background blurb. | CWD, then `~/.job-shit/` |
-| `jd.txt` | The job description (copy-paste). | Must be explicit (`--job`) |
+| File | Purpose | Auto-discovery |
+|------|---------|----------------|
+| `resume*.md` | Base resume (markdown) | CWD, then `~/.job-shit/` — most recently modified wins |
+| `bio*.md` | Personal background blurb | CWD, then `~/.job-shit/` |
+| `cover-letter*.md` | Voice/tone reference for cover letter | CWD, then `~/.job-shit/` — optional |
+| `resume-supplemental*.md` | Extra factual context for AI | CWD, then `~/.job-shit/` — optional |
 
-Within each location the **most recently modified** matching file is used automatically, so saving `resume-2026-03.md` will pick it up without changing any flags.
-
-### Huntr.co integration (bonus)
+### Huntr.co integration
 
 ```bash
-# List all jobs from your huntr boards
+# List jobs in your Wishlist (not yet applied to)
+job-shit huntr wishlist
+
+# List all jobs across boards with their current stage
 job-shit huntr jobs
 
-# Tailor directly from a huntr job ID (fetches JD from Huntr automatically)
-job-shit huntr tailor <jobId> --board <boardId>
+# Tailor a specific job (board auto-detected)
+job-shit huntr tailor <jobId>
+
+# Tailor every Wishlist job in one shot
+job-shit huntr tailor-all
 ```
 
-**Credentials are read automatically** from huntr-cli in this order:
+**Credentials** are resolved automatically in this order:
 1. `HUNTR_API_TOKEN` environment variable
-2. `~/.huntr/config.json` (set by `huntr config set-token`)
-3. System keychain (set by `huntr config set-token --keychain`)
+2. `~/.huntr/config.json` (written by `huntr config set-token`)
+3. System keychain (written by `huntr config set-token --keychain`)
 
-So if you've already run `huntr login` or `huntr config set-token` in huntr-cli, no extra config is needed here.
+If you've already used huntr-cli, no extra config is needed.
 
 ## Environment variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | ✅ | — | OpenAI API key |
-| `OPENAI_MODEL` | ❌ | `gpt-4o` | Model to use |
-| `HUNTR_API_TOKEN` | ❌ | — | Huntr token (only if not using huntr-cli) |
+At least one AI provider key is required. The first matching key wins.
+
+| Variable | Provider | Default model |
+|----------|----------|---------------|
+| `GEMINI_API_KEY` | Google Gemini | `gemini-2.0-flash-lite` |
+| `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY` | Azure AI Foundry | `gpt-4o-mini` |
+| `OPENAI_API_KEY` | OpenAI (or any compatible endpoint) | `gpt-4o-mini` |
+| `ANTHROPIC_API_KEY` | Anthropic Claude | `claude-haiku-4-5` |
+
+Optional:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_MODEL` / `OPENAI_MODEL` | Override the default model for that provider |
+| `AZURE_OPENAI_DEPLOYMENT` | Azure deployment name (default: `gpt-4o-mini`) |
+| `AZURE_OPENAI_API_VERSION` | Azure API version (default: `2024-12-01-preview`) |
+| `OPENAI_BASE_URL` | Custom base URL for OpenAI-compatible endpoints |
+| `HUNTR_API_TOKEN` | Huntr token (if not using huntr-cli credentials) |
 
 ## Development
 
 ```bash
 npm run dev -- tailor --help   # run via tsx without building
 npm run build                  # compile to dist/
-npm test                       # run tests
-npm run lint                   # lint
-npm run typecheck              # type check
+npm test                       # run tests (vitest)
+npm run typecheck              # tsc --noEmit
+npm run lint                   # eslint
 ```
 
+Sample files for testing without real personal data are in `*.sample.md`.

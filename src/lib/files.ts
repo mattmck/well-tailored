@@ -5,6 +5,12 @@ import { homedir } from 'os';
 /** Default directory where job-shit looks for base files. */
 export const JOB_SHIT_DIR = join(homedir(), '.job-shit');
 
+/** Local directory for prompt overrides (ignored by git). */
+export const PROMPT_DIR = 'prompts';
+
+/** Global directory for prompt overrides. */
+export const PROMPTS_GLOBAL_DIR = join(JOB_SHIT_DIR, 'prompts');
+
 /**
  * Find the most recently modified file matching a glob-like basename pattern.
  * Checks the given directory and returns the path of the newest match, or null.
@@ -77,4 +83,19 @@ export function findFile(opts: {
 /** Read a file and return its trimmed contents. */
 export function readFile(filePath: string): string {
   return readFileSync(resolve(filePath), 'utf8').trim();
+}
+
+/**
+ * Load a prompt from a file, with fallbacks.
+ * Checks local 'prompts/' directory then global '~/.job-shit/prompts/'.
+ * Returns the provided default if no file is found.
+ */
+export function loadPrompt(filename: string, defaultValue: string): string {
+  const localPath = join(PROMPT_DIR, filename);
+  if (existsSync(localPath)) return readFile(localPath);
+
+  const globalPath = join(PROMPTS_GLOBAL_DIR, filename);
+  if (existsSync(globalPath)) return readFile(globalPath);
+
+  return defaultValue;
 }

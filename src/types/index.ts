@@ -24,6 +24,5 @@ export interface TailorOutput {
 
 /** Config loaded from env / options. */
 export interface Config {
-  apiKey: string;
   model: string;
 }

@@ -2,10 +2,9 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
-import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
-import { renderResumeHtml } from '../lib/render.js';
+import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -27,6 +26,7 @@ interface HuntrCompany {
   _id?: string;
   id?: string;
   name?: string;
+  domain?: string;
 }
 
 interface HuntrJob {
@@ -37,7 +37,7 @@ interface HuntrJob {
   htmlDescription?: string;
   _list?: string;   // which list (wishlist, applied, etc.) this job belongs to
   _company?: string;
-  company?: HuntrCompany;
+  company?: HuntrCompany | string;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,20 +145,56 @@ function extractCompanyFromDescription(text: string): string | null {
 }
 
 function extractCompanyName(job: HuntrJob): string {
-  if (job.company?.name) return job.company.name;
+  let name: string | undefined;
+  
+  if (typeof job.company === 'object') {
+    name = job.company.name;
+  } else if (typeof job.company === 'string') {
+    // If it's a string, it might be the name or an ID.
+    // If it looks like a Mongo ID (24 chars hex), it's not the name.
+    if (!/^[0-9a-fA-F]{24}$/.test(job.company)) {
+      name = job.company;
+    }
+  }
 
-  // If the URL is from a job board, the rootDomain is useless — dig into the description
-  const isJobBoard = job.rootDomain && JOB_BOARD_DOMAINS.has(job.rootDomain);
-  if (isJobBoard && job.htmlDescription) {
+  // Detect and reject generic/placeholder names from extensions
+  const placeholders = new Set(['the job', 'unknown company', 'unknown', 'job']);
+  if (name && placeholders.has(name.toLowerCase())) {
+    name = undefined;
+  }
+
+  if (name) return name;
+
+  // Fallback 1: Try to extract from description
+  if (job.htmlDescription) {
     const plain = stripHtml(job.htmlDescription);
     const extracted = extractCompanyFromDescription(plain);
     if (extracted) return extracted;
   }
 
-  if (job.rootDomain && !isJobBoard) return job.rootDomain;
+  // Fallback 2: Try to extract from URL
   if (job.url) {
-    try { return new URL(job.url).hostname.replace(/^www\./, ''); } catch { /* fall through */ }
+    try {
+      const url = new URL(job.url);
+      const hostname = url.hostname.replace(/^www\./, '');
+      
+      // If it's not a job board, the hostname is likely the company
+      if (!JOB_BOARD_DOMAINS.has(hostname)) {
+        // Handle greenhouse/lever specific board names
+        if (hostname.includes('greenhouse.io') || hostname.includes('lever.co')) {
+          const parts = hostname.split('.');
+          if (parts.length > 2) return parts[0];
+        }
+        return hostname;
+      }
+    } catch { /* fall through */ }
   }
+
+  // Fallback 3: rootDomain if not a job board
+  if (job.rootDomain && !JOB_BOARD_DOMAINS.has(job.rootDomain)) {
+    return job.rootDomain;
+  }
+
   return 'Unknown Company';
 }
 
@@ -320,17 +356,21 @@ export function registerHuntrCommand(program: Command): void {
       '-b, --bio <file>',
       `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
     )
+    .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')
+    .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .action(async (jobId: string, opts: {
       board?: string;
       resume?: string;
       bio?: string;
+      supplemental?: string;
       output: string;
+      verbose?: boolean;
     }) => {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath } = resolveBaseFiles(opts.resume, opts.bio, opts.supplemental);
 
       // Resolve job — use explicit board or search all boards
       let job: HuntrJob;
@@ -351,11 +391,11 @@ export function registerHuntrCommand(program: Command): void {
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
+      if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
 
       const config = loadConfig();
-      const aiClient = createAnthropicClient(config.apiKey);
 
-      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model: config.model, outputDir: opts.output });
+      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model: config.model, outputDir: opts.output, verbose: opts.verbose });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -371,19 +411,25 @@ export function registerHuntrCommand(program: Command): void {
       '-b, --bio <file>',
       `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
     )
+    .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')
+    .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .action(async (opts: {
       board?: string;
       resume?: string;
       bio?: string;
+      supplemental?: string;
       output: string;
+      verbose?: boolean;
     }) => {
       const token = await requireHuntrToken();
       const client = createHuntrClient(token);
 
-      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath } = resolveBaseFiles(opts.resume, opts.bio);
+      const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath } = resolveBaseFiles(opts.resume, opts.bio, opts.supplemental);
       console.log(`\nUsing resume: ${resumePath}`);
-      console.log(`Using bio:    ${bioPath}\n`);
+      console.log(`Using bio:    ${bioPath}`);
+      if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
+      console.log('');
 
       const boards = opts.board
         ? [{ id: opts.board, isArchived: false }]
@@ -406,19 +452,23 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
 
       const config = loadConfig();
-      const aiClient = createAnthropicClient(config.apiKey);
 
       let done = 0;
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model: config.model, outputDir: opts.output });
+          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model: config.model, outputDir: opts.output, verbose: opts.verbose });
           done++;
         } catch (err) {
           failed++;
           console.error(`  ❌  Failed to tailor ${job.title ?? 'unknown'} @ ${extractCompanyName(job)}: ${err instanceof Error ? err.message : String(err)}`);
         }
-        if (done + failed < wishlistJobs.length) console.log('');
+        const remaining = wishlistJobs.length - done - failed;
+        if (remaining > 0) {
+          console.log('');
+          // Small pause between jobs to stay within provider rate limits
+          await new Promise<void>((r) => setTimeout(r, 2_000));
+        }
       }
 
       const summary = failed > 0
@@ -435,7 +485,8 @@ export function registerHuntrCommand(program: Command): void {
 function resolveBaseFiles(
   explicitResume?: string,
   explicitBio?: string,
-): { resume: string; bio: string; baseCoverLetter?: string; resumeSupplemental?: string; resumePath: string; bioPath: string } {
+  explicitSupplemental?: string,
+): { resume: string; bio: string; baseCoverLetter?: string; resumeSupplemental?: string; resumePath: string; bioPath: string; supplementalPath?: string } {
   let resumePath: string;
   let bioPath: string;
   try {
@@ -458,12 +509,13 @@ function resolveBaseFiles(
   } catch { /* optional */ }
 
   let resumeSupplemental: string | undefined;
+  let supplementalPath: string | undefined;
   try {
-    const supplementalPath = findFile({ prefix: 'resume-supplemental', label: 'Resume supplemental' });
+    supplementalPath = findFile({ explicit: explicitSupplemental, prefix: 'resume-supplemental', label: 'Resume supplemental' });
     resumeSupplemental = readFile(supplementalPath);
   } catch { /* optional */ }
 
-  return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumeSupplemental, resumePath, bioPath };
+  return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath };
 }
 
 async function tailorAndWrite(args: {
@@ -472,11 +524,11 @@ async function tailorAndWrite(args: {
   bio: string;
   baseCoverLetter?: string;
   resumeSupplemental?: string;
-  aiClient: ReturnType<typeof createAnthropicClient>;
   model: string;
   outputDir: string;
+  verbose?: boolean;
 }): Promise<void> {
-  const { job, resume, bio, baseCoverLetter, resumeSupplemental, aiClient, model, outputDir } = args;
+  const { job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir, verbose = false } = args;
   const companyName = extractCompanyName(job);
   const jobDescription = job.htmlDescription
     ? stripHtml(job.htmlDescription)
@@ -489,7 +541,7 @@ async function tailorAndWrite(args: {
   console.log(`🎯  ${job.title} @ ${companyName}`);
   console.log('    Generating resume and cover letter in parallel...');
 
-  const output = await tailorDocuments(aiClient, model, {
+  const output = await tailorDocuments(model, {
     resume,
     bio,
     baseCoverLetter,
@@ -497,12 +549,13 @@ async function tailorAndWrite(args: {
     company: companyName,
     jobTitle: job.title,
     jobDescription,
-  });
+  }, verbose);
 
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
+  const datePrefix = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
-  const slug = slugify(slugParts);
+  const slug = `${datePrefix}-${slugify(slugParts)}`;
   const resumeOut = join(outputDir, `resume-${slug}.md`);
   const coverLetterOut = join(outputDir, `cover-letter-${slug}.md`);
 
@@ -510,9 +563,21 @@ async function tailorAndWrite(args: {
   writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
   const resumeHtmlOut = join(outputDir, `resume-${slug}.html`);
-  writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume — ${companyName}`), 'utf8');
+  writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Matthew McKnight - Resume - ${companyName}`), 'utf8');
+
+  const resumePdfOut = join(outputDir, `resume-${slug}.pdf`);
+  await renderPdf(resumeHtmlOut, resumePdfOut);
+
+  const coverLetterHtmlOut = join(outputDir, `cover-letter-${slug}.html`);
+  writeFileSync(coverLetterHtmlOut, renderCoverLetterHtml(output.coverLetter, `Matthew McKnight - Cover Letter - ${companyName}`), 'utf8');
+
+  const coverLetterPdfOut = join(outputDir, `cover-letter-${slug}.pdf`);
+  await renderPdf(coverLetterHtmlOut, coverLetterPdfOut);
 
   console.log(`    ✓ resume       → ${resumeOut}`);
   console.log(`    ✓ resume (html)→ ${resumeHtmlOut}`);
+  console.log(`    ✓ resume (pdf) → ${resumePdfOut}`);
   console.log(`    ✓ cover letter → ${coverLetterOut}`);
+  console.log(`    ✓ cl (html)    → ${coverLetterHtmlOut}`);
+  console.log(`    ✓ cl (pdf)     → ${coverLetterPdfOut}`);
 }

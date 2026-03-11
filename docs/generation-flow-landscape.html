@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>generation flow · landscape · job-shit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f1faff;
+      --dark:        #3f4756;
+      --mid:         #708090;
+      --text:        #444;
+      --border:      rgba(63,71,86,0.11);
+      --border-soft: rgba(63,71,86,0.06);
+      --label-h:     24px;
+      --label-gap:   10px;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 60px 48px 100px;
+    }
+
+    /* ── Header ──────────────────────────────────── */
+
+    .header {
+      margin-bottom: 52px;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: reveal 0.5s ease 0.04s forwards;
+    }
+
+    .header-eyebrow {
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-eyebrow::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .header-title {
+      font-family: 'Crimson Pro', serif;
+      font-size: 38px;
+      font-weight: 600;
+      color: var(--dark);
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .header-sub {
+      font-family: 'Crimson Pro', serif;
+      font-size: 16px;
+      font-style: italic;
+      color: var(--mid);
+      line-height: 1.5;
+    }
+
+    @keyframes reveal { to { opacity: 1; transform: translateY(0); } }
+
+    .flow-item {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: reveal 0.45s ease forwards;
+    }
+
+    /* ── Lane ────────────────────────────────────── */
+
+    .lane-name {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.6;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .lane-name::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Grid layout ─────────────────────────────── */
+
+    /* 9 columns: 5 content cols + 4 arrow cols */
+    .lane-grid {
+      display: grid;
+      grid-template-columns: 252px 40px 162px 40px 425px 40px 194px 40px 216px;
+      grid-template-rows: var(--label-h) auto;
+      row-gap: var(--label-gap);
+      align-items: stretch;
+    }
+
+    .col-label {
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.6;
+      display: flex;
+      align-items: center;
+    }
+
+    /* arrow cols: empty in label row */
+    .h-arr-label { /* intentionally empty */ }
+
+    .col-content {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Horizontal arrow ────────────────────────── */
+
+    .h-arrow {
+      display: flex;
+      align-items: center;
+    }
+
+    .h-arrow-inner {
+      width: 100%;
+      height: 1px;
+      background: rgba(63,71,86,0.14);
+      position: relative;
+    }
+
+    .h-arrow-inner::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 3px solid transparent;
+      border-bottom: 3px solid transparent;
+      border-left: 4px solid rgba(112,128,144,0.35);
+    }
+
+    .h-arrow.dim .h-arrow-inner { background: rgba(63,71,86,0.07); }
+    .h-arrow.dim .h-arrow-inner::after { border-left-color: rgba(112,128,144,0.2); }
+
+    /* ── Generic card ────────────────────────────── */
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 18px 20px;
+      height: 100%;
+    }
+
+    .note { font-size: 10px; color: var(--mid); opacity: 0.55; line-height: 1.5; }
+
+    /* ── Discovery: two path cards stacked ───────── */
+
+    .path-stack { display: flex; flex-direction: column; gap: 10px; height: 100%; }
+
+    .path-mini {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .path-mini-head {
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .path-tag { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); opacity: 0.6; }
+    .path-cmd { font-size: 9px; color: var(--dark); opacity: 0.5; }
+
+    .path-mini-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    .user-block {
+      border: 1px dashed rgba(112,128,144,0.25);
+      border-radius: 3px;
+      padding: 8px 11px;
+      background: var(--border-soft);
+    }
+
+    .user-lbl { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); opacity: 0.6; margin-bottom: 4px; }
+    .user-txt { font-size: 10px; color: var(--mid); line-height: 1.4; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip { font-size: 9.5px; padding: 3px 7px; border-radius: 3px; line-height: 1; }
+    .chip.req  { background: var(--dark); color: var(--bg); }
+    .chip.opt  { border: 1px solid rgba(112,128,144,0.25); color: var(--mid); }
+    .chip.flag { background: var(--border-soft); border: 1px solid var(--border); color: var(--dark); }
+
+    .api-steps { display: flex; flex-direction: column; gap: 5px; }
+    .api-step { font-size: 10px; color: var(--dark); display: flex; gap: 6px; }
+    .api-step::before { content: '·'; color: var(--mid); opacity: 0.4; flex-shrink: 0; }
+    .api-step.dim { color: var(--mid); }
+
+    /* ── Provider column (vertical chain) ────────── */
+
+    .provider-v {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 18px 16px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      height: 100%;
+    }
+
+    .prov-item {
+      font-size: 11px;
+      color: var(--dark);
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: #fff;
+      text-align: center;
+    }
+
+    .prov-down { font-size: 10px; color: var(--mid); opacity: 0.35; text-align: center; }
+
+    /* ── Shared/compact card (stack lane) ────────── */
+
+    .shared-card {
+      background: var(--border-soft);
+      border: 1px dashed rgba(112,128,144,0.18);
+      border-radius: 5px;
+      padding: 18px 16px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+    }
+
+    .shared-badge { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); opacity: 0.5; }
+    .shared-text  { font-size: 10px; color: var(--mid); opacity: 0.6; line-height: 1.6; }
+
+    /* ── Parallel generate (dark card) ───────────── */
+
+    .parallel-card {
+      background: var(--dark);
+      border-radius: 5px;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .parallel-head {
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(241,250,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .parallel-head-label { font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(241,250,255,0.28); }
+
+    .promise-badge {
+      font-size: 10px;
+      color: rgba(241,250,255,0.8);
+      background: rgba(241,250,255,0.07);
+      border: 1px solid rgba(241,250,255,0.12);
+      padding: 2px 9px;
+      border-radius: 3px;
+    }
+
+    .streams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+    }
+
+    .stream { padding: 16px; min-width: 0; }
+    .stream:first-child { border-right: 1px solid rgba(241,250,255,0.07); }
+
+    .stream-name { font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(241,250,255,0.3); margin-bottom: 12px; }
+
+    .stream-steps { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+    .stream-step { font-size: 10px; color: rgba(241,250,255,0.65); display: flex; gap: 7px; }
+    .stream-step::before { content: '·'; color: rgba(241,250,255,0.2); flex-shrink: 0; }
+
+    .prompt-preview {
+      padding: 11px;
+      background: rgba(0,0,0,0.18);
+      border-radius: 3px;
+      border: 1px solid rgba(241,250,255,0.05);
+    }
+
+    .prompt-opening {
+      font-family: 'Crimson Pro', serif;
+      font-style: italic;
+      font-size: 11.5px;
+      color: rgba(241,250,255,0.45);
+      line-height: 1.5;
+      margin-bottom: 9px;
+    }
+
+    .prompt-rules { display: flex; flex-direction: column; gap: 5px; }
+    .prompt-rule { font-size: 9.5px; color: rgba(241,250,255,0.24); line-height: 1.45; display: flex; gap: 6px; }
+    .prompt-rule::before { content: '—'; flex-shrink: 0; opacity: 0.4; }
+
+    .stream-footer {
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px solid rgba(241,250,255,0.05);
+      font-size: 9px;
+      color: rgba(241,250,255,0.2);
+      line-height: 1.6;
+    }
+
+    /* ── Single call (stack generate) ────────────── */
+
+    .single-card {
+      background: var(--dark);
+      border-radius: 5px;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      opacity: 0.82;
+    }
+
+    .single-head {
+      padding: 10px 18px;
+      border-bottom: 1px solid rgba(241,250,255,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .single-head-label { font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(241,250,255,0.22); }
+
+    .single-badge {
+      font-size: 10px;
+      color: rgba(241,250,255,0.65);
+      background: rgba(241,250,255,0.06);
+      border: 1px solid rgba(241,250,255,0.1);
+      padding: 2px 9px;
+      border-radius: 3px;
+    }
+
+    .single-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+
+    .single-step { font-size: 10px; color: rgba(241,250,255,0.58); display: flex; gap: 7px; margin-bottom: 7px; }
+    .single-step::before { content: '·'; color: rgba(241,250,255,0.2); flex-shrink: 0; }
+    .single-step:last-of-type { margin-bottom: 0; }
+
+    .single-note {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(241,250,255,0.05);
+      font-size: 9px;
+      color: rgba(241,250,255,0.2);
+      line-height: 1.6;
+    }
+
+    /* ── Render card ──────────────────────────────── */
+
+    .render-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 18px 18px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pipeline { display: flex; flex-direction: column; gap: 7px; }
+    .pl-step  { font-size: 11px; color: var(--dark); }
+    .pl-down  { font-size: 10px; color: var(--mid); opacity: 0.35; padding-left: 3px; }
+
+    /* ── Output card ──────────────────────────────── */
+
+    .output-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 18px 18px;
+      height: 100%;
+    }
+
+    .output-grp-label {
+      font-size: 8.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--mid);
+      opacity: 0.5;
+      margin-bottom: 8px;
+    }
+
+    .output-files { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+    .output-files:last-of-type { margin-bottom: 0; }
+
+    .out-file {
+      font-size: 10px;
+      padding: 4px 9px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--dark);
+      background: #fff;
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .out-file.dim { color: var(--mid); background: var(--border-soft); border-color: transparent; }
+
+    /* ── Stack profiles card ─────────────────────── */
+
+    .stack-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 16px 18px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stack-list { display: flex; flex-direction: column; }
+    .stack-row  { padding: 7px 0; border-bottom: 1px solid var(--border-soft); }
+    .stack-row:first-child { border-top: 1px solid var(--border-soft); }
+    .stack-row:last-child  { border-bottom: none; }
+    .stack-name { font-size: 10px; color: var(--dark); line-height: 1; margin-bottom: 2px; }
+    .stack-desc { font-size: 9.5px; color: var(--mid); opacity: 0.65; }
+
+    /* ── Lane separator ───────────────────────────── */
+
+    .lane-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Header ───────────────────────────────── -->
+  <div class="header">
+    <div class="header-eyebrow">job-shit · architecture · landscape</div>
+    <h1 class="header-title">Generation Flow</h1>
+    <p class="header-sub">Two workflows, one pipeline — left to right. Job application above; stack resume maintenance below.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       LANE 1 · JOB APPLICATION
+       ══════════════════════════════════════════════ -->
+  <div class="flow-item" style="animation-delay:0.10s">
+    <div class="lane-name">Job Application · resume + cover letter</div>
+
+    <div class="lane-grid">
+
+      <!-- ── Labels row ─────────────────────────── -->
+      <div class="col-label">Discovery</div>
+      <div></div>
+      <div class="col-label">Provider</div>
+      <div></div>
+      <div class="col-label">Generate</div>
+      <div></div>
+      <div class="col-label">Render</div>
+      <div></div>
+      <div class="col-label">Outputs</div>
+
+      <!-- ── Content row ────────────────────────── -->
+
+      <!-- Discovery: manual + huntr stacked -->
+      <div class="col-content">
+        <div class="path-stack">
+          <div class="path-mini">
+            <div class="path-mini-head">
+              <span class="path-tag">manual</span>
+              <span class="path-cmd">tailor</span>
+            </div>
+            <div class="path-mini-body">
+              <div class="user-block">
+                <div class="user-lbl">user</div>
+                <div class="user-txt">finds job · saves job.txt</div>
+              </div>
+              <div class="chips">
+                <span class="chip req">resume.md</span>
+                <span class="chip req">bio.md</span>
+                <span class="chip req">job.txt</span>
+                <span class="chip flag">--company</span>
+                <span class="chip flag">--title</span>
+                <span class="chip opt">cover-letter.md</span>
+                <span class="chip opt">resume-supplemental.md</span>
+              </div>
+            </div>
+          </div>
+          <div class="path-mini">
+            <div class="path-mini-head">
+              <span class="path-tag">huntr</span>
+              <span class="path-cmd">huntr tailor[-all]</span>
+            </div>
+            <div class="path-mini-body">
+              <div class="user-block">
+                <div class="user-lbl">user</div>
+                <div class="user-txt">browses boards · saves to Wishlist</div>
+              </div>
+              <div class="api-steps">
+                <div class="api-step">resolveHuntrToken()</div>
+                <div class="api-step dim">env → config → keychain</div>
+                <div class="api-step">GET /board/{id}/jobs</div>
+                <div class="api-step">filter Wishlist · extractCompany()</div>
+                <div class="api-step">stripHtml(htmlDescription)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- → -->
+      <div class="h-arrow"><div class="h-arrow-inner"></div></div>
+
+      <!-- Provider -->
+      <div class="col-content">
+        <div class="provider-v">
+          <div class="prov-item">Gemini</div>
+          <div class="prov-down">↓</div>
+          <div class="prov-item">Azure</div>
+          <div class="prov-down">↓</div>
+          <div class="prov-item">OpenAI</div>
+          <div class="prov-down">↓</div>
+          <div class="prov-item">Anthropic</div>
+          <p class="note" style="margin-top:10px;font-size:9px">first matching env var wins</p>
+        </div>
+      </div>
+
+      <!-- → -->
+      <div class="h-arrow"><div class="h-arrow-inner"></div></div>
+
+      <!-- Generate: parallel -->
+      <div class="col-content">
+        <div class="parallel-card">
+          <div class="parallel-head">
+            <span class="parallel-head-label">concurrent ai calls</span>
+            <span class="promise-badge">Promise.all()</span>
+          </div>
+          <div class="streams">
+            <div class="stream">
+              <div class="stream-name">Resume</div>
+              <div class="stream-steps">
+                <div class="stream-step">resumeSystemPrompt()</div>
+                <div class="stream-step">resumeUserPrompt(input)</div>
+                <div class="stream-step">complete(model, sys, usr)</div>
+              </div>
+              <div class="prompt-preview">
+                <div class="prompt-opening">"You are an expert resume writer. Tailor the candidate's resume for a specific role…"</div>
+                <div class="prompt-rules">
+                  <div class="prompt-rule">NEVER invent, fabricate, or exaggerate experience</div>
+                  <div class="prompt-rule">Ownership voice — "built", "shipped", "led" — never "helped"</div>
+                  <div class="prompt-rule">LENGTH — must fit one page. Be ruthless</div>
+                </div>
+              </div>
+              <div class="stream-footer">↺ up to 6 retries on 429 · 30s base</div>
+            </div>
+            <div class="stream">
+              <div class="stream-name">Cover Letter</div>
+              <div class="stream-steps">
+                <div class="stream-step">coverLetterSystemPrompt()</div>
+                <div class="stream-step">coverLetterUserPrompt(input)</div>
+                <div class="stream-step">complete(model, sys, usr)</div>
+              </div>
+              <div class="prompt-preview">
+                <div class="prompt-opening">"Sharp, confident, non-generic writing for senior engineers…"</div>
+                <div class="prompt-rules">
+                  <div class="prompt-rule">Sounds like someone who could walk away from this offer</div>
+                  <div class="prompt-rule">Prohibited: "I'm excited to apply", "team player", "great fit"</div>
+                  <div class="prompt-rule">Paragraph 3: specific company challenge — not a compliment</div>
+                </div>
+              </div>
+              <div class="stream-footer">↺ up to 6 retries on 429 · 30s base</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- → -->
+      <div class="h-arrow"><div class="h-arrow-inner"></div></div>
+
+      <!-- Render -->
+      <div class="col-content">
+        <div class="render-card">
+          <div class="pipeline">
+            <span class="pl-step">markdown</span>
+            <span class="pl-down">↓</span>
+            <span class="pl-step">marked</span>
+            <span class="pl-down">↓</span>
+            <span class="pl-step">sanitize-html</span>
+            <span class="pl-down">↓</span>
+            <span class="pl-step">styled HTML</span>
+            <span class="pl-down">↓</span>
+            <span class="pl-step">Chrome headless</span>
+            <span class="pl-down">↓</span>
+            <span class="pl-step">PDF</span>
+          </div>
+          <p class="note" style="margin-top:14px">custom renderer · semantic CSS · print-ready</p>
+        </div>
+      </div>
+
+      <!-- → -->
+      <div class="h-arrow"><div class="h-arrow-inner"></div></div>
+
+      <!-- Outputs -->
+      <div class="col-content">
+        <div class="output-card">
+          <div class="output-grp-label">resume</div>
+          <div class="output-files">
+            <span class="out-file">resume-&lt;slug&gt;.md</span>
+            <span class="out-file">resume-&lt;slug&gt;.html</span>
+            <span class="out-file dim">resume-&lt;slug&gt;.pdf</span>
+          </div>
+          <div class="output-grp-label">cover letter</div>
+          <div class="output-files">
+            <span class="out-file">cover-letter-&lt;slug&gt;.md</span>
+            <span class="out-file">cover-letter-&lt;slug&gt;.html</span>
+            <span class="out-file dim">cover-letter-&lt;slug&gt;.pdf</span>
+          </div>
+          <p class="note" style="margin-top:12px">output/ · gitignored</p>
+        </div>
+      </div>
+
+    </div><!-- /lane-grid -->
+  </div>
+
+  <!-- ── Separator ─────────────────────────────── -->
+  <div class="flow-item lane-sep" style="animation-delay:0.22s"></div>
+
+  <!-- ══════════════════════════════════════════════
+       LANE 2 · STACK MAINTENANCE
+       ══════════════════════════════════════════════ -->
+  <div class="flow-item" style="animation-delay:0.28s">
+    <div class="lane-name">Stack Maintenance · resume only</div>
+
+    <div class="lane-grid">
+
+      <!-- ── Labels row ─────────────────────────── -->
+      <div class="col-label">Stack Profiles</div>
+      <div></div>
+      <div class="col-label" style="opacity:0.3">Provider</div>
+      <div></div>
+      <div class="col-label">Generate</div>
+      <div></div>
+      <div class="col-label" style="opacity:0.3">Render</div>
+      <div></div>
+      <div class="col-label">Outputs</div>
+
+      <!-- ── Content row ────────────────────────── -->
+
+      <!-- Stack profiles -->
+      <div class="col-content">
+        <div class="stack-card">
+          <div class="user-block" style="margin-bottom:12px">
+            <div class="user-lbl">user</div>
+            <div class="user-txt">authors a generic role description per technology stack</div>
+          </div>
+          <div class="stack-list" style="flex:1">
+            <div class="stack-row">
+              <div class="stack-name">aws · java · spring · eks</div>
+              <div class="stack-desc">backend microservices · JVM · cloud-native</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-name">azure · node · react · serverless</div>
+              <div class="stack-desc">full-stack SaaS · TypeScript · functions</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-name">gcp · python · k8s · data-eng</div>
+              <div class="stack-desc">data pipelines · ML infra · distributed</div>
+            </div>
+            <div class="stack-row">
+              <div class="stack-name">ts · postgres · redis · graphql</div>
+              <div class="stack-desc">product eng · API-first · full-stack</div>
+            </div>
+          </div>
+          <p class="note" style="margin-top:10px">stack-*.md · reusable · not job-specific</p>
+        </div>
+      </div>
+
+      <!-- → (dim) -->
+      <div class="h-arrow dim"><div class="h-arrow-inner"></div></div>
+
+      <!-- Provider: shared/compact -->
+      <div class="col-content">
+        <div class="shared-card">
+          <div class="shared-badge">shared</div>
+          <div class="shared-text">same provider chain<br>same retry logic</div>
+        </div>
+      </div>
+
+      <!-- → (dim) -->
+      <div class="h-arrow dim"><div class="h-arrow-inner"></div></div>
+
+      <!-- Generate: single call -->
+      <div class="col-content">
+        <div class="single-card">
+          <div class="single-head">
+            <span class="single-head-label">single ai call · no cover letter</span>
+            <span class="single-badge">tailorResume()</span>
+          </div>
+          <div class="single-body">
+            <div class="single-step">resumeSystemPrompt()</div>
+            <div class="single-step">resumeUserPrompt(input)</div>
+            <div class="single-step">complete(model, sys, usr)</div>
+            <div class="prompt-preview" style="margin-top:12px">
+              <div class="prompt-opening">"You are an expert resume writer. Tailor the candidate's resume for a specific role…"</div>
+              <div class="prompt-rules">
+                <div class="prompt-rule">same system prompt · stack keyword emphasis over company framing</div>
+                <div class="prompt-rule">resume only · no cover letter generated</div>
+              </div>
+            </div>
+            <div class="single-note">no cover letter · resume only<br>↺ same retry logic · same provider chain</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- → (dim) -->
+      <div class="h-arrow dim"><div class="h-arrow-inner"></div></div>
+
+      <!-- Render: shared/compact -->
+      <div class="col-content">
+        <div class="shared-card">
+          <div class="shared-badge">shared</div>
+          <div class="shared-text">marked → HTML → PDF<br>same CSS · same renderer</div>
+        </div>
+      </div>
+
+      <!-- → (dim) -->
+      <div class="h-arrow dim"><div class="h-arrow-inner"></div></div>
+
+      <!-- Outputs: resume only -->
+      <div class="col-content">
+        <div class="output-card">
+          <div class="output-grp-label">resume only</div>
+          <div class="output-files">
+            <span class="out-file">resume-aws-java-eks.md</span>
+            <span class="out-file">resume-aws-java-eks.html</span>
+            <span class="out-file dim">resume-aws-java-eks.pdf</span>
+          </div>
+          <p class="note" style="margin-top:12px">one file per stack<br>refreshed as base resume evolves</p>
+        </div>
+      </div>
+
+    </div><!-- /lane-grid -->
+  </div>
+
+</div>
+</body>
+</html>
