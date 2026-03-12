@@ -5,17 +5,29 @@ import { homedir } from 'os';
 /** Default directory where job-shit looks for base files. */
 export const JOB_SHIT_DIR = join(homedir(), '.job-shit');
 
+/** Local directory for prompt overrides (ignored by git). */
+export const PROMPT_DIR = 'prompts';
+
+/** Global directory for prompt overrides. */
+export const PROMPTS_GLOBAL_DIR = join(JOB_SHIT_DIR, 'prompts');
+
 /**
  * Find the most recently modified file matching a glob-like basename pattern.
  * Checks the given directory and returns the path of the newest match, or null.
+ * Explicitly ignores files starting with 'sample.'.
  */
 function findLatestIn(dir: string, prefix: string, ext: string): string | null {
   if (!existsSync(dir)) return null;
 
+  // 1. Try exact match first (e.g., "resume.md")
+  const exactPath = join(dir, `${prefix}${ext}`);
+  if (existsSync(exactPath)) return exactPath;
+
+  // 2. Try prefix matches, ignoring samples
   let entries: { path: string; mtime: number }[];
   try {
     entries = readdirSync(dir)
-      .filter((f) => f.startsWith(prefix) && f.endsWith(ext))
+      .filter((f) => f.startsWith(prefix) && f.endsWith(ext) && !f.startsWith('sample.'))
       .map((f) => {
         const p = join(dir, f);
         return { path: p, mtime: statSync(p).mtimeMs };
@@ -34,8 +46,8 @@ function findLatestIn(dir: string, prefix: string, ext: string): string | null {
  *
  * Resolution order (stops at first hit):
  *   1. Explicit path (if provided via CLI flag)
- *   2. Current directory — most recently modified file matching prefix+ext
- *   3. ~/.job-shit/    — most recently modified file matching prefix+ext
+ *   2. Current directory — exact match (prefix+ext), then newest prefix+ext (ignoring samples)
+ *   3. ~/.job-shit/    — exact match (prefix+ext), then newest prefix+ext (ignoring samples)
  *
  * Returns the resolved path string, or throws if nothing is found.
  *
@@ -77,4 +89,19 @@ export function findFile(opts: {
 /** Read a file and return its trimmed contents. */
 export function readFile(filePath: string): string {
   return readFileSync(resolve(filePath), 'utf8').trim();
+}
+
+/**
+ * Load a prompt from a file, with fallbacks.
+ * Checks local 'prompts/' directory then global '~/.job-shit/prompts/'.
+ * Returns the provided default if no file is found.
+ */
+export function loadPrompt(filename: string, defaultValue: string): string {
+  const localPath = join(PROMPT_DIR, filename);
+  if (existsSync(localPath)) return readFile(localPath);
+
+  const globalPath = join(PROMPTS_GLOBAL_DIR, filename);
+  if (existsSync(globalPath)) return readFile(globalPath);
+
+  return defaultValue;
 }

@@ -1,5 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { complete } from './ai.js';
+import { complete as defaultComplete } from './ai.js';
 import {
   resumeSystemPrompt,
   resumeUserPrompt,
@@ -13,13 +12,14 @@ import { TailorInput, TailorOutput } from '../types/index.js';
  * Returns both strings once both API calls complete.
  */
 export async function tailorDocuments(
-  client: Anthropic,
   model: string,
   input: TailorInput,
+  verbose = false,
+  complete = defaultComplete,
 ): Promise<TailorOutput> {
   const [resume, coverLetter] = await Promise.all([
-    complete(client, model, resumeSystemPrompt(), resumeUserPrompt(input)),
-    complete(client, model, coverLetterSystemPrompt(), coverLetterUserPrompt(input)),
+    complete(model, resumeSystemPrompt(), resumeUserPrompt(input), verbose),
+    complete(model, coverLetterSystemPrompt(), coverLetterUserPrompt(input), verbose),
   ]);
 
   return { resume, coverLetter };
@@ -30,9 +30,10 @@ export async function tailorDocuments(
  * Use this when a cover letter is not required (e.g. stack profiles).
  */
 export async function tailorResume(
-  client: Anthropic,
   model: string,
   input: TailorInput,
+  verbose = false,
+  complete = defaultComplete,
 ): Promise<string> {
-  return complete(client, model, resumeSystemPrompt(), resumeUserPrompt(input));
+  return complete(model, resumeSystemPrompt(), resumeUserPrompt(input), verbose);
 }
