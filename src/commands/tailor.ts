@@ -86,6 +86,9 @@ export function registerTailorCommand(program: Command): void {
       console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
 
+      if (!process.stdout.isTTY) {
+        console.log('Generating resume and cover letter...');
+      }
       const output = await withSpinner('generating', () => tailorDocuments(client, config.model, {
         resume,
         bio,
