@@ -236,10 +236,16 @@ const CSS = `
 // Public API
 // ---------------------------------------------------------------------------
 
+/** Extract the first H1 heading text from a markdown string, if present. */
+function extractH1(markdown: string): string | undefined {
+  return markdown.match(/^#\s+(.+)$/m)?.[1]?.trim();
+}
+
 /**
  * Convert a tailored resume (markdown) to a styled, print-ready HTML string.
  */
-export function renderResumeHtml(markdown: string, pageTitle = 'Matthew McKnight - Resume'): string {
+export function renderResumeHtml(markdown: string, pageTitle?: string): string {
+  const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Resume` : 'Resume');
   const cleaned = markdown
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^• /gm, '- ')
@@ -253,7 +259,7 @@ export function renderResumeHtml(markdown: string, pageTitle = 'Matthew McKnight
   // Close any open job-section wrapper
   body += closeJobSection();
 
-  const safeTitle = escapeHtml(pageTitle);
+  const safeTitle = escapeHtml(resolvedTitle);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -277,10 +283,11 @@ ${body.trim().split('\n').map(l => `    ${l}`).join('\n')}
 /**
  * Convert a tailored cover letter (markdown) to a styled, print-ready HTML string.
  */
-export function renderCoverLetterHtml(markdown: string, pageTitle = 'Matthew McKnight - Cover Letter'): string {
+export function renderCoverLetterHtml(markdown: string, pageTitle?: string): string {
+  const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Cover Letter` : 'Cover Letter');
   const m = new Marked();
   const body = sanitizeHtml(m.parse(markdown) as string);
-  const safeTitle = escapeHtml(pageTitle);
+  const safeTitle = escapeHtml(resolvedTitle);
 
   return `<!DOCTYPE html>
 <html lang="en">

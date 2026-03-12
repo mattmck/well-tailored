@@ -92,8 +92,18 @@ describe('renderResumeHtml', () => {
     expect(html).not.toContain('•');
   });
 
-  it('uses the pageTitle in the <title> tag', () => {
+  it('uses the pageTitle in the <title> tag when explicitly provided', () => {
     const html = renderResumeHtml(SAMPLE, 'Resume — Acme Corp');
     expect(html).toContain('<title>Resume — Acme Corp</title>');
+  });
+
+  it('derives the default title from the first H1 when no pageTitle is given', () => {
+    const html = renderResumeHtml(SAMPLE);
+    expect(html).toContain('<title>Jane Doe – Resume</title>');
+  });
+
+  it('falls back to generic "Resume" title when markdown has no H1', () => {
+    const html = renderResumeHtml('## Summary\n\nNo name here.');
+    expect(html).toContain('<title>Resume</title>');
   });
 });
