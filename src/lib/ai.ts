@@ -1,5 +1,6 @@
 import OpenAI, { AzureOpenAI } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
+import { startRetrySpinner } from './spinner.js';
 
 /**
  * Resolve an abstract model alias to a provider-specific model ID.
@@ -10,42 +11,59 @@ function resolveModel(hint: string, providerDefault: string): string {
   return abstracts.has(hint.toLowerCase()) ? providerDefault : hint;
 }
 
-/** Sleep for `ms` milliseconds. */
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const MAX_ATTEMPTS = 6;
+const BASE_DELAY_MS = 5_000;
+const MAX_DELAY_MS = 60_000;
 
 function getErrorStatus(err: unknown): number | undefined {
   if (err instanceof OpenAI.APIError || err instanceof Anthropic.APIError) {
     return err.status ?? undefined;
   }
-  const status = typeof err === 'object' && err !== null && 'status' in err ? (err as { status?: unknown }).status : undefined;
+  const status = typeof err === 'object' && err !== null && 'status' in err
+    ? (err as { status?: unknown }).status
+    : undefined;
   return typeof status === 'number' ? status : undefined;
 }
 
-function formatErrorWithStatus(err: unknown): Error {
-  if (!(err instanceof Error)) return new Error(String(err));
+function isRateLimited(err: unknown): boolean {
   const status = getErrorStatus(err);
-  if (!status || err.message.includes(`${status}`)) return err;
-  return new Error(`HTTP ${status}: ${err.message}`, { cause: err });
+  if (status === 429 || status === 529) return true;
+  return err instanceof Error && err.message.includes('429');
+}
+
+function resolveDelayMs(err: unknown, attempt: number): number {
+  // Honor Retry-After if the API supplies it
+  const headers = typeof err === 'object' && err !== null && 'headers' in err
+    ? (err as { headers?: { get?(k: string): string | null } }).headers
+    : undefined;
+  const raw = headers?.get?.('retry-after');
+  if (raw) {
+    const secs = parseInt(raw, 10);
+    if (!isNaN(secs) && secs > 0) return secs * 1000;
+  }
+  // Exponential backoff with ±20% jitter, capped at MAX_DELAY_MS
+  const base = Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+  return Math.round(base * (0.8 + 0.4 * Math.random()));
+}
+
+async function sleepWithSpinner(ms: number): Promise<void> {
+  const spinner = startRetrySpinner(ms);
+  await new Promise<void>((r) => setTimeout(r, ms));
+  spinner.stop();
 }
 
 /**
- * Retry `fn` up to `maxAttempts` times on 429 rate-limit errors,
- * with exponential backoff starting at `baseDelayMs`.
+ * Retry `fn` up to MAX_ATTEMPTS times on 429/529 rate-limit errors,
+ * with exponential backoff + jitter and a live spinner while waiting.
+ * Honors Retry-After headers when present.
  */
-async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 6, baseDelayMs = 30_000): Promise<T> {
-  let attempt = 0;
-  while (true) {
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      const status = getErrorStatus(err);
-      const is429 = status === 429 || (err instanceof Error && err.message.includes('429'));
-      attempt++;
-      if (!is429 || attempt >= maxAttempts) throw formatErrorWithStatus(err);
-      const delay = baseDelayMs * Math.pow(2, attempt - 1);
-      const statusText = status ? ` (HTTP ${status})` : '';
-      console.log(`  ⏳  Rate limited${statusText} — retrying in ${delay / 1000}s (attempt ${attempt}/${maxAttempts})...`);
-      await sleep(delay);
+      if (!isRateLimited(err) || attempt >= MAX_ATTEMPTS - 1) throw err;
+      await sleepWithSpinner(resolveDelayMs(err, attempt));
     }
   }
 }

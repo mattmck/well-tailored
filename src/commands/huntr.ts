@@ -4,6 +4,7 @@ import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
+import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
 
@@ -571,7 +572,7 @@ async function tailorAndWrite(args: {
   console.log(`🎯  ${job.title} @ ${companyName}`);
   console.log('    Generating resume and cover letter in parallel...');
 
-  const output = await tailorDocuments(model, {
+  const output = await withSpinner('generating', () => tailorDocuments(model, {
     resume,
     bio,
     baseCoverLetter,
@@ -579,7 +580,7 @@ async function tailorAndWrite(args: {
     company: companyName,
     jobTitle: job.title,
     jobDescription,
-  }, verbose);
+  }, verbose));
 
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 

@@ -4,6 +4,7 @@ import { join } from 'path';
 import { loadConfig } from '../config.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
+import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
 
@@ -106,7 +107,7 @@ export function registerTailorCommand(program: Command): void {
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
-      const output = await tailorDocuments(model, {
+      const output = await withSpinner('generating', () => tailorDocuments(model, {
         resume,
         bio,
         baseCoverLetter,
@@ -114,16 +115,15 @@ export function registerTailorCommand(program: Command): void {
         company: opts.company,
         jobTitle: opts.title,
         jobDescription,
-      }, opts.verbose);
+      }, opts.verbose));
 
       // Write outputs
       if (!existsSync(opts.output)) {
         mkdirSync(opts.output, { recursive: true });
       }
       
-      const datePrefix = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const slugParts = [opts.company, opts.title].filter(Boolean);
-      const slug = `${datePrefix}-${slugify(slugParts.join(' '))}`;
+      const slug = slugify(slugParts.join(' '));
       const resumeOut = join(opts.output, `resume-${slug}.md`);
       const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
