@@ -4,6 +4,7 @@ import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
 import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
+import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml } from '../lib/render.js';
 
@@ -487,9 +488,11 @@ async function tailorAndWrite(args: {
   }
 
   console.log(`🎯  ${job.title} @ ${companyName}`);
-  console.log('    Generating resume and cover letter in parallel...');
 
-  const output = await tailorDocuments(aiClient, model, {
+  if (!process.stdout.isTTY) {
+    console.log('    Generating tailored resume and cover letter...');
+  }
+  const output = await withSpinner('generating', () => tailorDocuments(aiClient, model, {
     resume,
     bio,
     baseCoverLetter,
@@ -497,7 +500,7 @@ async function tailorAndWrite(args: {
     company: companyName,
     jobTitle: job.title,
     jobDescription,
-  });
+  }));
 
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
