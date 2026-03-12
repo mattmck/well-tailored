@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
 import { tailorDocuments } from '../lib/tailor.js';
+import { describeProvider } from '../lib/ai.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
 
@@ -402,12 +403,13 @@ export function registerHuntrCommand(program: Command): void {
         ({ job, boardId } = found);
       }
 
+      const config = loadConfig();
+      const model = opts.model ?? config.model;
+
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
-
-      const config = loadConfig();
-      const model = opts.model ?? config.model;
+      console.log(`Using AI:     ${describeProvider(model)}`);
 
       await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir: opts.output, verbose: opts.verbose, pdf: opts.pdf });
     });
@@ -444,9 +446,14 @@ export function registerHuntrCommand(program: Command): void {
       const client = createHuntrClient(token);
 
       const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath } = resolveBaseFiles(opts.resume, opts.bio, opts.supplemental);
+
+      const config = loadConfig();
+      const model = opts.model ?? config.model;
+
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
+      console.log(`Using AI:     ${describeProvider(model)}`);
       console.log('');
 
       const boards = opts.board
@@ -468,9 +475,6 @@ export function registerHuntrCommand(program: Command): void {
       }
 
       console.log(`Found ${wishlistJobs.length} wishlist job(s). Tailoring...\n`);
-
-      const config = loadConfig();
-      const model = opts.model ?? config.model;
 
       let done = 0;
       let failed = 0;

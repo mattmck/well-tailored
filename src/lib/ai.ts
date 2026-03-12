@@ -55,6 +55,26 @@ function vlog(verbose: boolean, msg: string): void {
 }
 
 /**
+ * Return a human-readable description of which provider + model will be used
+ * for the given model hint (mirrors the priority logic in complete()).
+ */
+export function describeProvider(model: string): string {
+  if (process.env.GEMINI_API_KEY) {
+    return `Gemini · ${resolveModel(model, 'gemini-2.0-flash-lite')}`;
+  }
+  if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
+    return `Azure OpenAI · ${resolveModel(model, process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini')}`;
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return `OpenAI · ${resolveModel(model, 'gpt-4o-mini')}`;
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return `Anthropic · ${resolveModel(model, 'claude-haiku-4-5-20251001')}`;
+  }
+  return '(no provider configured)';
+}
+
+/**
  * Send a prompt to the configured AI provider and return the text response.
  *
  * Provider priority (first matching env wins):

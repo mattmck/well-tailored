@@ -3,6 +3,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from '../config.js';
 import { tailorDocuments } from '../lib/tailor.js';
+import { describeProvider } from '../lib/ai.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
 
@@ -75,14 +76,16 @@ export function registerTailorCommand(program: Command): void {
       const bio = readFile(bioPath);
 
       let baseCoverLetter: string | undefined;
+      let coverLetterPath: string | undefined;
       try {
-        const coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
+        coverLetterPath = findFile({ prefix: 'cover-letter', label: 'Cover letter' });
         baseCoverLetter = readFile(coverLetterPath);
       } catch { /* optional */ }
 
       let resumeSupplemental: string | undefined;
+      let supplementalPath: string | undefined;
       try {
-        const supplementalPath = findFile({ explicit: opts.supplemental, prefix: 'resume-supplemental', label: 'Resume supplemental' });
+        supplementalPath = findFile({ explicit: opts.supplemental, prefix: 'resume-supplemental', label: 'Resume supplemental' });
         resumeSupplemental = readFile(supplementalPath);
       } catch (err) {
         if (opts.supplemental) {
@@ -97,6 +100,9 @@ export function registerTailorCommand(program: Command): void {
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
+      if (coverLetterPath) console.log(`Using cover letter: ${coverLetterPath}`);
+      if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
+      console.log(`Using AI:     ${describeProvider(model)}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
