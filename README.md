@@ -131,4 +131,4 @@ npm run typecheck              # tsc --noEmit
 npm run lint                   # eslint
 ```
 
-Sample files for testing without real personal data are in `*.sample.md`.
+Sample files for testing without real personal data are in `sample.*.md`.
