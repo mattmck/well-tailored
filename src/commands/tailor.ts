@@ -6,7 +6,7 @@ import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
-import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
+import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -131,9 +131,8 @@ export function registerTailorCommand(program: Command): void {
       writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
       const resumeHtmlOut = join(opts.output, `resume-${slug}.html`);
-      writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume - ${opts.company}`), 'utf8');
-
       const coverLetterHtmlOut = join(opts.output, `cover-letter-${slug}.html`);
+      writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume - ${opts.company}`), 'utf8');
       writeFileSync(coverLetterHtmlOut, renderCoverLetterHtml(output.coverLetter, `Cover Letter - ${opts.company}`), 'utf8');
 
       console.log(`✓ resume       → ${resumeOut}`);
@@ -144,8 +143,8 @@ export function registerTailorCommand(program: Command): void {
       if (opts.pdf) {
         const resumePdfOut = join(opts.output, `resume-${slug}.pdf`);
         try {
-          await renderPdf(resumeHtmlOut, resumePdfOut);
-          console.log(`✓ resume (pdf) → ${resumePdfOut}`);
+          const fit = await renderResumePdfFit(output.resume, `Resume - ${opts.company}`, resumeHtmlOut, resumePdfOut);
+          console.log(`✓ resume (pdf) → ${resumePdfOut}${fit ? '' : ' (compact: still >1 page)'}`);
         } catch (err) {
           console.warn(`⚠ PDF generation skipped: ${(err as Error).message}`);
           console.warn('  Run `npm run setup` to check Chrome prerequisites.');
