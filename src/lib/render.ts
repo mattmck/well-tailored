@@ -1,5 +1,6 @@
 import { execFileSync } from 'child_process';
 import { resolve } from 'path';
+import { pathToFileURL } from 'url';
 import { existsSync } from 'fs';
 import { Marked } from 'marked';
 import sanitizeHtmlLib from 'sanitize-html';
@@ -35,7 +36,11 @@ function isEmail(text: string): boolean {
 }
 
 function isUrlLike(text: string): boolean {
-  return /^(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?$/.test(text);
+  // Require an explicit scheme, www., or a path component so bare dotted
+  // identifiers like "Node.js" are not treated as URLs.
+  return /^https?:\/\/[^\s]+$/.test(text) ||
+    /^www\.(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/.test(text) ||
+    /^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\/[^\s]*$/.test(text);
 }
 
 function linkifyContactSegment(segment: string): string {
@@ -51,16 +56,30 @@ function linkifyContactSegment(segment: string): string {
 }
 
 function normalizeContactLinks(markdown: string): string {
-  return markdown
-    .split('\n')
-    .map((line) => {
-      if (!line.includes('|')) return line;
-      return line
-        .split('|')
-        .map((segment) => linkifyContactSegment(segment))
-        .join(' | ');
-    })
-    .join('\n');
+  const lines = markdown.split('\n');
+  let h2Count = 0;
+
+  const processed = lines.map((line) => {
+    const trimmed = line.trim();
+
+    // The first ## is the role subtitle; contact/links follow it.
+    // Only treat content as body (and skip linkification) once we hit
+    // the second ## (the first real section heading).
+    if (trimmed.startsWith('##')) {
+      h2Count++;
+    }
+
+    if (h2Count >= 2 || !line.includes('|')) {
+      return line;
+    }
+
+    return line
+      .split('|')
+      .map((segment) => linkifyContactSegment(segment))
+      .join(' | ');
+  });
+
+  return processed.join('\n');
 }
 
 /**
@@ -341,17 +360,19 @@ export async function renderPdf(htmlPath: string, pdfPath: string): Promise<void
     throw new Error('Google Chrome not found.');
   }
 
-  const args = [
-    '--headless',
-    '--disable-gpu',
-    `--print-to-pdf=${resolve(pdfPath)}`,
-    '--print-to-pdf-no-header',
-    '--no-pdf-header-footer',
-    `file://${resolve(htmlPath)}`,
-  ];
-
   try {
-    execFileSync(chromePath, args, { stdio: 'ignore' });
+    execFileSync(
+      chromePath,
+      [
+        '--headless',
+        '--disable-gpu',
+        `--print-to-pdf=${resolve(pdfPath)}`,
+        '--print-to-pdf-no-header',
+        '--no-pdf-header-footer',
+        pathToFileURL(resolve(htmlPath)).href,
+      ],
+      { stdio: 'ignore' }
+    );
   } catch (err) {
     throw new Error(`Failed to generate PDF: ${err instanceof Error ? err.message : String(err)}`);
   }

@@ -117,6 +117,7 @@ describe('provider selection', () => {
   it('uses Azure OpenAI when AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_API_KEY are set (and no Gemini)', async () => {
     process.env.AZURE_OPENAI_ENDPOINT = 'https://my-azure.openai.azure.com';
     process.env.AZURE_OPENAI_API_KEY = 'azure-key';
+    process.env.AZURE_OPENAI_DEPLOYMENT = 'my-deployment';
     mockChatCreate.mockResolvedValueOnce(openaiOk('azure response'));
 
     const result = await complete('auto', 'sys', 'user');
@@ -161,6 +162,7 @@ describe('provider selection', () => {
   it('prefers Azure over OpenAI and Anthropic', async () => {
     process.env.AZURE_OPENAI_ENDPOINT = 'https://my-azure.openai.azure.com';
     process.env.AZURE_OPENAI_API_KEY = 'azure-key';
+    process.env.AZURE_OPENAI_DEPLOYMENT = 'my-deployment';
     process.env.OPENAI_API_KEY = 'openai-key';
     process.env.ANTHROPIC_API_KEY = 'anthropic-key';
     mockChatCreate.mockResolvedValueOnce(openaiOk('azure wins'));

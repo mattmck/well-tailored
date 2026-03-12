@@ -63,6 +63,9 @@ export function describeProvider(model: string): string {
     return `Gemini · ${resolveModel(model, 'gemini-2.0-flash-lite')}`;
   }
   if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
+    if (['auto', 'default'].includes(model.toLowerCase()) && !process.env.AZURE_OPENAI_DEPLOYMENT) {
+      throw new Error('AZURE_OPENAI_DEPLOYMENT is not set. Set it to your Azure deployment name.');
+    }
     return `Azure OpenAI · ${resolveModel(model, process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini')}`;
   }
   if (process.env.OPENAI_API_KEY) {
@@ -117,6 +120,9 @@ export async function complete(
 
   // ── 2. Azure AI Foundry / Azure OpenAI ──────────────────────────────────
   if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
+    if (['auto', 'default'].includes(model.toLowerCase()) && !process.env.AZURE_OPENAI_DEPLOYMENT) {
+      throw new Error('AZURE_OPENAI_DEPLOYMENT is not set. Set it to your Azure deployment name.');
+    }
     const resolved = resolveModel(model, process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini');
     vlog(verbose, `    🔧  Azure OpenAI · ${resolved}`);
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
