@@ -4,6 +4,7 @@ import { join } from 'path';
 import { loadConfig } from '../config.js';
 import { createAnthropicClient } from '../lib/ai.js';
 import { tailorDocuments } from '../lib/tailor.js';
+import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml } from '../lib/render.js';
 function slugify(text: string): string {
@@ -84,9 +85,8 @@ export function registerTailorCommand(program: Command): void {
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(`Using bio:    ${bioPath}`);
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
-      console.log('Generating resume and cover letter in parallel...\n');
 
-      const output = await tailorDocuments(client, config.model, {
+      const output = await withSpinner('generating', () => tailorDocuments(client, config.model, {
         resume,
         bio,
         baseCoverLetter,
@@ -94,7 +94,7 @@ export function registerTailorCommand(program: Command): void {
         company: opts.company,
         jobTitle: opts.title,
         jobDescription,
-      });
+      }));
 
       // Write outputs
       if (!existsSync(opts.output)) {
