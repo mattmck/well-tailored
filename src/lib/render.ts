@@ -36,7 +36,11 @@ function isEmail(text: string): boolean {
 }
 
 function isUrlLike(text: string): boolean {
-  return /^(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?$/.test(text);
+  // Require an explicit scheme, www., or a path component so bare dotted
+  // identifiers like "Node.js" are not treated as URLs.
+  return /^https?:\/\/[^\s]+$/.test(text) ||
+    /^www\.(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/.test(text) ||
+    /^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\/[^\s]*$/.test(text);
 }
 
 function linkifyContactSegment(segment: string): string {
@@ -53,18 +57,19 @@ function linkifyContactSegment(segment: string): string {
 
 function normalizeContactLinks(markdown: string): string {
   const lines = markdown.split('\n');
-  let inBody = false;
+  let h2Count = 0;
 
   const processed = lines.map((line) => {
     const trimmed = line.trim();
 
-    // Once we hit the first level-2 heading, treat everything as body content
-    // and avoid auto-linkifying pipe-separated segments.
-    if (!inBody && trimmed.startsWith('##')) {
-      inBody = true;
+    // The first ## is the role subtitle; contact/links follow it.
+    // Only treat content as body (and skip linkification) once we hit
+    // the second ## (the first real section heading).
+    if (trimmed.startsWith('##')) {
+      h2Count++;
     }
 
-    if (inBody || !line.includes('|')) {
+    if (h2Count >= 2 || !line.includes('|')) {
       return line;
     }
 
