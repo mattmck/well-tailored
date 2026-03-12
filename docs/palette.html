@@ -282,20 +282,24 @@
   p.contact, p.links { color: ${c.contact}; }
   a { color: ${c.link}; }`;
 
-    try { await navigator.clipboard.writeText(css); } catch(e) {}
-    const btn = document.getElementById('cssBtn');
-    btn.classList.add('copied');
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '{ } Copy CSS'; }, 2000);
+    try {
+      await navigator.clipboard.writeText(css);
+      const btn = document.getElementById('cssBtn');
+      btn.classList.add('copied');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '{ } Copy CSS'; }, 2000);
+    } catch(e) { console.error('Copy failed', e); }
   }
 
   async function copyHex(id) {
     const hex = state[id];
-    try { await navigator.clipboard.writeText(hex); } catch(e) {}
-    const btn = document.getElementById('copy-' + id);
-    btn.classList.add('copied');
-    btn.textContent = '✓';
-    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '⎘'; }, 1500);
+    try {
+      await navigator.clipboard.writeText(hex);
+      const btn = document.getElementById('copy-' + id);
+      btn.classList.add('copied');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '⎘'; }, 1500);
+    } catch(e) { console.error('Copy failed', e); }
   }
 
   buildGrid();
