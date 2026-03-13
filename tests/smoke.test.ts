@@ -3,7 +3,7 @@
  *
  * Wires together: prompts → tailorDocuments → render (HTML).
  * AI calls are mocked so this never hits the network, but everything
- * else (prompt construction, markdown→HTML rendering, file output) is real.
+ * else (prompt construction and markdown→HTML rendering) is real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { tailorDocuments } from '../src/lib/tailor.js';
