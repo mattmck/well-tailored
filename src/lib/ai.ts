@@ -105,11 +105,33 @@ export function describeProvider(model: string): string {
  *   4. ANTHROPIC_API_KEY                            → Anthropic Claude (claude-haiku-4-5)
  */
 export async function complete(
-  model: string,
-  systemPrompt: string,
-  userPrompt: string,
-  verbose = false,
+  clientOrModel: Anthropic | OpenAI | AzureOpenAI | string,
+  modelOrSystemPrompt: string,
+  systemPromptOrUserPrompt: string,
+  userPromptOrVerbose?: string | boolean,
+  verboseArg?: boolean,
 ): Promise<string> {
+  // Support both legacy signature:
+  //   complete(client, model, systemPrompt, userPrompt, verbose?)
+  // and new signature:
+  //   complete(model, systemPrompt, userPrompt, verbose?)
+  const usingInjectedClient = typeof clientOrModel !== 'string';
+
+  const model = usingInjectedClient
+    ? modelOrSystemPrompt
+    : (clientOrModel as string);
+
+  const systemPrompt = usingInjectedClient
+    ? systemPromptOrUserPrompt
+    : modelOrSystemPrompt;
+
+  const userPrompt = usingInjectedClient
+    ? (typeof userPromptOrVerbose === 'string' ? userPromptOrVerbose : '')
+    : systemPromptOrUserPrompt;
+
+  const verbose = usingInjectedClient
+    ? (typeof verboseArg === 'boolean' ? verboseArg : false)
+    : (typeof userPromptOrVerbose === 'boolean' ? userPromptOrVerbose : false);
 
   // ── 1. Gemini ───────────────────────────────────────────────────────────
   if (process.env.GEMINI_API_KEY) {
