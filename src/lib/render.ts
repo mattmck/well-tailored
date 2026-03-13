@@ -1,7 +1,7 @@
 import { execFileSync } from 'child_process';
 import { resolve, dirname, join } from 'path';
 import { pathToFileURL, fileURLToPath } from 'url';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { Marked } from 'marked';
 import sanitizeHtmlLib from 'sanitize-html';
 
@@ -190,7 +190,51 @@ function extractH1(markdown: string): string | undefined {
 /**
  * Convert a tailored resume (markdown) to a styled, print-ready HTML string.
  */
-export function renderResumeHtml(markdown: string, pageTitle?: string): string {
+// Compact CSS overrides — injected when content is slightly over one page.
+// Tightens spacing without touching font sizes to keep readability.
+const COMPACT_CSS = `
+  @page { margin: 0.65cm !important; }
+  li, p { line-height: 1.4 !important; margin-bottom: 2px !important; }
+  h2.section { margin-top: 10px !important; margin-bottom: 3px !important; }
+  h3 { margin-top: 7px !important; margin-bottom: 1px !important; }
+  p.links { margin-bottom: 10px !important; }
+  ul { margin: 0 0 1px 0 !important; }
+`;
+
+/**
+ * Read the page count of a PDF file.
+ * Works with Chrome headless --print-to-pdf output.
+ */
+export function getPdfPageCount(pdfPath: string): number {
+  const content = readFileSync(pdfPath, 'latin1');
+  const match = content.match(/\/Type\s*\/Pages[\s\S]*?\/Count\s+(\d+)/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+
+/**
+ * Generate a resume PDF, retrying with compact spacing if content overflows one page.
+ * Overwrites htmlPath with the compact HTML when compaction is applied.
+ * Returns true if the final PDF fits on one page.
+ */
+export async function renderResumePdfFit(
+  markdown: string,
+  title: string,
+  htmlPath: string,
+  pdfPath: string,
+): Promise<boolean> {
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title), 'utf8');
+  await renderPdf(htmlPath, pdfPath);
+
+  const pages = getPdfPageCount(pdfPath);
+  if (pages <= 1) return true;
+
+  // Slightly over — retry with compact CSS
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title, true), 'utf8');
+  await renderPdf(htmlPath, pdfPath);
+  return getPdfPageCount(pdfPath) <= 1;
+}
+
+export function renderResumeHtml(markdown: string, pageTitle?: string, compact = false): string {
   const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Resume` : 'Resume');
   const cleaned = markdown
     .replace(/<!--[\s\S]*?-->/g, '')

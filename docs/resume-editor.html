@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Content Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #eee;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Left: Editor panel ── */
+    .editor {
+      width: 50%;
+      padding: 24px 28px;
+      overflow-y: auto;
+      border-right: 1px solid #333;
+    }
+    .editor h1 {
+      font-size: 16px; font-weight: 600; color: #aaa;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .editor .subtitle {
+      font-size: 12px; color: #555; margin-bottom: 24px;
+    }
+
+    /* Section blocks */
+    .section-block {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .section-block.header-block {
+      border-color: #BE503C44;
+    }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .section-header .section-title {
+      font-size: 12px; font-weight: 700; color: #BE503C;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .section-header .section-title.meta { color: #7a8fa3; }
+    .section-actions { display: flex; gap: 6px; }
+    .section-actions button {
+      font-size: 10px; color: #666; background: none;
+      border: 1px solid #333; border-radius: 4px;
+      padding: 3px 8px; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .section-actions button:hover { color: #ccc; border-color: #555; }
+    .section-actions button.danger:hover { color: #e74c3c; border-color: #e74c3c; }
+
+    /* Form fields */
+    label {
+      display: block; font-size: 10px; font-weight: 600;
+      color: #777; margin-bottom: 3px; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 6px 8px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: vertical;
+    }
+    input[type="text"]:focus, textarea:focus { border-color: #555; color: #eee; }
+    .field-row { margin-bottom: 8px; }
+    .field-row:last-child { margin-bottom: 0; }
+
+    /* Sub-items (jobs, bullet groups) */
+    .sub-item {
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+    .sub-item-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .sub-item-label { font-size: 10px; color: #555; font-weight: 600; }
+
+    /* Bullet editor */
+    .bullet-list { list-style: none; }
+    .bullet-list li {
+      display: flex; align-items: flex-start; gap: 6px;
+      margin-bottom: 4px;
+    }
+    .bullet-list li::before {
+      content: '•'; color: #555; flex-shrink: 0; margin-top: 5px;
+    }
+    .bullet-list li input {
+      flex: 1;
+    }
+    .add-btn {
+      font-size: 10px; color: #4caf50; background: none;
+      border: 1px solid #2a4a2a; border-radius: 4px;
+      padding: 3px 10px; cursor: pointer; margin-top: 6px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .add-btn:hover { color: #6fcf70; border-color: #4caf50; }
+
+    /* Date picker row */
+    .date-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .date-row select, .date-row input[type="number"] {
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 5px 6px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .date-row select:focus, .date-row input[type="number"]:focus { border-color: #555; color: #eee; }
+    .date-row select { width: 80px; cursor: pointer; }
+    .date-row input[type="number"] { width: 62px; }
+    .date-row .sep { color: #444; font-size: 11px; }
+    .date-row label.present-label {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; color: #666; text-transform: none;
+      letter-spacing: 0; cursor: pointer; margin: 0;
+    }
+    .date-row label.present-label input[type="checkbox"] {
+      width: auto; cursor: pointer; accent-color: #3B72A8;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex; gap: 10px; align-items: center;
+      margin-bottom: 20px;
+    }
+    button.primary {
+      font-size: 12px; font-weight: 600;
+      background: #BE503C; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 8px 18px; cursor: pointer;
+    }
+    button.primary:hover { background: #a8402e; }
+    button.secondary {
+      font-size: 12px; font-weight: 600; color: #eee;
+      background: #2a2a2a; border: 1px solid #444;
+      border-radius: 6px; padding: 8px 16px; cursor: pointer;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    button.secondary:hover { background: #333; border-color: #666; }
+    button.secondary.copied { background: #1a3a1a; border-color: #4caf50; color: #4caf50; }
+    button.ghost {
+      font-size: 12px; color: #555; background: none;
+      border: 1px solid #333; border-radius: 6px;
+      padding: 8px 14px; cursor: pointer;
+    }
+    button.ghost:hover { color: #aaa; border-color: #555; }
+
+    .drop-zone {
+      border: 2px dashed #333; border-radius: 8px;
+      padding: 16px; text-align: center; color: #555;
+      font-size: 11px; margin-bottom: 14px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #BE503C; color: #BE503C;
+    }
+
+    /* ── Right: Live preview ── */
+    .preview-pane {
+      width: 50%;
+      overflow-y: auto;
+      background: #111;
+      padding: 32px;
+    }
+    .preview-pane > h2 {
+      font-size: 12px; font-weight: 600; color: #555;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+    #preview {
+      background: #B7CCE0;
+      padding: 40px 54px;
+      max-width: 760px;
+      border-radius: 4px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #323434;
+      -webkit-font-smoothing: antialiased;
+    }
+    #preview h1 { font-size: 23px; font-weight: 700; color: #BE503C; line-height: 1.1; margin-bottom: 3px; }
+    #preview h2.role { font-size: 14px; font-weight: 700; color: #364D62; margin-bottom: 7px; }
+    #preview p.contact, #preview p.links { font-size: 11px; color: #323434; line-height: 1.4; }
+    #preview p.links { margin-bottom: 16px; }
+    #preview p.contact a, #preview p.links a { color: #255F91; text-decoration: none; }
+    #preview h2.section {
+      font-size: 13.5px; font-weight: 700; color: #BE503C;
+      margin-top: 14px; margin-bottom: 4px;
+      border-bottom: 1px solid rgba(50,52,52,0.15); padding-bottom: 3px;
+    }
+    #preview h3 { font-size: 11.5px; font-weight: 700; color: #182234; line-height: 1.3; margin-top: 10px; margin-bottom: 1px; }
+    #preview h2.section + h3 { margin-top: 4px; }
+    #preview h2.section + .job-header { margin-top: 4px; }
+    #preview .job-header { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; margin-bottom: 1px; }
+    #preview .job-header h3 { margin: 0; }
+    #preview .job-company { font-size: 11px; font-weight: 700; color: #364D62; white-space: nowrap; margin-left: 12px; }
+    #preview .job-sub { margin-top: 0; margin-bottom: 4px; }
+    #preview .job-sub .date { margin: 0; }
+    #preview .job-location { font-size: 11px; color: #3B72A8; white-space: nowrap; margin-left: 12px; }
+    #preview p.date { font-size: 11px; color: #3B72A8; line-height: 1.3; margin-bottom: 4px; }
+    #preview ul { list-style: disc; padding-left: 16px; margin: 0 0 2px 0; color: #323434; }
+    #preview li { font-size: 11px; line-height: 1.5; color: #323434; margin-bottom: 1px; }
+    #preview p { font-size: 11px; line-height: 1.5; color: #323434; margin-bottom: 3px; }
+    #preview a { color: #255F91; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="editor" id="editorPane">
+  <h1>Resume Content Editor</h1>
+  <p class="subtitle">Edit resume contents section by section. Preview updates live. Export as Markdown when done.</p>
+
+  <div class="drop-zone" id="dropZone" tabindex="0" role="button" onclick="document.getElementById('fileInput').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileInput').click()}">
+    Drop a resume .md file here or click to import
+    <input type="file" id="fileInput" accept=".md,.txt" style="display:none" onchange="handleFile(this.files[0])">
+  </div>
+
+  <div class="toolbar">
+    <button class="secondary" id="mdBtn" onclick="copyMarkdown()">{ } Copy Markdown</button>
+    <button class="ghost" onclick="downloadMarkdown()">Download .md</button>
+    <button class="ghost" onclick="addSection()">+ Add Section</button>
+  </div>
+
+  <div id="editorSections"></div>
+</div>
+
+<div class="preview-pane">
+  <h2>Live Preview</h2>
+  <div id="preview"></div>
+</div>
+
+<script>
+// ── Data model ──
+
+const data = {
+  name: 'Matthew McKnight',
+  role: 'Senior Software Engineer',
+  contact: 'matt@example.com | San Diego, CA',
+  links: 'github.com/mattmck | linkedin.com/in/mattmck',
+  sections: [
+    {
+      id: sid(),
+      title: 'Summary',
+      type: 'text',
+      content: 'Backend engineer with 10+ years shipping distributed systems, cloud platforms, and developer tooling.'
+    },
+    {
+      id: sid(),
+      title: 'Selected Impact',
+      type: 'bullets',
+      items: [
+        { id: sid(), text: 'Re-architected payment pipeline handling 50K+ TPS with exactly-once semantics.' },
+        { id: sid(), text: 'Drove MTTR from 45 min to 9 min through runbook automation and alert tuning.' },
+      ]
+    },
+    {
+      id: sid(),
+      title: 'Experience',
+      type: 'jobs',
+      jobs: [
+        {
+          id: sid(),
+          title: 'Staff Software Engineer',
+          company: 'ExampleCorp',
+          location: 'Remote',
+          date: '2022 – Present',
+          dateObj: { startMonth: 0, startYear: '2022', endMonth: 0, endYear: '', present: true },
+          bullets: [
+            { id: sid(), text: 'Led migration of monolith to event-driven microservices.' },
+            { id: sid(), text: 'Mentored 5 engineers; 2 promoted to senior within 12 months.' },
+          ]
+        }
+      ]
+    },
+    {
+      id: sid(),
+      title: 'Skills',
+      type: 'text',
+      content: 'Go · TypeScript · Python · Kafka · Postgres · AWS · Kubernetes · Terraform'
+    },
+  ]
+};
+
+function sid() { return Math.random().toString(36).slice(2, 9); }
+
+// ── Render editor ──
+
+function renderEditor() {
+  const el = document.getElementById('editorSections');
+  el.innerHTML = '';
+
+  // Header block
+  el.appendChild(makeHeaderBlock());
+
+  // Sections
+  data.sections.forEach((sec, i) => {
+    el.appendChild(makeSectionBlock(sec, i));
+  });
+
+  renderPreview();
+}
+
+function makeHeaderBlock() {
+  const div = document.createElement('div');
+  div.className = 'section-block header-block';
+  div.innerHTML = `
+    <div class="section-header">
+      <span class="section-title meta">Header</span>
+    </div>
+    <div class="field-row">
+      <label>Name</label>
+      <input type="text" value="${esc(data.name)}" oninput="data.name=this.value;renderPreview()">
+    </div>
+    <div class="field-row">
+      <label>Role / Title</label>
+      <input type="text" value="${esc(data.role)}" oninput="data.role=this.value;renderPreview()">
+    </div>
+    <div class="field-row">
+      <label>Contact (pipe-separated)</label>
+      <input type="text" value="${esc(data.contact)}" oninput="data.contact=this.value;renderPreview()">
+    </div>
+    <div class="field-row">
+      <label>Links (pipe-separated)</label>
+      <input type="text" value="${esc(data.links)}" oninput="data.links=this.value;renderPreview()">
+    </div>`;
+  return div;
+}
+
+function makeSectionBlock(sec, idx) {
+  const div = document.createElement('div');
+  div.className = 'section-block';
+  div.dataset.id = sec.id;
+
+  const canUp = idx > 0;
+  const canDown = idx < data.sections.length - 1;
+
+  let inner = `
+    <div class="section-header">
+      <input type="text" value="${esc(sec.title)}" style="background:none;border:none;color:#BE503C;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:0;width:200px;"
+        oninput="data.sections[${idx}].title=this.value;renderPreview()">
+      <div class="section-actions">
+        <select style="font-size:10px;background:#1a1a1a;color:#888;border:1px solid #333;border-radius:4px;padding:2px 4px;cursor:pointer;"
+          onchange="changeType(${idx},this.value)">
+          <option value="text" ${sec.type==='text'?'selected':''}>Text</option>
+          <option value="bullets" ${sec.type==='bullets'?'selected':''}>Bullets</option>
+          <option value="jobs" ${sec.type==='jobs'?'selected':''}>Jobs</option>
+        </select>
+        ${canUp ? `<button onclick="moveSection(${idx},-1)" title="Move up">&#x25B2;</button>` : ''}
+        ${canDown ? `<button onclick="moveSection(${idx},1)" title="Move down">&#x25BC;</button>` : ''}
+        <button class="danger" onclick="removeSection(${idx})" title="Remove">&times;</button>
+      </div>
+    </div>`;
+
+  if (sec.type === 'text') {
+    inner += `
+      <div class="field-row">
+        <textarea rows="3" oninput="data.sections[${idx}].content=this.value;renderPreview()">${esc(sec.content || '')}</textarea>
+      </div>`;
+  }
+
+  if (sec.type === 'bullets') {
+    const items = sec.items || [];
+    inner += `<ul class="bullet-list">`;
+    items.forEach((b, bi) => {
+      inner += `<li>
+        <input type="text" value="${esc(b.text)}" oninput="data.sections[${idx}].items[${bi}].text=this.value;renderPreview()">
+        <button style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;" onclick="removeBullet(${idx},${bi})" title="Remove">&times;</button>
+      </li>`;
+    });
+    inner += `</ul>
+      <button class="add-btn" onclick="addBullet(${idx})">+ bullet</button>`;
+  }
+
+  if (sec.type === 'jobs') {
+    const jobs = sec.jobs || [];
+    jobs.forEach((job, ji) => {
+      inner += `<div class="sub-item">
+        <div class="sub-item-header">
+          <span class="sub-item-label">Job ${ji+1}</span>
+          <div class="section-actions">
+            ${ji > 0 ? `<button onclick="moveJob(${idx},${ji},-1)">&#x25B2;</button>` : ''}
+            ${ji < jobs.length-1 ? `<button onclick="moveJob(${idx},${ji},1)">&#x25BC;</button>` : ''}
+            <button class="danger" onclick="removeJob(${idx},${ji})">&times;</button>
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Job Title</label>
+          <input type="text" value="${esc(job.title)}" oninput="data.sections[${idx}].jobs[${ji}].title=this.value;renderPreview()">
+        </div>
+        <div class="field-row">
+          <label>Company</label>
+          <input type="text" value="${esc(job.company || '')}" oninput="data.sections[${idx}].jobs[${ji}].company=this.value;renderPreview()">
+        </div>
+        <div class="field-row">
+          <label>Location</label>
+          <input type="text" value="${esc(job.location || '')}" oninput="data.sections[${idx}].jobs[${ji}].location=this.value;renderPreview()">
+        </div>
+        <div class="field-row">
+          <label>Date</label>
+          ${renderDatePicker(idx, ji, job)}
+        </div>
+        <label>Bullets</label>
+        <ul class="bullet-list">`;
+      (job.bullets || []).forEach((b, bi) => {
+        inner += `<li>
+          <input type="text" value="${esc(b.text)}" oninput="data.sections[${idx}].jobs[${ji}].bullets[${bi}].text=this.value;renderPreview()">
+          <button style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;" onclick="removeJobBullet(${idx},${ji},${bi})">&times;</button>
+        </li>`;
+      });
+      inner += `</ul>
+        <button class="add-btn" onclick="addJobBullet(${idx},${ji})">+ bullet</button>
+      </div>`;
+    });
+    inner += `<button class="add-btn" onclick="addJob(${idx})" style="margin-top:10px">+ job</button>`;
+  }
+
+  div.innerHTML = inner;
+  return div;
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function inlineMd(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); }
+
+// ── Date helpers ──
+
+const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function ensureDateObj(job) {
+  if (!job.dateObj) {
+    job.dateObj = parseDateString(job.date || '');
+  }
+  return job.dateObj;
+}
+
+function parseDateString(str) {
+  const obj = { startMonth: 0, startYear: '', endMonth: 0, endYear: '', present: false };
+  if (!str) return obj;
+
+  // Match patterns like "Jan 2022 – Present", "2019 – 2021", "March 2020 – December 2023"
+  const parts = str.split(/\s*[–—-]\s*/);
+  if (parts.length >= 1) {
+    const s = parseOneDate(parts[0].trim());
+    obj.startMonth = s.month;
+    obj.startYear = s.year;
+  }
+  if (parts.length >= 2) {
+    const end = parts[1].trim();
+    if (/present/i.test(end)) {
+      obj.present = true;
+    } else {
+      const e = parseOneDate(end);
+      obj.endMonth = e.month;
+      obj.endYear = e.year;
+    }
+  }
+  return obj;
+}
+
+function parseOneDate(s) {
+  // "January 2022", "Jan 2022", "2022"
+  const monthMatch = s.match(/^([A-Za-z]+)\s*(\d{4})$/);
+  if (monthMatch) {
+    const mName = monthMatch[1].toLowerCase().slice(0, 3);
+    const mIdx = MONTHS.findIndex(m => m.toLowerCase() === mName);
+    return { month: mIdx > 0 ? mIdx : 0, year: monthMatch[2] };
+  }
+  const yearOnly = s.match(/^(\d{4})$/);
+  if (yearOnly) return { month: 0, year: yearOnly[1] };
+  return { month: 0, year: '' };
+}
+
+function dateObjToString(d) {
+  const start = d.startMonth ? `${MONTHS[d.startMonth]} ${d.startYear}` : (d.startYear || '');
+  if (d.present) return start ? `${start} – Present` : '';
+  const end = d.endMonth ? `${MONTHS[d.endMonth]} ${d.endYear}` : (d.endYear || '');
+  if (!start && !end) return '';
+  if (!end) return start;
+  if (!start) return end;
+  return `${start} – ${end}`;
+}
+
+function onDateChange(secIdx, jobIdx) {
+  const job = data.sections[secIdx].jobs[jobIdx];
+  job.date = dateObjToString(job.dateObj);
+  renderPreview();
+}
+
+function renderDatePicker(secIdx, jobIdx, job) {
+  const d = ensureDateObj(job);
+  const base = `data.sections[${secIdx}].jobs[${jobIdx}].dateObj`;
+  const change = `onDateChange(${secIdx},${jobIdx})`;
+
+  const monthOpts = (sel) => MONTHS.map((m, i) =>
+    `<option value="${i}" ${i===sel?'selected':''}>${i === 0 ? '—' : m}</option>`
+  ).join('');
+
+  const endDisabled = d.present ? 'disabled style="opacity:0.35"' : '';
+
+  return `<div class="date-row">
+    <select onchange="${base}.startMonth=+this.value;${change}">${monthOpts(d.startMonth)}</select>
+    <input type="number" placeholder="Year" value="${d.startYear}" min="1970" max="2040"
+      oninput="${base}.startYear=this.value;${change}">
+    <span class="sep">–</span>
+    <select ${endDisabled} onchange="${base}.endMonth=+this.value;${change}" id="endm-${secIdx}-${jobIdx}">${monthOpts(d.endMonth)}</select>
+    <input type="number" placeholder="Year" value="${d.endYear}" min="1970" max="2040" ${endDisabled}
+      oninput="${base}.endYear=this.value;${change}" id="endy-${secIdx}-${jobIdx}">
+    <label class="present-label">
+      <input type="checkbox" ${d.present?'checked':''} onchange="${base}.present=this.checked;${change};renderEditor()">
+      Present
+    </label>
+  </div>`;
+}
+
+// ── Section operations ──
+
+function addSection() {
+  data.sections.push({ id: sid(), title: 'New Section', type: 'text', content: '' });
+  renderEditor();
+}
+
+function removeSection(idx) {
+  data.sections.splice(idx, 1);
+  renderEditor();
+}
+
+function moveSection(idx, dir) {
+  const s = data.sections;
+  const target = idx + dir;
+  [s[idx], s[target]] = [s[target], s[idx]];
+  renderEditor();
+}
+
+function changeType(idx, newType) {
+  const sec = data.sections[idx];
+  if (sec.type === newType) return;
+  sec.type = newType;
+  if (newType === 'text') { sec.content = sec.content || ''; }
+  if (newType === 'bullets') { sec.items = sec.items || [{ id: sid(), text: '' }]; }
+  if (newType === 'jobs') { sec.jobs = sec.jobs || [{ id: sid(), title: '', date: '', bullets: [{ id: sid(), text: '' }] }]; }
+  renderEditor();
+}
+
+// Bullet operations
+function addBullet(secIdx) {
+  data.sections[secIdx].items.push({ id: sid(), text: '' });
+  renderEditor();
+  // Focus last input
+  setTimeout(() => {
+    const inputs = document.querySelectorAll(`[data-id="${data.sections[secIdx].id}"] .bullet-list input`);
+    inputs[inputs.length - 1]?.focus();
+  }, 0);
+}
+
+function removeBullet(secIdx, bulletIdx) {
+  data.sections[secIdx].items.splice(bulletIdx, 1);
+  renderEditor();
+}
+
+// Job operations
+function addJob(secIdx) {
+  data.sections[secIdx].jobs.push({
+    id: sid(), title: '', company: '', location: '', date: '',
+    dateObj: { startMonth: 0, startYear: '', endMonth: 0, endYear: '', present: false },
+    bullets: [{ id: sid(), text: '' }]
+  });
+  renderEditor();
+}
+
+function removeJob(secIdx, jobIdx) {
+  data.sections[secIdx].jobs.splice(jobIdx, 1);
+  renderEditor();
+}
+
+function moveJob(secIdx, jobIdx, dir) {
+  const jobs = data.sections[secIdx].jobs;
+  const target = jobIdx + dir;
+  [jobs[jobIdx], jobs[target]] = [jobs[target], jobs[jobIdx]];
+  renderEditor();
+}
+
+function addJobBullet(secIdx, jobIdx) {
+  data.sections[secIdx].jobs[jobIdx].bullets.push({ id: sid(), text: '' });
+  renderEditor();
+  setTimeout(() => {
+    const sectionEl = document.querySelectorAll('.section-block')[secIdx + 1]; // +1 for header
+    const jobEls = sectionEl?.querySelectorAll('.sub-item');
+    const inputs = jobEls?.[jobIdx]?.querySelectorAll('.bullet-list input');
+    inputs?.[inputs.length - 1]?.focus();
+  }, 0);
+}
+
+function removeJobBullet(secIdx, jobIdx, bulletIdx) {
+  data.sections[secIdx].jobs[jobIdx].bullets.splice(bulletIdx, 1);
+  renderEditor();
+}
+
+// ── Preview ──
+
+function renderPreview() {
+  const p = document.getElementById('preview');
+  let html = '';
+
+  html += `<h1>${inlineMd(data.name)}</h1>`;
+  html += `<h2 class="role">${inlineMd(data.role)}</h2>`;
+  if (data.contact) html += `<p class="contact">${linkify(data.contact)}</p>`;
+  if (data.links) html += `<p class="links">${linkify(data.links)}</p>`;
+
+  data.sections.forEach(sec => {
+    html += `<h2 class="section">${esc(sec.title)}</h2>`;
+
+    if (sec.type === 'text') {
+      html += `<p>${inlineMd(sec.content || '')}</p>`;
+    }
+
+    if (sec.type === 'bullets') {
+      html += '<ul>';
+      (sec.items || []).forEach(b => {
+        if (b.text) html += `<li>${inlineMd(b.text)}</li>`;
+      });
+      html += '</ul>';
+    }
+
+    if (sec.type === 'jobs') {
+      (sec.jobs || []).forEach(job => {
+        if (job.title || job.company) {
+          html += `<div class="job-header">`;
+          html += `<h3>${inlineMd(job.title || '')}</h3>`;
+          if (job.company) html += `<span class="job-company">${esc(job.company)}</span>`;
+          html += `</div>`;
+        }
+        if (job.date || job.location) {
+          html += `<div class="job-header job-sub">`;
+          html += `<p class="date">${job.date ? esc(job.date) : ''}</p>`;
+          if (job.location) html += `<span class="job-location">${esc(job.location)}</span>`;
+          html += `</div>`;
+        }
+        if (job.bullets?.length) {
+          html += '<ul>';
+          job.bullets.forEach(b => {
+            if (b.text) html += `<li>${inlineMd(b.text)}</li>`;
+          });
+          html += '</ul>';
+        }
+      });
+    }
+  });
+
+  p.innerHTML = html;
+}
+
+function linkify(text) {
+  return text.split('|').map(seg => {
+    const t = seg.trim();
+    if (!t) return '';
+    if (t.includes('@')) return `<a href="mailto:${esc(t)}">${esc(t)}</a>`;
+    if (t.match(/^(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]+\/)/i)) {
+      const href = t.startsWith('http') ? t : 'https://' + t;
+      return `<a href="${esc(href)}">${esc(t)}</a>`;
+    }
+    // Check for domain-like patterns (e.g., github.com/user)
+    if (t.match(/^[a-z0-9-]+\.[a-z]{2,}/i) && t.includes('/')) {
+      return `<a href="https://${esc(t)}">${esc(t)}</a>`;
+    }
+    return esc(t);
+  }).join(' &nbsp;|&nbsp; ');
+}
+
+// ── Markdown import/export ──
+
+function toMarkdown() {
+  let md = '';
+  md += `# ${data.name}\n\n`;
+  md += `## ${data.role}\n\n`;
+  if (data.contact) md += data.contact + '\n';
+  if (data.links) md += data.links + '\n';
+  md += '\n';
+
+  data.sections.forEach(sec => {
+    md += `## ${sec.title}\n\n`;
+
+    if (sec.type === 'text') {
+      md += (sec.content || '') + '\n\n';
+    }
+
+    if (sec.type === 'bullets') {
+      (sec.items || []).forEach(b => {
+        if (b.text) md += `- ${b.text}\n`;
+      });
+      md += '\n';
+    }
+
+    if (sec.type === 'jobs') {
+      (sec.jobs || []).forEach(job => {
+        const fullTitle = [job.title, job.company, job.location].filter(Boolean).join(' | ');
+        if (fullTitle) md += `### ${fullTitle}\n\n`;
+        if (job.date) md += `${job.date}\n\n`;
+        (job.bullets || []).forEach(b => {
+          if (b.text) md += `- ${b.text}\n`;
+        });
+        md += '\n';
+      });
+    }
+  });
+
+  return md.trimEnd() + '\n';
+}
+
+async function copyMarkdown() {
+  const md = toMarkdown();
+  try {
+    await navigator.clipboard.writeText(md);
+    const btn = document.getElementById('mdBtn');
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '{ } Copy Markdown'; }, 2000);
+  } catch(e) { console.error('Copy failed', e); }
+}
+
+function downloadMarkdown() {
+  const md = toMarkdown();
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `resume-${data.name.toLowerCase().replace(/\s+/g, '-')}.md`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── Import from markdown ──
+
+function parseMarkdown(md) {
+  const lines = md.split('\n');
+  const parsed = { name: '', role: '', contact: '', links: '', sections: [] };
+  let h2Count = 0;
+  let currentSection = null;
+  let currentJob = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // H1 — name
+    if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) {
+      parsed.name = trimmed.slice(2).trim();
+      continue;
+    }
+
+    // H2
+    if (trimmed.startsWith('## ') && !trimmed.startsWith('### ')) {
+      h2Count++;
+
+      if (h2Count === 1) {
+        // First h2 is role
+        parsed.role = trimmed.slice(3).trim();
+        continue;
+      }
+
+      // Subsequent h2s are sections
+      currentJob = null;
+      currentSection = {
+        id: sid(),
+        title: trimmed.slice(3).trim(),
+        type: 'text',
+        content: '',
+        items: [],
+        jobs: [],
+      };
+      parsed.sections.push(currentSection);
+      lastHeadingLevel = 2;
+      continue;
+    }
+
+    // H3 — job entry
+    if (trimmed.startsWith('### ')) {
+      if (currentSection) {
+        currentSection.type = 'jobs';
+        const h3Text = trimmed.slice(4).trim();
+        const parts = h3Text.split('|').map(s => s.trim());
+        currentJob = {
+          id: sid(),
+          title: parts[0] || '',
+          company: parts[1] || '',
+          location: parts[2] || '',
+          date: '',
+          bullets: [],
+        };
+        currentSection.jobs.push(currentJob);
+      }
+      continue;
+    }
+
+    // Before any real section (h2Count <= 1) — contact/links lines
+    if (h2Count <= 1 && !currentSection) {
+      if (trimmed && !parsed.contact) {
+        parsed.contact = trimmed;
+      } else if (trimmed && !parsed.links) {
+        parsed.links = trimmed;
+      }
+      continue;
+    }
+
+    if (!currentSection) continue;
+
+    // Bullet
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const text = trimmed.slice(2).trim();
+      if (currentJob) {
+        currentJob.bullets.push({ id: sid(), text });
+      } else {
+        // Switch to bullets type whenever we see a bullet line
+        if (currentSection.type !== 'bullets') {
+          currentSection.type = 'bullets';
+          if (!currentSection.items) currentSection.items = [];
+        }
+        currentSection.items.push({ id: sid(), text });
+      }
+      continue;
+    }
+
+    // Date line (after h3, starts with year or contains year range)
+    if (currentJob && !currentJob.date && trimmed && (/^\d{4}/.test(trimmed) || /^(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}/i.test(trimmed))) {
+      currentJob.date = trimmed;
+      continue;
+    }
+
+    // Plain text
+    if (trimmed && currentSection.type === 'text') {
+      currentSection.content += (currentSection.content ? '\n' : '') + trimmed;
+    }
+  }
+
+  // Clean up
+  parsed.sections.forEach(sec => {
+    if (sec.type === 'jobs' && sec.jobs.length === 0) sec.type = 'text';
+    if (sec.type === 'bullets' && sec.items.length === 0) sec.type = 'text';
+
+    // Text sections whose content is really bullet-separated items:
+    // split on " · " or "• " patterns and promote to bullets
+    if (sec.type === 'text' && sec.content) {
+      // Check for "• " prefixed items (unicode bullet)
+      if (/^[•·]\s/.test(sec.content.trim()) || /\s[•·]\s/.test(sec.content)) {
+        const parts = sec.content.split(/\s*[•·]\s+/).filter(s => s.trim());
+        if (parts.length > 1) {
+          sec.type = 'bullets';
+          sec.items = parts.map(t => ({ id: sid(), text: t.trim() }));
+          sec.content = '';
+        }
+      }
+      // Check for lines starting with "- " that weren't caught earlier (e.g. inside a text block)
+      else if (sec.content.includes('\n- ') || sec.content.startsWith('- ')) {
+        const parts = sec.content.split('\n').filter(l => l.trim());
+        const allBullets = parts.every(l => l.trim().startsWith('- ') || l.trim().startsWith('* '));
+        if (allBullets) {
+          sec.type = 'bullets';
+          sec.items = parts.map(l => ({ id: sid(), text: l.trim().replace(/^[-*]\s+/, '') }));
+          sec.content = '';
+        }
+      }
+    }
+  });
+
+  return parsed;
+}
+
+function importMarkdown(md) {
+  const parsed = parseMarkdown(md);
+  data.name = parsed.name || data.name;
+  data.role = parsed.role || data.role;
+  data.contact = parsed.contact || data.contact;
+  data.links = parsed.links || data.links;
+  data.sections = parsed.sections.length ? parsed.sections : data.sections;
+  renderEditor();
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => importMarkdown(e.target.result);
+  reader.readAsText(file);
+}
+
+// Drag and drop
+const dropZone = document.getElementById('dropZone');
+['dragover', 'dragenter'].forEach(evt => {
+  dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+});
+['dragleave', 'drop'].forEach(evt => {
+  dropZone.addEventListener(evt, () => dropZone.classList.remove('drag-over'));
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// ── Init ──
+renderEditor();
+</script>
+</body>
+</html>

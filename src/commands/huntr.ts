@@ -6,7 +6,7 @@ import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
-import { renderResumeHtml, renderCoverLetterHtml, renderPdf } from '../lib/render.js';
+import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -606,8 +606,8 @@ async function tailorAndWrite(args: {
   if (pdf) {
     const resumePdfOut = join(outputDir, `resume-${slug}.pdf`);
     try {
-      await renderPdf(resumeHtmlOut, resumePdfOut);
-      console.log(`    ✓ resume (pdf) → ${resumePdfOut}`);
+      const fit = await renderResumePdfFit(output.resume, `Resume - ${companyName}`, resumeHtmlOut, resumePdfOut);
+      console.log(`    ✓ resume (pdf) → ${resumePdfOut}${fit ? '' : ' (compact: still >1 page)'}`);
     } catch (err) {
       console.warn(`    ⚠ PDF generation skipped: ${(err as Error).message}`);
     }
