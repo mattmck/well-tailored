@@ -1,9 +1,15 @@
 import { execFileSync } from 'child_process';
-import { resolve } from 'path';
-import { pathToFileURL } from 'url';
-import { existsSync } from 'fs';
+import { resolve, dirname, join } from 'path';
+import { pathToFileURL, fileURLToPath } from 'url';
+import { existsSync, readFileSync } from 'fs';
 import { Marked } from 'marked';
 import sanitizeHtmlLib from 'sanitize-html';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+function readTemplate(name: string): string {
+  return readFileSync(join(__dirname, '../templates', name), 'utf8');
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -171,85 +177,6 @@ function makeRenderer() {
   return { renderer, closeJobSection };
 }
 
-// ---------------------------------------------------------------------------
-// CSS
-// ---------------------------------------------------------------------------
-
-const CSS = `
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html { font-size: 16px; }
-
-  body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #B7CCE0;
-    color: #323434;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  .resume {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 40px 54px;
-    background: #B7CCE0;
-  }
-
-  .job-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  /* ── Typography ───────────────────────────────── */
-
-  h1 { font-size: 23px; font-weight: 700; color: #BE503C; line-height: 1.1; margin-bottom: 3px; }
-  h2.role { font-size: 14px; font-weight: 700; color: #364D62; margin-bottom: 7px; }
-  p.contact, p.links { font-size: 11px; color: #323434; line-height: 1.4; }
-  p.links { margin-bottom: 16px; }
-  p.contact a, p.links a { color: #255F91; }
-  h2.section { font-size: 13.5px; font-weight: 700; color: #BE503C; margin-top: 14px; margin-bottom: 4px; }
-  h3 { font-size: 11.5px; font-weight: 700; color: #182234; line-height: 1.3; margin-top: 10px; margin-bottom: 1px; }
-  h2.section + .job-section h3, h2.section + h3 { margin-top: 4px; }
-  p.date { font-size: 11px; color: #3B72A8; line-height: 1.3; margin-bottom: 4px; }
-  ul { list-style: disc; padding-left: 16px; margin: 0 0 2px 0; color: #323434; }
-  li, p { font-size: 11px; line-height: 1.5; color: #323434; margin-bottom: 3px; }
-  a { color: #255F91; text-decoration: none; }
-
-  /* ── Print ────────────────────────────────────── */
-
-  @media print {
-    @page { size: letter portrait; }
-    body { background: white; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    .resume { padding: 0; max-width: 100%; }
-    
-    @page {
-      margin: 1cm;
-      size: letter portrait;
-      background-color: #B7CCE0;
-      background: #B7CCE0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    html { padding: 0; background-color: #B7CCE0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #B7CCE0 !important;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .resume {
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      background: transparent;
-    }
-    h2.section { break-after: avoid; page-break-after: avoid; }
-    h3 { break-after: avoid; page-break-after: avoid; }
-    li { break-inside: avoid; page-break-inside: avoid; }
-    p.contact, p.links { break-after: avoid; page-break-after: avoid; }
-  }
-`;
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -279,24 +206,12 @@ export function renderResumeHtml(markdown: string, pageTitle?: string): string {
   body += closeJobSection();
 
   const safeTitle = escapeHtml(resolvedTitle);
+  const indentedBody = body.trim().split('\n').map(l => `    ${l}`).join('\n');
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${safeTitle}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>${CSS}</style>
-</head>
-<body>
-  <div class="resume">
-${body.trim().split('\n').map(l => `    ${l}`).join('\n')}
-  </div>
-</body>
-</html>`;
+  return readTemplate('resume.html')
+    .replace('{{TITLE}}', safeTitle)
+    .replace('{{CSS}}', readTemplate('resume.css'))
+    .replace('{{BODY}}', indentedBody);
 }
 
 /**
@@ -308,41 +223,13 @@ export function renderCoverLetterHtml(markdown: string, pageTitle?: string): str
   const body = sanitizeHtml(m.parse(markdown) as string);
   const safeTitle = escapeHtml(resolvedTitle);
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${safeTitle}</title>
-  <style>
-    ${CSS}
-    .cover-letter {
-      max-width: 100%;
-      padding: 0;
-    }
-    .cover-letter p {
-      font-size: 13px;
-      line-height: 1.6;
-      margin-bottom: 20px;
-      color: #323434;
-    }
-    @media print {
-      body {
-        padding: 1.2cm 1.5cm;
-      }
-      .resume.cover-letter {
-        margin: 0;
-        padding: 0;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="resume cover-letter">
-${body.trim().split('\n').map(l => `    ${l}`).join('\n')}
-  </div>
-</body>
-</html>`;
+  const indentedBody = body.trim().split('\n').map(l => `    ${l}`).join('\n');
+  const css = readTemplate('resume.css') + '\n' + readTemplate('cover-letter.css');
+
+  return readTemplate('cover-letter.html')
+    .replace('{{TITLE}}', safeTitle)
+    .replace('{{CSS}}', css)
+    .replace('{{BODY}}', indentedBody);
 }
 
 /**
