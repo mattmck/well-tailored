@@ -3115,7 +3115,10 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
           : null;
         if (frame) frame.style.height = (msg.height + 24) + 'px';
       }
+      // Only trust structured editor messages from the resume editor iframe
+      const isFromResumeEditor = els.resumeEditorFrame && event.source === els.resumeEditorFrame.contentWindow;
       if (msg.type === 'resume-editor-ready') {
+        if (!isFromResumeEditor) return;
         state.resumeEditorReady = true;
         state.lastResumeEditorSync = '';
         syncResumeEditor(els.resume.value);
@@ -3123,6 +3126,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
         sendThemeToEditor();
       }
       if (msg.type === 'resume-editor-change' && typeof msg.markdown === 'string') {
+        if (!isFromResumeEditor) return;
         state.lastResumeEditorSync = msg.markdown;
         if (state.structuredEditorTarget === 'result' && state.lastResult) {
           // Write back to result
