@@ -422,7 +422,10 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   sendNotFound(res);
 }
 
-export async function startWorkbenchServer(port = Number(process.env.PORT ?? DEFAULT_PORT)) {
+export async function startWorkbenchServer(
+  port = Number(process.env.PORT ?? DEFAULT_PORT),
+  host = process.env.HOST || '127.0.0.1',
+) {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://localhost');
@@ -443,12 +446,13 @@ export async function startWorkbenchServer(port = Number(process.env.PORT ?? DEF
   });
 
   await new Promise<void>((resolve) => {
-    server.listen(port, '0.0.0.0', () => resolve());
+    server.listen(port, host, () => resolve());
   });
 
   return {
     server,
     port,
+    host,
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
@@ -457,9 +461,11 @@ export async function startWorkbenchServer(port = Number(process.env.PORT ?? DEF
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  startWorkbenchServer()
-    .then(({ port }) => {
-      console.log(`job-shit workbench listening on http://localhost:${port}`);
+  const defaultHost = process.env.HOST || '127.0.0.1';
+  startWorkbenchServer(undefined, defaultHost)
+    .then(({ port, host }) => {
+      const displayHost = host === '127.0.0.1' ? 'localhost' : host;
+      console.log(`job-shit workbench listening on http://${displayHost}:${port}`);
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));
