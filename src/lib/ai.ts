@@ -104,8 +104,11 @@ export function describeProvider(model: string, preferredProvider: ProviderChoic
   if (!provider) {
     return '(no provider configured)';
   }
-  if (provider.id === 'azure' && ['auto', 'default'].includes(model.toLowerCase()) && !process.env.AZURE_OPENAI_DEPLOYMENT) {
-    throw new Error('AZURE_OPENAI_DEPLOYMENT is not set. Set it to your Azure deployment name.');
+  if (['auto', 'default'].includes(model.toLowerCase()) && !provider.defaultModel) {
+    throw new Error(
+      `No default model configured for provider "${provider.label}". ` +
+        'Set a defaultModel in your provider profile or specify an explicit model.',
+    );
   }
   return `${provider.label} · ${resolveModel(model, provider.defaultModel)}`;
 }
