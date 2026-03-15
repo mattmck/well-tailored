@@ -58,16 +58,31 @@ export interface HuntrApiClient {
 
 const COMPANY_PLACEHOLDERS = new Set(['the job', 'unknown company', 'unknown', 'job']);
 
-export function createHuntrClient(token: string): HuntrApiClient {
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+export function createHuntrClient(token: string, timeoutMs = DEFAULT_TIMEOUT_MS): HuntrApiClient {
   const baseURL = 'https://api.huntr.co/api';
   return {
     async get<T>(endpoint: string): Promise<T> {
-      const response = await fetch(baseURL + endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      let response: Response;
+      try {
+        response = await fetch(baseURL + endpoint, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timer);
+        if (err instanceof Error && err.name === 'AbortError') {
+          throw new Error(`Huntr API request timed out after ${timeoutMs}ms: ${baseURL}${endpoint}`);
+        }
+        throw err;
+      }
+      clearTimeout(timer);
       if (!response.ok) {
         throw new Error(`Huntr API error ${response.status}: ${response.statusText}`);
       }

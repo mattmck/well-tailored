@@ -36,14 +36,37 @@ function workspacePath(id: string): string {
 }
 
 function readWorkspace(path: string): SavedWorkspace {
-  return JSON.parse(readFileSync(path, 'utf8')) as SavedWorkspace;
+  let raw: string;
+  try {
+    raw = readFileSync(path, 'utf8');
+  } catch (err) {
+    throw new Error(`Failed to read workspace at ${path}: ${(err as Error).message}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Failed to parse workspace at ${path}: ${(err as Error).message}`);
+  }
+  const ws = parsed as Record<string, unknown>;
+  if (!ws || typeof ws !== 'object' || typeof ws.id !== 'string' || typeof ws.name !== 'string') {
+    throw new Error(`Invalid workspace file at ${path}: missing required fields (id, name)`);
+  }
+  return ws as unknown as SavedWorkspace;
 }
 
 export function listSavedWorkspaces(): SavedWorkspaceSummary[] {
   const dir = ensureWorkspaceDir();
-  return readdirSync(dir)
-    .filter((name) => name.endsWith('.json'))
-    .map((name) => readWorkspace(join(dir, name)))
+  const workspaces: SavedWorkspace[] = [];
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.json')) continue;
+    try {
+      workspaces.push(readWorkspace(join(dir, name)));
+    } catch (err) {
+      console.warn(`Skipping corrupt workspace file ${name}: ${(err as Error).message}`);
+    }
+  }
+  return workspaces
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .map(({ id, name, slug, createdAt, updatedAt }) => ({
       id,

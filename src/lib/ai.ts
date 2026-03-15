@@ -168,7 +168,7 @@ export async function complete(
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
     const t0 = Date.now();
     const client = new AzureOpenAI({
-      endpoint: provider.endpoint,
+      endpoint: provider.endpoint!, // guaranteed present for azure providers
       apiKey: provider.apiKey,
       apiVersion: provider.apiVersion ?? '2024-12-01-preview',
       deployment: resolved,

@@ -54,6 +54,12 @@ export interface ProviderOption {
   label: string;
   defaultModel: string;
   models: string[];
+  /** Base URL for OpenAI-compatible or custom endpoints. */
+  baseURL?: string;
+  /** Azure-specific endpoint URL. */
+  endpoint?: string;
+  /** Azure API version string. */
+  apiVersion?: string;
 }
 
 /** Agent/model selection for generation and evaluation. */

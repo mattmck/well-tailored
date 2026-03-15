@@ -139,10 +139,14 @@ function parseJobHeading(text: string): JobHeading {
   const dashMatch = stripped.match(/^(.+?)\s+[—–-]{1,2}\s+(.+)$/);
   if (dashMatch) {
     const [, title, rest] = dashMatch;
-    // rest might be "Company, Location" or just "Company"
-    const commaIdx = rest.lastIndexOf(',');
-    if (commaIdx > 0) {
-      return { title: title.trim(), company: rest.slice(0, commaIdx).trim(), location: rest.slice(commaIdx + 1).trim() };
+    // rest might be "Company, City, ST" or "Company, Location" or just "Company"
+    const restParts = rest.split(',').map(s => s.trim());
+    if (restParts.length >= 3 && restParts[restParts.length - 1].length <= 3) {
+      // "Acme, San Francisco, CA" → company="Acme", location="San Francisco, CA"
+      return { title: title.trim(), company: restParts[0], location: restParts.slice(1).join(', ') };
+    }
+    if (restParts.length >= 2) {
+      return { title: title.trim(), company: restParts.slice(0, -1).join(', '), location: restParts[restParts.length - 1] };
     }
     return { title: title.trim(), company: rest.trim(), location: '' };
   }
@@ -264,8 +268,24 @@ const COMPACT_CSS = `
   ul { margin: 0 0 1px 0 !important; }
 `;
 
+const SAFE_CSS_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([^)]+\)|[a-zA-Z]{1,30})$/;
+
+function safeColor(value: string, fallback: string): string {
+  return SAFE_CSS_COLOR.test(value.trim()) ? value.trim() : fallback;
+}
+
 function buildThemeCss(theme?: Partial<ResumeTheme>): string {
-  const resolved = { ...DEFAULT_RESUME_THEME, ...theme };
+  const merged = { ...DEFAULT_RESUME_THEME, ...theme };
+  const resolved = {
+    background: safeColor(merged.background, DEFAULT_RESUME_THEME.background),
+    body: safeColor(merged.body, DEFAULT_RESUME_THEME.body),
+    accent: safeColor(merged.accent, DEFAULT_RESUME_THEME.accent),
+    subheading: safeColor(merged.subheading, DEFAULT_RESUME_THEME.subheading),
+    jobTitle: safeColor(merged.jobTitle, DEFAULT_RESUME_THEME.jobTitle),
+    date: safeColor(merged.date, DEFAULT_RESUME_THEME.date),
+    contact: safeColor(merged.contact, DEFAULT_RESUME_THEME.contact),
+    link: safeColor(merged.link, DEFAULT_RESUME_THEME.link),
+  };
   return `
 html, body, .resume { background: ${resolved.background}; }
 body, li, p, ul { color: ${resolved.body}; }

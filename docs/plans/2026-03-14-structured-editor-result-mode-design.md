@@ -14,7 +14,7 @@ The structured editor only operates on the source resume. After AI tailoring, th
 - Manual toggle always available
 
 **Side panel header layout:**
-```
+```text
 [Source | Result]  [Edit | Preview]  [x]
 ```
 

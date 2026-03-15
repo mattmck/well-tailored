@@ -97,10 +97,17 @@ function sendHtml(res: ServerResponse, html: string): void {
   res.end(html);
 }
 
+function sanitizeFilename(raw: string): string {
+  // Strip path separators, CR/LF, quotes; fallback to safe default
+  const safe = raw.replace(/[\r\n"\/\\]/g, '').trim();
+  return safe || 'download.pdf';
+}
+
 function sendPdf(res: ServerResponse, filename: string, pdf: Buffer): void {
+  const safe = sanitizeFilename(filename);
   res.writeHead(200, {
     'Content-Type': 'application/pdf',
-    'Content-Disposition': `attachment; filename="${filename}"`,
+    'Content-Disposition': `attachment; filename="${safe}"`,
     'Cache-Control': 'no-store',
   });
   res.end(pdf);

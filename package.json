@@ -7,7 +7,7 @@
     "job-shit": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && rm -rf dist/templates dist/workbench && cp -r src/templates dist/templates && cp -r src/workbench dist/workbench && cp docs/resume-editor.html dist/workbench/resume-editor.html",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "dev": "tsx src/cli.ts",
     "serve": "tsx src/cli.ts serve",
     "shit": "tsx src/cli.ts serve",

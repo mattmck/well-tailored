@@ -2,9 +2,6 @@ import { ProviderChoice, ProviderKind, ProviderOption } from '../types/index.js'
 
 export interface ResolvedProvider extends ProviderOption {
   apiKey: string;
-  baseURL?: string;
-  endpoint?: string;
-  apiVersion?: string;
 }
 
 const LEGACY_PROVIDER_PRIORITY: ProviderKind[] = ['gemini', 'azure', 'openai', 'anthropic'];
@@ -239,7 +236,7 @@ function configuredProviders(): ResolvedProvider[] {
 }
 
 export function listConfiguredProviders(): ProviderOption[] {
-  return configuredProviders().map(({ apiKey: _apiKey, baseURL, endpoint, apiVersion, ...provider }) => provider);
+  return configuredProviders().map(({ apiKey: _apiKey, ...provider }) => provider);
 }
 
 export function resolveProviderConfig(preferred?: ProviderChoice): ResolvedProvider | undefined {

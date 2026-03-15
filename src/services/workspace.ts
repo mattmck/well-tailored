@@ -49,7 +49,10 @@ export function resolveWorkspaceDocuments(
       cwd,
     });
     baseCoverLetter = readFile(coverLetterPath);
-  } catch {
+  } catch (err) {
+    if (overrides.coverLetter) {
+      throw new Error(`Failed to load cover letter from "${overrides.coverLetter}": ${(err as Error).message}`);
+    }
     coverLetterPath = undefined;
   }
 
@@ -63,7 +66,10 @@ export function resolveWorkspaceDocuments(
       cwd,
     });
     resumeSupplemental = readFile(supplementalPath);
-  } catch {
+  } catch (err) {
+    if (overrides.supplemental) {
+      throw new Error(`Failed to load supplemental from "${overrides.supplemental}": ${(err as Error).message}`);
+    }
     supplementalPath = undefined;
   }
 
