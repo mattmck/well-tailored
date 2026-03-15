@@ -22,8 +22,17 @@ function slugify(value: string): string {
   return slug || 'workspace';
 }
 
+function validateWorkspaceId(id: string): string {
+  // Allow only simple filename-safe tokens like "my-workspace-123"
+  if (!/^[a-z0-9-]+$/.test(id)) {
+    throw new Error(`Invalid workspace id: "${id}"`);
+  }
+  return id;
+}
+
 function workspacePath(id: string): string {
-  return join(ensureWorkspaceDir(), `${id}.json`);
+  const safeId = validateWorkspaceId(id);
+  return join(ensureWorkspaceDir(), `${safeId}.json`);
 }
 
 function readWorkspace(path: string): SavedWorkspace {
