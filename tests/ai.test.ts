@@ -47,7 +47,7 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: AnthropicMock };
 });
 
-import { complete } from '../src/lib/ai.js';
+import { complete, describeProvider } from '../src/lib/ai.js';
 
 /** Helper: a successful OpenAI-style response */
 function openaiOk(text: string) {
@@ -61,6 +61,7 @@ function anthropicOk(text: string) {
 
 // Capture the original env so each test starts with a clean slate.
 const SAVED_ENV: Record<string, string | undefined> = {};
+const SAVED_JOB_SHIT_ENV: Record<string, string | undefined> = {};
 const PROVIDER_KEYS = [
   'GEMINI_API_KEY',
   'AZURE_OPENAI_ENDPOINT',
@@ -69,6 +70,7 @@ const PROVIDER_KEYS = [
   'AZURE_OPENAI_API_VERSION',
   'OPENAI_API_KEY',
   'OPENAI_BASE_URL',
+  'OPENAI_PROVIDER_NAME',
   'ANTHROPIC_API_KEY',
 ];
 
@@ -77,6 +79,12 @@ beforeEach(() => {
     SAVED_ENV[k] = process.env[k];
     delete process.env[k];
   });
+  Object.keys(process.env)
+    .filter((key) => key.startsWith('JOB_SHIT_PROVIDER_') || key.startsWith('JOB_SHIT_'))
+    .forEach((key) => {
+      SAVED_JOB_SHIT_ENV[key] = process.env[key];
+      delete process.env[key];
+    });
   mockChatCreate.mockReset();
   mockMessagesCreate.mockReset();
 });
@@ -88,6 +96,14 @@ afterEach(() => {
     } else {
       process.env[k] = SAVED_ENV[k];
     }
+  });
+  Object.keys(SAVED_JOB_SHIT_ENV).forEach((key) => {
+    if (SAVED_JOB_SHIT_ENV[key] === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = SAVED_JOB_SHIT_ENV[key];
+    }
+    delete SAVED_JOB_SHIT_ENV[key];
   });
   vi.useRealTimers();
 });
@@ -173,6 +189,42 @@ describe('provider selection', () => {
     expect(mockChatCreate).toHaveBeenCalledOnce();
     expect(mockMessagesCreate).not.toHaveBeenCalled();
   });
+
+  it('uses the explicitly requested provider even when a higher-priority provider is configured', async () => {
+    process.env.GEMINI_API_KEY = 'gemini-key';
+    process.env.OPENAI_API_KEY = 'openai-key';
+    mockChatCreate.mockResolvedValueOnce(openaiOk('openai explicit'));
+
+    const result = await complete('auto', 'sys', 'user', false, { provider: 'openai' });
+
+    expect(result).toBe('openai explicit');
+    expect(mockChatCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-4o-mini' }),
+    );
+  });
+
+  it('throws when an explicitly requested provider is not configured', async () => {
+    process.env.OPENAI_API_KEY = 'openai-key';
+
+    await expect(
+      complete('auto', 'sys', 'user', false, { provider: 'azure' }),
+    ).rejects.toThrow('Provider "azure" is not configured');
+  });
+
+  it('supports named OpenAI-compatible profiles such as Groq', async () => {
+    process.env.JOB_SHIT_PROVIDER_PROFILES = 'groq';
+    process.env.JOB_SHIT_PROVIDER_GROQ_KIND = 'openai';
+    process.env.JOB_SHIT_PROVIDER_GROQ_LABEL = 'Groq';
+    process.env.JOB_SHIT_PROVIDER_GROQ_API_KEY = 'groq-key';
+    process.env.JOB_SHIT_PROVIDER_GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+    process.env.JOB_SHIT_PROVIDER_GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+    mockChatCreate.mockResolvedValueOnce(openaiOk('groq response'));
+
+    const result = await complete('auto', 'sys', 'user', false, { provider: 'groq' });
+
+    expect(result).toBe('groq response');
+    expect(describeProvider('auto', 'groq')).toBe('Groq · llama-3.3-70b-versatile');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,6 +287,13 @@ describe('model alias resolution', () => {
     expect(mockChatCreate).toHaveBeenCalledWith(
       expect.objectContaining({ model: 'my-custom-deployment' }),
     );
+  });
+
+  it('describeProvider reflects a custom OpenAI-compatible label', () => {
+    process.env.OPENAI_API_KEY = 'openai-key';
+    process.env.OPENAI_PROVIDER_NAME = 'Grok';
+
+    expect(describeProvider('auto')).toBe('Grok · gpt-4o-mini');
   });
 });
 

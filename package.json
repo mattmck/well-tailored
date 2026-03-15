@@ -7,8 +7,12 @@
     "job-shit": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && node -e \"const fs = require('fs'); fs.rmSync('dist/templates', { recursive: true, force: true }); fs.mkdirSync('dist/templates', { recursive: true }); fs.cpSync('src/templates', 'dist/templates', { recursive: true });\"",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "dev": "tsx src/cli.ts",
+    "serve": "tsx src/cli.ts serve",
+    "shit": "tsx src/cli.ts serve",
+    "shots:workbench": "node scripts/capture-workbench-shots.mjs",
+    "video:promo": "node scripts/build-workbench-promo.mjs",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

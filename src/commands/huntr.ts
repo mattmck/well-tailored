@@ -7,6 +7,12 @@ import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
+import {
+  createHuntrClient as createSharedHuntrClient,
+  extractCompanyName as extractSharedCompanyName,
+  getJob as getSharedJob,
+  listWishlistJobs as listSharedWishlistJobs,
+} from '../services/huntr.js';
 
 // ---------------------------------------------------------------------------
 // Huntr API types (inlined — huntr-cli has no library exports)
@@ -148,65 +154,7 @@ function extractCompanyFromDescription(text: string): string | null {
 }
 
 function extractCompanyName(job: HuntrJob): string {
-  let name: string | undefined;
-  
-  if (typeof job.company === 'object') {
-    name = job.company.name;
-  } else if (typeof job.company === 'string') {
-    // If it's a string, it might be the name or an ID.
-    // If it looks like a Mongo ID (24 chars hex), it's not the name.
-    if (!/^[0-9a-fA-F]{24}$/.test(job.company)) {
-      name = job.company;
-    }
-  }
-
-  // Detect and reject generic/placeholder names from extensions
-  const placeholders = new Set(['the job', 'unknown company', 'unknown', 'job']);
-  if (name && placeholders.has(name.toLowerCase())) {
-    name = undefined;
-  }
-
-  if (name) return name;
-
-  // Fallback 1: Try to extract from description
-  if (job.htmlDescription) {
-    const plain = stripHtml(job.htmlDescription);
-    const extracted = extractCompanyFromDescription(plain);
-    if (extracted) return extracted;
-  }
-
-  // Fallback 2: Try to extract from URL
-  if (job.url) {
-    try {
-      const url = new URL(job.url);
-      const hostname = url.hostname.replace(/^www\./, '');
-
-      // Greenhouse/Lever board URLs carry the company slug in the path
-      // e.g. boards.greenhouse.io/<company>/jobs/... or jobs.lever.co/<company>/...
-      if (hostname === 'boards.greenhouse.io' || hostname === 'jobs.lever.co') {
-        const pathParts = url.pathname.split('/').filter(Boolean);
-        if (pathParts.length > 0) return decodeURIComponent(pathParts[0]);
-      }
-
-      // Company-specific Greenhouse/Lever subdomains (e.g. acme.greenhouse.io)
-      if (hostname.endsWith('.greenhouse.io') || hostname.endsWith('.lever.co')) {
-        const subdomain = hostname.split('.')[0];
-        if (subdomain) return subdomain;
-      }
-
-      // If it's not a known job board, the hostname likely belongs to the company
-      if (!JOB_BOARD_DOMAINS.has(hostname)) {
-        return hostname;
-      }
-    } catch { /* fall through */ }
-  }
-
-  // Fallback 3: rootDomain if not a job board
-  if (job.rootDomain && !JOB_BOARD_DOMAINS.has(job.rootDomain)) {
-    return job.rootDomain;
-  }
-
-  return 'Unknown Company';
+  return extractSharedCompanyName(job);
 }
 
 async function requireHuntrToken(): Promise<string> {
@@ -295,30 +243,15 @@ export function registerHuntrCommand(program: Command): void {
     .option('--board <boardId>', 'Limit to a specific board ID')
     .action(async (opts: { board?: string }) => {
       const token = await requireHuntrToken();
-      const client = createHuntrClient(token);
+      const client = createSharedHuntrClient(token);
+      const wishlistJobs = await listSharedWishlistJobs(client, opts.board);
 
-      const boards = opts.board
-        ? [{ id: opts.board, isArchived: false }]
-        : await getBoards(client);
-
-      let found = 0;
-      for (const board of boards) {
-        const wishlistId = await findWishlistId(client, board.id);
-        if (!wishlistId) continue;
-
-        const jobs = await getJobsForBoard(client, board.id);
-        const wishlistJobs = jobs.filter((j) => j._list === wishlistId);
-        if (wishlistJobs.length === 0) continue;
-
-        found += wishlistJobs.length;
-        for (const job of wishlistJobs) {
-          const company = extractCompanyName(job);
-          const url = job.url ? `  ${job.url}` : '';
-          console.log(`${job.id}  ${job.title}  @ ${company}${url}`);
-        }
+      for (const entry of wishlistJobs) {
+        const url = entry.job.url ? `  ${entry.job.url}` : '';
+        console.log(`${entry.job.id}  ${entry.job.title}  @ ${entry.company}${url}`);
       }
 
-      if (found === 0) console.log('No wishlist jobs found.');
+      if (wishlistJobs.length === 0) console.log('No wishlist jobs found.');
     });
 
   // huntr jobs — all jobs across boards (with list name)
@@ -383,26 +316,14 @@ export function registerHuntrCommand(program: Command): void {
       pdf?: boolean;
     }) => {
       const token = await requireHuntrToken();
-      const client = createHuntrClient(token);
+      const client = createSharedHuntrClient(token);
 
       const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath } = resolveBaseFiles(opts.resume, opts.bio, opts.supplemental);
 
-      // Resolve job — use explicit board or search all boards
-      let job: HuntrJob;
-      let boardId: string;
-
-      if (opts.board) {
-        boardId = opts.board;
-        job = await client.get<HuntrJob>(`/board/${boardId}/jobs/${jobId}`);
-      } else {
+      if (!opts.board) {
         console.log('Board not specified — searching all boards...');
-        const found = await findJobAcrossBoards(client, jobId);
-        if (!found) {
-          console.error(`Error: Job ${jobId} not found in any active board.`);
-          process.exit(1);
-        }
-        ({ job, boardId } = found);
       }
+      const { job } = await getSharedJob(client, jobId, opts.board);
 
       const config = loadConfig();
       const model = opts.model ?? config.model;
@@ -444,7 +365,7 @@ export function registerHuntrCommand(program: Command): void {
       pdf?: boolean;
     }) => {
       const token = await requireHuntrToken();
-      const client = createHuntrClient(token);
+      const client = createSharedHuntrClient(token);
 
       const { resume, bio, baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath } = resolveBaseFiles(opts.resume, opts.bio, opts.supplemental);
 
@@ -457,18 +378,7 @@ export function registerHuntrCommand(program: Command): void {
       console.log(`Using AI:     ${describeProvider(model)}`);
       console.log('');
 
-      const boards = opts.board
-        ? [{ id: opts.board, isArchived: false }]
-        : await getBoards(client);
-
-      // Collect all wishlist jobs across boards
-      const wishlistJobs: HuntrJob[] = [];
-      for (const board of boards) {
-        const wishlistId = await findWishlistId(client, board.id);
-        if (!wishlistId) continue;
-        const jobs = await getJobsForBoard(client, board.id);
-        wishlistJobs.push(...jobs.filter((j) => j._list === wishlistId));
-      }
+      const wishlistJobs = (await listSharedWishlistJobs(client, opts.board)).map((entry) => entry.job);
 
       if (wishlistJobs.length === 0) {
         console.log('No wishlist jobs found.');

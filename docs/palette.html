@@ -116,8 +116,12 @@
     #preview .p-contact { font-size: 11px; line-height: 1.4; margin-bottom: 14px; }
     #preview .p-contact a { text-decoration: none; }
     #preview .p-sh      { font-size: 13.5px; font-weight: 700; margin-top: 14px; margin-bottom: 4px; border-bottom: 1px solid rgba(50,52,52,0.15); padding-bottom: 3px; }
-    #preview .p-job     { font-size: 11.5px; font-weight: 700; line-height: 1.3; margin-top: 10px; margin-bottom: 1px; }
-    #preview .p-date    { font-size: 11px; line-height: 1.3; margin-bottom: 4px; }
+    #preview .p-job-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 10px; margin-bottom: 1px; }
+    #preview .p-job { font-size: 11.5px; font-weight: 700; line-height: 1.3; margin: 0; }
+    #preview .p-job-company { font-size: 11px; font-weight: 700; white-space: nowrap; text-align: right; }
+    #preview .p-job-sub { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+    #preview .p-date { font-size: 11px; line-height: 1.3; margin: 0; }
+    #preview .p-job-location { font-size: 11px; white-space: nowrap; text-align: right; }
     #preview .p-body    { font-size: 11px; line-height: 1.5; margin-bottom: 3px; }
     #preview ul         { list-style: disc; padding-left: 16px; margin: 0 0 2px 0; }
     #preview li         { font-size: 11px; line-height: 1.5; margin-bottom: 1px; }
@@ -148,8 +152,14 @@
     <div class="p-sh">Summary</div>
     <p class="p-body">Backend engineer with 10+ years shipping distributed systems, cloud platforms, and developer tooling. Focused on reliability, clarity, and shipping things that last.</p>
     <div class="p-sh">Experience</div>
-    <div class="p-job">Staff Software Engineer | ExampleCorp | Remote</div>
-    <div class="p-date">2022 – Present</div>
+    <div class="p-job-header">
+      <div class="p-job">Staff Software Engineer</div>
+      <div class="p-job-company">ExampleCorp</div>
+    </div>
+    <div class="p-job-sub">
+      <div class="p-date">2022 – Present</div>
+      <div class="p-job-location">Remote</div>
+    </div>
     <ul>
       <li>Re-architected payment pipeline handling 50K+ TPS with exactly-once semantics.</li>
       <li>Drove MTTR from 45 min to 9 min through runbook automation and alert tuning.</li>
@@ -162,7 +172,7 @@
 
 <script>
   const DEFAULTS = [
-    { id: 'bg',       label: 'Background',       hex: '#B7CCE0', role: 'html, body, .resume' },
+    { id: 'bg',       label: 'Background',       hex: '#CEE6FE', role: 'html, body, .resume' },
     { id: 'body',     label: 'Body text',         hex: '#323434', role: 'body, li, p, ul' },
     { id: 'accent',   label: 'Accent / Headings', hex: '#BE503C', role: 'h1, h2.section' },
     { id: 'sub',      label: 'Subheading',        hex: '#364D62', role: 'h2.role' },
@@ -248,11 +258,11 @@
 
     p.style.background = c.bg;
     p.querySelectorAll('.p-name, .p-sh').forEach(el => el.style.color = c.accent);
-    p.querySelectorAll('.p-role').forEach(el => el.style.color = c.sub);
+    p.querySelectorAll('.p-role, .p-job-company').forEach(el => el.style.color = c.sub);
     p.querySelectorAll('.p-body, li').forEach(el => el.style.color = c.body);
     p.querySelectorAll('ul').forEach(el => el.style.color = c.body);
     p.querySelectorAll('.p-job').forEach(el => el.style.color = c.job);
-    p.querySelectorAll('.p-date').forEach(el => el.style.color = c.date);
+    p.querySelectorAll('.p-date, .p-job-location').forEach(el => el.style.color = c.date);
     p.querySelectorAll('.p-contact').forEach(el => el.style.color = c.contact);
     p.querySelectorAll('.p-contact a, a').forEach(el => el.style.color = c.link);
 
@@ -278,7 +288,8 @@
   h2.role { color: ${c.sub}; }  /* role subtitle */
   h2.section { color: ${c.accent}; } /* section headers */
   h3 { color: ${c.job}; }       /* job titles */
-  p.date { color: ${c.date}; }
+  .job-company { color: ${c.sub}; }
+  p.date, .job-location { color: ${c.date}; }
   p.contact, p.links { color: ${c.contact}; }
   a { color: ${c.link}; }`;
 

@@ -4,8 +4,20 @@ import { pathToFileURL, fileURLToPath } from 'url';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { Marked } from 'marked';
 import sanitizeHtmlLib from 'sanitize-html';
+import { ResumeTheme } from '../types/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export const DEFAULT_RESUME_THEME: ResumeTheme = {
+  background: '#CEE6FE',
+  body: '#323434',
+  accent: '#BE503C',
+  subheading: '#364D62',
+  jobTitle: '#182234',
+  date: '#3B72A8',
+  contact: '#323434',
+  link: '#255F91',
+};
 
 function readTemplate(name: string): string {
   return readFileSync(join(__dirname, '../templates', name), 'utf8');
@@ -42,11 +54,13 @@ function isEmail(text: string): boolean {
 }
 
 function isUrlLike(text: string): boolean {
+  const commonBareTld = /^(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|io|dev|me|ai|app|co|us|ca|blog|info|xyz)$/i;
   // Require an explicit scheme, www., or a path component so bare dotted
   // identifiers like "Node.js" are not treated as URLs.
   return /^https?:\/\/[^\s]+$/.test(text) ||
     /^www\.(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/.test(text) ||
-    /^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\/[^\s]*$/.test(text);
+    /^(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\/[^\s]*$/.test(text) ||
+    commonBareTld.test(text);
 }
 
 function linkifyContactSegment(segment: string): string {
@@ -94,15 +108,57 @@ function normalizeContactLinks(markdown: string): string {
  */
 function sanitizeHtml(html: string): string {
   return sanitizeHtmlLib(html, {
-    allowedTags: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'hr', 'a', 'strong', 'em', 'code', 'br', 'div'],
-    allowedAttributes: { a: ['href'], div: ['class'] },
+    allowedTags: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'hr', 'a', 'strong', 'em', 'code', 'br', 'div', 'span'],
+    allowedAttributes: { a: ['href'], div: ['class'], span: ['class'] },
     allowedClasses: {
       h2: ['role', 'section'],
       p: ['contact', 'links', 'date'],
-      div: ['job-section'],
+      div: ['job-section', 'job-header', 'job-sub'],
+      span: ['job-company', 'job-location'],
     },
     allowedSchemes: ['mailto', 'https', 'http'],
   });
+}
+
+// ---------------------------------------------------------------------------
+// Job heading parser — extracts title, company, location from h3 text
+// Handles pipe format (preferred) and common AI fallback formats
+
+interface JobHeading { title: string; company: string; location: string; }
+
+function parseJobHeading(text: string): JobHeading {
+  // Preferred: "Title | Company | Location"
+  const pipeParts = text.split(/\s+\|\s+/).map(s => s.trim()).filter(Boolean);
+  if (pipeParts.length >= 2) {
+    return { title: pipeParts[0], company: pipeParts[1], location: pipeParts[2] ?? '' };
+  }
+
+  // Fallback: "Title — Company (dates)" or "Title – Company (dates)"
+  // Strip trailing parenthesized content (dates the AI jammed in)
+  const stripped = text.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  const dashMatch = stripped.match(/^(.+?)\s+[—–-]{1,2}\s+(.+)$/);
+  if (dashMatch) {
+    const [, title, rest] = dashMatch;
+    // rest might be "Company, City, ST" or "Company, Location" or just "Company"
+    const restParts = rest.split(',').map(s => s.trim());
+    if (restParts.length >= 3 && restParts[restParts.length - 1].length <= 3) {
+      // "Acme, San Francisco, CA" → company="Acme", location="San Francisco, CA"
+      return { title: title.trim(), company: restParts[0], location: restParts.slice(1).join(', ') };
+    }
+    if (restParts.length >= 2) {
+      return { title: title.trim(), company: restParts.slice(0, -1).join(', '), location: restParts[restParts.length - 1] };
+    }
+    return { title: title.trim(), company: rest.trim(), location: '' };
+  }
+
+  // Fallback: "Title at Company" or "Title, Company"
+  const atMatch = stripped.match(/^(.+?)\s+at\s+(.+)$/i);
+  if (atMatch) {
+    return { title: atMatch[1].trim(), company: atMatch[2].trim(), location: '' };
+  }
+
+  // No pattern matched — just a plain title
+  return { title: text, company: '', location: '' };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +170,7 @@ function makeRenderer() {
     prevToken: '',
     h2Count: 0,
     inJobSection: false,
+    pendingJobLocation: '',
   };
 
   const closeJobSection = () => {
@@ -148,7 +205,11 @@ function makeRenderer() {
         prefix = closeJobSection();
         state.inJobSection = true;
         state.prevToken = 'h3';
-        return `${prefix}<div class="job-section">\n<h3>${inline}</h3>\n`;
+        const parsed = parseJobHeading(text);
+        state.pendingJobLocation = parsed.location;
+        const titleHtml = escapeHtml(parsed.title);
+        const companyHtml = parsed.company ? `<span class="job-company">${escapeHtml(parsed.company)}</span>` : '';
+        return `${prefix}<div class="job-section">\n<div class="job-header">\n<h3>${titleHtml}</h3>\n${companyHtml}\n</div>\n`;
       }
       
       state.prevToken = `h${depth}`;
@@ -168,7 +229,11 @@ function makeRenderer() {
       }
       if (prev === 'h3' && looksLikeDate(text)) {
         state.prevToken = 'date';
-        return `<p class="date">${inline}</p>\n`;
+        const locationHtml = state.pendingJobLocation
+          ? `<span class="job-location">${escapeHtml(state.pendingJobLocation)}</span>`
+          : '';
+        state.pendingJobLocation = '';
+        return `<div class="job-header job-sub">\n<p class="date">${inline}</p>\n${locationHtml}\n</div>\n`;
       }
       state.prevToken = 'p';
       return `<p>${inline}</p>\n`;
@@ -198,9 +263,40 @@ const COMPACT_CSS = `
   li, p { line-height: 1.4 !important; margin-bottom: 2px !important; }
   h2.section { margin-top: 10px !important; margin-bottom: 3px !important; }
   h3 { margin-top: 7px !important; margin-bottom: 1px !important; }
+  .job-header { margin-top: 7px !important; }
   p.links { margin-bottom: 10px !important; }
   ul { margin: 0 0 1px 0 !important; }
 `;
+
+const SAFE_CSS_COLOR = /^(?:#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([^)]+\)|[a-zA-Z]{1,30})$/;
+
+function safeColor(value: string, fallback: string): string {
+  return SAFE_CSS_COLOR.test(value.trim()) ? value.trim() : fallback;
+}
+
+function buildThemeCss(theme?: Partial<ResumeTheme>): string {
+  const merged = { ...DEFAULT_RESUME_THEME, ...theme };
+  const resolved = {
+    background: safeColor(merged.background, DEFAULT_RESUME_THEME.background),
+    body: safeColor(merged.body, DEFAULT_RESUME_THEME.body),
+    accent: safeColor(merged.accent, DEFAULT_RESUME_THEME.accent),
+    subheading: safeColor(merged.subheading, DEFAULT_RESUME_THEME.subheading),
+    jobTitle: safeColor(merged.jobTitle, DEFAULT_RESUME_THEME.jobTitle),
+    date: safeColor(merged.date, DEFAULT_RESUME_THEME.date),
+    contact: safeColor(merged.contact, DEFAULT_RESUME_THEME.contact),
+    link: safeColor(merged.link, DEFAULT_RESUME_THEME.link),
+  };
+  return `
+html, body, .resume { background: ${resolved.background}; }
+body, li, p, ul { color: ${resolved.body}; }
+h1, h2.section { color: ${resolved.accent}; }
+h2.role, .job-company { color: ${resolved.subheading}; }
+h3 { color: ${resolved.jobTitle}; }
+p.date, .job-location { color: ${resolved.date}; }
+p.contact, p.links { color: ${resolved.contact}; }
+p.contact a, p.links a, a { color: ${resolved.link}; }
+`;
+}
 
 /**
  * Read the page count of a PDF file.
@@ -222,20 +318,26 @@ export async function renderResumePdfFit(
   title: string,
   htmlPath: string,
   pdfPath: string,
+  theme?: Partial<ResumeTheme>,
 ): Promise<boolean> {
-  writeFileSync(htmlPath, renderResumeHtml(markdown, title), 'utf8');
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title, false, theme), 'utf8');
   await renderPdf(htmlPath, pdfPath);
 
   const pages = getPdfPageCount(pdfPath);
   if (pages <= 1) return true;
 
   // Slightly over — retry with compact CSS
-  writeFileSync(htmlPath, renderResumeHtml(markdown, title, true), 'utf8');
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title, true, theme), 'utf8');
   await renderPdf(htmlPath, pdfPath);
   return getPdfPageCount(pdfPath) <= 1;
 }
 
-export function renderResumeHtml(markdown: string, pageTitle?: string, compact = false): string {
+export function renderResumeHtml(
+  markdown: string,
+  pageTitle?: string,
+  compact = false,
+  theme?: Partial<ResumeTheme>,
+): string {
   const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Resume` : 'Resume');
   const cleaned = markdown
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -255,21 +357,25 @@ export function renderResumeHtml(markdown: string, pageTitle?: string, compact =
 
   return readTemplate('resume.html')
     .replace('{{TITLE}}', safeTitle)
-    .replace('{{CSS}}', readTemplate('resume.css'))
+    .replace('{{CSS}}', readTemplate('resume.css') + '\n' + buildThemeCss(theme) + (compact ? '\n' + COMPACT_CSS : ''))
     .replace('{{BODY}}', indentedBody);
 }
 
 /**
  * Convert a tailored cover letter (markdown) to a styled, print-ready HTML string.
  */
-export function renderCoverLetterHtml(markdown: string, pageTitle?: string): string {
+export function renderCoverLetterHtml(
+  markdown: string,
+  pageTitle?: string,
+  theme?: Partial<ResumeTheme>,
+): string {
   const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Cover Letter` : 'Cover Letter');
   const m = new Marked();
   const body = sanitizeHtml(m.parse(markdown) as string);
   const safeTitle = escapeHtml(resolvedTitle);
 
   const indentedBody = body.trim().split('\n').map(l => `    ${l}`).join('\n');
-  const css = readTemplate('resume.css') + '\n' + readTemplate('cover-letter.css');
+  const css = readTemplate('resume.css') + '\n' + buildThemeCss(theme) + '\n' + readTemplate('cover-letter.css');
 
   return readTemplate('cover-letter.html')
     .replace('{{TITLE}}', safeTitle)

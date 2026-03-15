@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from 'fs';
 import https from 'https';
 import { join } from 'path';
 import { homedir } from 'os';
-import { Config } from './types/index.js';
+import { Config, ProviderChoice, ProviderOption } from './types/index.js';
+import { listConfiguredProviders, normalizeProviderChoice } from './lib/providers.js';
 
 dotenv.config();
 
@@ -155,8 +156,80 @@ export async function resolveHuntrToken(): Promise<string | undefined> {
   return process.env.HUNTR_TOKEN ?? undefined;
 }
 
+function parseModelList(raw?: string): string[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function uniqueModels(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function defaultProvider(providers: ProviderOption[], preferred?: ProviderChoice): ProviderChoice {
+  if (preferred && preferred !== 'auto' && providers.some((provider) => provider.id === preferred)) {
+    return preferred;
+  }
+  return providers[0]?.id ?? 'auto';
+}
+
+function modelsForProvider(
+  providers: ProviderOption[],
+  provider: ProviderChoice,
+  extras: string[],
+  selectedModel: string,
+): string[] {
+  const providerModels = provider === 'auto'
+    ? (providers[0]?.models ?? ['auto'])
+    : (providers.find((entry) => entry.id === provider)?.models ?? ['auto']);
+  return uniqueModels([
+    ...providerModels,
+    selectedModel,
+    ...extras,
+  ]);
+}
+
 export function loadConfig(): Config {
+  const providers = listConfiguredProviders();
+  const preferredProvider = normalizeProviderChoice(process.env.JOB_SHIT_PROVIDER);
+  const tailoringProvider = defaultProvider(
+    providers,
+    normalizeProviderChoice(process.env.JOB_SHIT_TAILORING_PROVIDER) ?? preferredProvider,
+  );
+  const scoringProvider = defaultProvider(
+    providers,
+    normalizeProviderChoice(process.env.JOB_SHIT_SCORING_PROVIDER) ?? preferredProvider ?? tailoringProvider,
+  );
+  const sharedDefault = process.env.JOB_SHIT_MODEL
+    ?? (tailoringProvider === 'auto'
+      ? providers[0]?.defaultModel
+      : providers.find((provider) => provider.id === tailoringProvider)?.defaultModel)
+    ?? 'auto';
+  const tailoringModel = process.env.JOB_SHIT_TAILORING_MODEL ?? sharedDefault;
+  const scoringModel = process.env.JOB_SHIT_SCORING_MODEL ?? process.env.JOB_SHIT_MODEL ?? tailoringModel;
+  const tailoringModels = modelsForProvider(
+    providers,
+    tailoringProvider,
+    parseModelList(process.env.JOB_SHIT_TAILORING_MODELS),
+    tailoringModel,
+  );
+  const scoringModels = modelsForProvider(
+    providers,
+    scoringProvider,
+    parseModelList(process.env.JOB_SHIT_SCORING_MODELS),
+    scoringModel,
+  );
+
   return {
-    model: process.env.ANTHROPIC_MODEL ?? process.env.OPENAI_MODEL ?? 'auto',
+    model: tailoringModel,
+    tailoringProvider,
+    scoringProvider,
+    tailoringModel,
+    scoringModel,
+    tailoringModels,
+    scoringModels,
+    providers,
   };
 }

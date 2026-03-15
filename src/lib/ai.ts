@@ -1,6 +1,8 @@
 import OpenAI, { AzureOpenAI } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { startRetrySpinner } from './spinner.js';
+import { ProviderChoice } from '../types/index.js';
+import { ResolvedProvider, resolveProviderConfig } from './providers.js';
 
 export function createAnthropicClient(
   options?: ConstructorParameters<typeof Anthropic>[0],
@@ -89,54 +91,59 @@ function vlog(verbose: boolean, msg: string): void {
   if (verbose) console.log(msg);
 }
 
+export interface CompleteOptions {
+  provider?: ProviderChoice;
+}
+
 /**
  * Return a human-readable description of which provider + model will be used
  * for the given model hint (mirrors the priority logic in complete()).
  */
-export function describeProvider(model: string): string {
-  if (process.env.GEMINI_API_KEY) {
-    return `Gemini · ${resolveModel(model, 'gemini-2.0-flash-lite')}`;
+export function describeProvider(model: string, preferredProvider: ProviderChoice = 'auto'): string {
+  const provider = resolveProviderConfig(preferredProvider);
+  if (!provider) {
+    return '(no provider configured)';
   }
-  if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
-    if (['auto', 'default'].includes(model.toLowerCase()) && !process.env.AZURE_OPENAI_DEPLOYMENT) {
-      throw new Error('AZURE_OPENAI_DEPLOYMENT is not set. Set it to your Azure deployment name.');
-    }
-    return `Azure OpenAI · ${resolveModel(model, process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini')}`;
+  if (['auto', 'default'].includes(model.toLowerCase()) && !provider.defaultModel) {
+    return (
+      `${provider.label} · (no default model configured; ` +
+      'set a defaultModel in your provider profile or specify an explicit model)'
+    );
   }
-  if (process.env.OPENAI_API_KEY) {
-    return `OpenAI · ${resolveModel(model, 'gpt-4o-mini')}`;
-  }
-  if (process.env.ANTHROPIC_API_KEY) {
-    return `Anthropic · ${resolveModel(model, 'claude-haiku-4-5-20251001')}`;
-  }
-  return '(no provider configured)';
+  return `${provider.label} · ${resolveModel(model, provider.defaultModel)}`;
 }
 
 /**
  * Send a prompt to the configured AI provider and return the text response.
  *
- * Provider priority (first matching env wins):
- *   1. GEMINI_API_KEY                              → Google Gemini (gemini-2.0-flash-lite)
- *   2. AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_API_KEY → Azure AI Foundry / Azure OpenAI (gpt-4o-mini)
- *   3. OPENAI_API_KEY (+ optional OPENAI_BASE_URL)  → OpenAI or any OpenAI-compatible endpoint
- *   4. ANTHROPIC_API_KEY                            → Anthropic Claude (claude-haiku-4-5)
+ * Provider selection:
+ *   - If `options.provider` is set, use that configured provider profile.
+ *   - Otherwise, use the first configured provider profile.
  */
 export async function complete(
   model: string,
   systemPrompt: string,
   userPrompt: string,
   verboseArg?: boolean,
+  optionsArg?: CompleteOptions,
 ): Promise<string> {
   const verbose = verboseArg ?? false;
+  const provider = resolveProviderConfig(optionsArg?.provider);
+
+  if (!provider) {
+    throw new Error(
+      'No AI provider configured. Set one of: GEMINI_API_KEY, AZURE_OPENAI_ENDPOINT+AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.',
+    );
+  }
 
   // ── 1. Gemini ───────────────────────────────────────────────────────────
-  if (process.env.GEMINI_API_KEY) {
-    const resolved = resolveModel(model, 'gemini-2.0-flash-lite');
-    vlog(verbose, `    🔧  Gemini · ${resolved}`);
+  if (provider.kind === 'gemini') {
+    const resolved = resolveModel(model, provider.defaultModel);
+    vlog(verbose, `    🔧  ${provider.label} · ${resolved}`);
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
     const t0 = Date.now();
     const client = new OpenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: provider.apiKey,
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     });
     return withRetry(async () => {
@@ -155,18 +162,15 @@ export async function complete(
   }
 
   // ── 2. Azure AI Foundry / Azure OpenAI ──────────────────────────────────
-  if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
-    if (['auto', 'default'].includes(model.toLowerCase()) && !process.env.AZURE_OPENAI_DEPLOYMENT) {
-      throw new Error('AZURE_OPENAI_DEPLOYMENT is not set. Set it to your Azure deployment name.');
-    }
-    const resolved = resolveModel(model, process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini');
-    vlog(verbose, `    🔧  Azure OpenAI · ${resolved}`);
+  if (provider.kind === 'azure') {
+    const resolved = resolveModel(model, provider.defaultModel);
+    vlog(verbose, `    🔧  ${provider.label} · ${resolved}`);
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
     const t0 = Date.now();
     const client = new AzureOpenAI({
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-      apiKey: process.env.AZURE_OPENAI_API_KEY,
-      apiVersion: process.env.AZURE_OPENAI_API_VERSION ?? '2024-12-01-preview',
+      endpoint: provider.endpoint!, // guaranteed present for azure providers
+      apiKey: provider.apiKey,
+      apiVersion: provider.apiVersion ?? '2024-12-01-preview',
       deployment: resolved,
     });
     return withRetry(async () => {
@@ -185,14 +189,14 @@ export async function complete(
   }
 
   // ── 3. OpenAI (or custom OpenAI-compatible endpoint) ────────────────────
-  if (process.env.OPENAI_API_KEY) {
-    const resolved = resolveModel(model, 'gpt-4o-mini');
-    vlog(verbose, `    🔧  OpenAI · ${resolved}`);
+  if (provider.kind === 'openai') {
+    const resolved = resolveModel(model, provider.defaultModel);
+    vlog(verbose, `    🔧  ${provider.label} · ${resolved}`);
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
     const t0 = Date.now();
     const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      ...(process.env.OPENAI_BASE_URL ? { baseURL: process.env.OPENAI_BASE_URL } : {}),
+      apiKey: provider.apiKey,
+      ...(provider.baseURL ? { baseURL: provider.baseURL } : {}),
     });
     return withRetry(async () => {
       const resp = await client.chat.completions.create({
@@ -210,12 +214,12 @@ export async function complete(
   }
 
   // ── 4. Anthropic ─────────────────────────────────────────────────────────
-  if (process.env.ANTHROPIC_API_KEY) {
-    const resolved = resolveModel(model, 'claude-haiku-4-5-20251001');
-    vlog(verbose, `    🔧  Anthropic · ${resolved}`);
+  if (provider.kind === 'anthropic') {
+    const resolved = resolveModel(model, provider.defaultModel);
+    vlog(verbose, `    🔧  ${provider.label} · ${resolved}`);
     vlog(verbose, `    📝  system ${systemPrompt.length} chars | user ${userPrompt.length} chars`);
     const t0 = Date.now();
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({ apiKey: provider.apiKey });
     return withRetry(async () => {
       const msg = await client.messages.create({
         model: resolved,
@@ -230,7 +234,5 @@ export async function complete(
     });
   }
 
-  throw new Error(
-    'No AI provider configured. Set one of: GEMINI_API_KEY, AZURE_OPENAI_ENDPOINT+AZURE_OPENAI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.',
-  );
+  throw new Error(`Unsupported provider configuration: ${provider.kind}`);
 }

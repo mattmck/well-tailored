@@ -54,6 +54,38 @@ describe('tailorDocuments', () => {
 
     await expect(tailorDocuments('haiku', sampleInput, false, mockComplete)).rejects.toThrow('API timeout');
   });
+
+  it('uses prompt overrides when provided', async () => {
+    const mockComplete = vi.fn()
+      .mockResolvedValueOnce('# Tailored Resume')
+      .mockResolvedValueOnce('Tailored cover letter');
+
+    await tailorDocuments(
+      'haiku',
+      sampleInput,
+      false,
+      mockComplete,
+      {
+        resumeSystem: 'resume override',
+        coverLetterSystem: 'cover override',
+      },
+    );
+
+    expect(mockComplete).toHaveBeenNthCalledWith(
+      1,
+      'haiku',
+      'resume override',
+      expect.any(String),
+      false,
+    );
+    expect(mockComplete).toHaveBeenNthCalledWith(
+      2,
+      'haiku',
+      'cover override',
+      expect.any(String),
+      false,
+    );
+  });
 });
 
 describe('tailorResume', () => {

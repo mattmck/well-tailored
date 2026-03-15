@@ -79,6 +79,22 @@ describe('renderResumeHtml', () => {
     expect(renderResumeHtml(SAMPLE)).toContain('<p class="date">2021 – 2024</p>');
   });
 
+  it('renders company and location in the split job layout', () => {
+    const html = renderResumeHtml(`
+# Jane Doe
+## Senior Engineer
+
+jane@example.com | mattmcknight.com
+
+## Experience
+
+### Staff Engineer | Acme Corp | Remote
+2021 – 2024
+    `.trim());
+    expect(html).toContain('<span class="job-company">Acme Corp</span>');
+    expect(html).toContain('<span class="job-location">Remote</span>');
+  });
+
   it('strips HTML comments', () => {
     const html = renderResumeHtml(SAMPLE);
     expect(html).not.toContain('tech:');
@@ -138,6 +154,11 @@ describe('normalizeContactLinks / isUrlLike', () => {
     expect(html).not.toContain('<a href');
   });
 
+  it('linkifies bare domains in the contact area when they look like actual sites', () => {
+    const html = contactHtml('mattmcknight.com | github.com/janedoe');
+    expect(html).toContain('<a href="https://mattmcknight.com">mattmcknight.com</a>');
+  });
+
   it('does NOT linkify pipe-separated content after the second ## heading', () => {
     // The "Skills" section has pipes but should not be linkified.
     const html = renderResumeHtml(
@@ -145,6 +166,33 @@ describe('normalizeContactLinks / isUrlLike', () => {
     );
     // Inside the Skills section, pipes should be literal — not linkified
     expect(html).not.toMatch(/Skills[\s\S]*?<a href/);
+  });
+
+  it('parses dash-separated h3 fallback: "Title — Company"', () => {
+    const md = `# Dev\n## Engineer\n\nfoo@bar.com\n\nlinkedin.com/in/dev\n\n## Experience\n\n### Senior Engineer — Acme Corp\n2021 – 2024\n\n- Did stuff.`;
+    const html = renderResumeHtml(md);
+    expect(html).toContain('<span class="job-company">Acme Corp</span>');
+    expect(html).toContain('class="job-header"');
+  });
+
+  it('parses dash-separated h3 with location: "Title — Company, Location"', () => {
+    const md = `# Dev\n## Engineer\n\nfoo@bar.com\n\nlinkedin.com/in/dev\n\n## Experience\n\n### Senior Engineer — Acme Corp, Remote\n2021 – 2024\n\n- Did stuff.`;
+    const html = renderResumeHtml(md);
+    expect(html).toContain('<span class="job-company">Acme Corp</span>');
+    expect(html).toContain('<span class="job-location">Remote</span>');
+  });
+
+  it('strips trailing parenthesized dates from h3 fallback', () => {
+    const md = `# Dev\n## Engineer\n\nfoo@bar.com\n\nlinkedin.com/in/dev\n\n## Experience\n\n### Senior Engineer — Acme Corp (Jan 2021 – Dec 2024)\n\n- Did stuff.`;
+    const html = renderResumeHtml(md);
+    expect(html).toContain('<span class="job-company">Acme Corp</span>');
+    expect(html).not.toContain('(Jan 2021');
+  });
+
+  it('parses "Title at Company" fallback', () => {
+    const md = `# Dev\n## Engineer\n\nfoo@bar.com\n\nlinkedin.com/in/dev\n\n## Experience\n\n### Senior Engineer at Acme Corp\n2021 – 2024\n\n- Did stuff.`;
+    const html = renderResumeHtml(md);
+    expect(html).toContain('<span class="job-company">Acme Corp</span>');
   });
 
   it('does NOT count ### headings toward the h2 stop-linkify threshold', () => {

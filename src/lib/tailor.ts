@@ -5,7 +5,7 @@ import {
   coverLetterSystemPrompt,
   coverLetterUserPrompt,
 } from './prompts.js';
-import { TailorInput, TailorOutput } from '../types/index.js';
+import { PromptOverrides, TailorInput, TailorOutput } from '../types/index.js';
 
 /**
  * Generate a tailored resume AND cover letter in parallel.
@@ -16,10 +16,11 @@ export async function tailorDocuments(
   input: TailorInput,
   verbose = false,
   complete = defaultComplete,
+  promptOverrides?: PromptOverrides,
 ): Promise<TailorOutput> {
   const [resume, coverLetter] = await Promise.all([
-    complete(model, resumeSystemPrompt(), resumeUserPrompt(input), verbose),
-    complete(model, coverLetterSystemPrompt(), coverLetterUserPrompt(input), verbose),
+    complete(model, resumeSystemPrompt(promptOverrides), resumeUserPrompt(input), verbose),
+    complete(model, coverLetterSystemPrompt(promptOverrides), coverLetterUserPrompt(input), verbose),
   ]);
 
   return { resume, coverLetter };
@@ -34,6 +35,7 @@ export async function tailorResume(
   input: TailorInput,
   verbose = false,
   complete = defaultComplete,
+  promptOverrides?: PromptOverrides,
 ): Promise<string> {
-  return complete(model, resumeSystemPrompt(), resumeUserPrompt(input), verbose);
+  return complete(model, resumeSystemPrompt(promptOverrides), resumeUserPrompt(input), verbose);
 }

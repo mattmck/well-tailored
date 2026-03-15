@@ -13,8 +13,8 @@ Two entry points, one pipeline:
   [huntr]   Wishlist jobs pulled automatically via Huntr API
        │
        ▼
-  Provider (first matching env var wins)
-  Gemini → Azure OpenAI → OpenAI → Anthropic
+  Provider (auto mode falls back by env priority)
+  Gemini → Azure OpenAI → OpenAI-compatible → Anthropic
        │
        ▼
   Generate (Promise.all — concurrent)
@@ -103,7 +103,9 @@ If you've already used huntr-cli, no extra config is needed.
 
 ## Environment variables
 
-At least one AI provider key is required. The first matching key wins.
+At least one AI provider key is required. In `auto` mode, the first matching configured provider wins.
+The workbench can explicitly switch between configured providers, so you can keep several backends
+available locally at once.
 
 | Variable | Provider | Default model |
 |----------|----------|---------------|
@@ -117,19 +119,94 @@ Optional:
 | Variable | Description |
 |----------|-------------|
 | `ANTHROPIC_MODEL` / `OPENAI_MODEL` | Override the default model for that provider |
+| `GEMINI_MODEL` | Override the default Gemini model |
 | `AZURE_OPENAI_DEPLOYMENT` | Azure deployment name (default: `gpt-4o-mini`) |
 | `AZURE_OPENAI_API_VERSION` | Azure API version (default: `2024-12-01-preview`) |
 | `OPENAI_BASE_URL` | Custom base URL for OpenAI-compatible endpoints |
+| `OPENAI_PROVIDER_NAME` | Friendly label for the OpenAI-compatible provider (for example `Grok`) |
+| `JOB_SHIT_PROVIDER` | Default provider for the workbench (`gemini`, `azure`, `openai`, `anthropic`) |
+| `JOB_SHIT_TAILORING_PROVIDER` / `JOB_SHIT_SCORING_PROVIDER` | Per-task provider defaults |
+| `JOB_SHIT_AZURE_MODELS` | Comma-separated Azure deployment names to show in the selector |
+| `JOB_SHIT_OPENAI_MODELS` / `JOB_SHIT_GEMINI_MODELS` / `JOB_SHIT_ANTHROPIC_MODELS` | Extra provider-specific model choices |
 | `HUNTR_API_TOKEN` | Huntr token (if not using huntr-cli credentials) |
+
+Notes:
+- Azure model choices are deployment names, not raw catalog model IDs.
+- If you point `OPENAI_BASE_URL` at another OpenAI-compatible service, set `OPENAI_PROVIDER_NAME`
+  so the workbench shows the right label.
+
+### Named provider profiles
+
+If you want several providers side by side, especially multiple OpenAI-compatible backends such as
+official OpenAI plus Groq, use named profiles:
+
+```env
+JOB_SHIT_PROVIDER_PROFILES=openai,groq,azure,anthropic
+
+JOB_SHIT_PROVIDER_OPENAI_KIND=openai
+JOB_SHIT_PROVIDER_OPENAI_LABEL=OpenAI
+JOB_SHIT_PROVIDER_OPENAI_API_KEY=...
+JOB_SHIT_PROVIDER_OPENAI_DEFAULT_MODEL=gpt-5-mini
+
+JOB_SHIT_PROVIDER_GROQ_KIND=openai
+JOB_SHIT_PROVIDER_GROQ_LABEL=Groq
+JOB_SHIT_PROVIDER_GROQ_API_KEY=...
+JOB_SHIT_PROVIDER_GROQ_BASE_URL=https://api.groq.com/openai/v1
+JOB_SHIT_PROVIDER_GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile
+
+JOB_SHIT_PROVIDER_AZURE_KIND=azure
+JOB_SHIT_PROVIDER_AZURE_LABEL=Azure OpenAI
+JOB_SHIT_PROVIDER_AZURE_ENDPOINT=https://your-resource.openai.azure.com
+JOB_SHIT_PROVIDER_AZURE_API_KEY=...
+JOB_SHIT_PROVIDER_AZURE_DEFAULT_MODEL=gpt-5-mini
+
+JOB_SHIT_PROVIDER_ANTHROPIC_KIND=anthropic
+JOB_SHIT_PROVIDER_ANTHROPIC_LABEL=Anthropic
+JOB_SHIT_PROVIDER_ANTHROPIC_API_KEY=...
+JOB_SHIT_PROVIDER_ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-5
+```
+
+Each profile gets its own label, credentials, default model, and model list. The workbench provider
+selectors use these profile ids directly.
 
 ## Development
 
 ```bash
 npm run dev -- tailor --help   # run via tsx without building
 npm run build                  # compile to dist/
+npm run shots:workbench        # capture prompt-focused workbench screenshots
+npm run video:promo            # build a rough promo animatic from the screenshot pack
 npm test                       # run tests (vitest)
 npm run typecheck              # tsc --noEmit
 npm run lint                   # eslint
 ```
 
 Sample files for testing without real personal data are in `sample.*.md`.
+
+## Workbench Screenshots
+
+Use the Playwright CLI wrapper to generate a promo-ready screenshot pack for the browser workbench:
+
+```bash
+npm run shots:workbench
+```
+
+Outputs land in `output/playwright/workbench-shots/`:
+- `01-resume-prompt-overview.png`
+- `02-cover-prompt-overview.png`
+- `03-scoring-prompt-overview.png`
+- `04-scoring-prompt-panel.png`
+- `05-results-panel.png`
+- `06-source-huntr-overview.png`
+- `07-source-panel.png`
+- `08-documents-overview.png`
+- `09-appearance-overview.png`
+- `10-appearance-panel.png`
+- `11-export-actions-resume.png`
+- `12-export-actions-cover.png`
+
+Notes:
+- The script auto-detects the Codex `playwright` skill wrapper at `~/.codex/skills/playwright/scripts/playwright_cli.sh`.
+- Set `PWCLI` if you want to use a different Playwright CLI wrapper or binary.
+- Pass `--headed` to watch the capture flow live: `npm run shots:workbench -- --headed`
+- Pass `--url http://127.0.0.1:4312` if you already have the workbench running and do not want the script to start its own server.
