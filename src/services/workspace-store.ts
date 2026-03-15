@@ -74,14 +74,17 @@ export function saveWorkspaceSnapshot(args: {
   const slug = slugify(name);
 
   let existing: SavedWorkspace | undefined;
+  let resolvedId: string | undefined;
   if (args.id) {
     const path = workspacePath(args.id);
     if (existsSync(path)) {
       existing = readWorkspace(path);
+      // Use the canonical id from the existing workspace record
+      resolvedId = existing.id;
     }
   }
 
-  const id = args.id ?? `${slug}-${Date.now()}`;
+  const id = resolvedId ?? `${slug}-${Date.now()}`;
   const saved: SavedWorkspace = {
     id,
     name,
