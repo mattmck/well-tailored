@@ -13,3 +13,4 @@ cover-letter.md
 resume-supplemental.md
 prompts/
 .DS_Store
+.playwright-cli
