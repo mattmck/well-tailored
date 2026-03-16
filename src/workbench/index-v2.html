@@ -235,6 +235,7 @@
       flex: 1;
       overflow-y: auto;
       padding: 12px 14px;
+      min-height: 0;
     }
 
     .panel__footer {
@@ -244,6 +245,12 @@
     }
 
     /* Jobs panel specifics */
+    #panel-jobs .panel__body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     .jobs-actions {
       display: flex;
       gap: 6px;
@@ -345,8 +352,18 @@
       font-weight: 700;
     }
 
+    .job-browser {
+      flex: 1;
+      min-height: 160px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
     .job-list {
       list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .job-item {
@@ -420,6 +437,60 @@
       color: var(--muted);
       flex-shrink: 0;
       margin-top: 2px;
+    }
+
+    .job-detail {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      flex-shrink: 0;
+    }
+
+    .job-detail[hidden] {
+      display: none !important;
+    }
+
+    .job-detail__grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .job-detail__field {
+      min-width: 0;
+    }
+
+    .job-detail__label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .job-detail__input,
+    .job-detail__textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .job-detail__input {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+
+    .job-detail__textarea {
+      min-height: 120px;
+      max-height: 240px;
+      padding: 8px;
+      resize: vertical;
+      line-height: 1.45;
     }
 
     /* Empty state */
@@ -795,24 +866,14 @@
       flex-shrink: 0;
     }
 
-    .editor-col__toolbar .tab {
-      padding: 4px 10px;
-      font-size: 12px;
-      border: 1px solid transparent;
-      border-radius: var(--radius-sm);
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      transition: background 0.12s, color 0.12s;
+    .editor-col__toolbar .toolbar-group,
+    .preview-col__toolbar .toolbar-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
     }
 
-    .editor-col__toolbar .tab.active {
-      background: var(--surface-raised);
-      color: var(--text);
-      border-color: var(--line);
-    }
-
-    .preview-col__toolbar .view-switcher {
+    .pill-switcher {
       display: inline-flex;
       align-items: center;
       padding: 3px;
@@ -822,7 +883,7 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
     }
 
-    .preview-col__toolbar .view-switcher .tab {
+    .pill-switcher .tab {
       padding: 5px 12px;
       border: none;
       border-radius: 999px;
@@ -834,13 +895,13 @@
       transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
     }
 
-    .preview-col__toolbar .view-switcher .tab:hover {
+    .pill-switcher .tab:hover {
       color: var(--text);
       background: rgba(255,255,255,0.04);
     }
 
-    .preview-col__toolbar .view-switcher .tab.active,
-    .preview-col__toolbar .view-switcher .tab[aria-pressed="true"] {
+    .pill-switcher .tab.active,
+    .pill-switcher .tab[aria-pressed="true"] {
       background: rgba(190,80,60,0.18);
       color: #ffd6cc;
       box-shadow: inset 0 0 0 1px rgba(190,80,60,0.4);
@@ -913,12 +974,6 @@
       border-bottom: 1px solid var(--line);
       background: var(--surface);
       flex-shrink: 0;
-    }
-
-    .preview-col__toolbar .toolbar-group {
-      display: flex;
-      gap: 4px;
-      align-items: center;
     }
 
     .preview-col__toolbar .toolbar-spacer {
@@ -1793,29 +1848,31 @@
         <div class="job-groups" id="job-groups" hidden>
           <!-- Job groups inserted dynamically -->
         </div>
-        <ul class="job-list" id="job-list">
-          <!-- Job items inserted dynamically -->
-        </ul>
-        <div class="empty-state" id="jobs-empty">
-          <span class="empty-state__icon">&#x1F4BC;</span>
-          <span>No jobs loaded</span>
-          <span>Load from Huntr or paste a job description</span>
+        <div class="job-browser" id="job-browser">
+          <ul class="job-list" id="job-list">
+            <!-- Job items inserted dynamically -->
+          </ul>
+          <div class="empty-state" id="jobs-empty">
+            <span class="empty-state__icon">&#x1F4BC;</span>
+            <span>No jobs loaded</span>
+            <span>Load from Huntr or paste a job description</span>
+          </div>
         </div>
 
         <!-- Job detail (shows when a job is selected) -->
-        <div id="job-detail" style="display:none; border-top:1px solid var(--line); padding-top:10px; margin-top:10px;">
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <div style="flex:1;">
-              <label style="font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">Company</label>
-              <input type="text" id="detail-company" style="width:100%; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; color:var(--text); font-size:13px;" />
+        <div class="job-detail" id="job-detail" hidden>
+          <div class="job-detail__grid">
+            <div class="job-detail__field">
+              <label class="job-detail__label" for="detail-company">Company</label>
+              <input type="text" class="job-detail__input" id="detail-company" />
             </div>
-            <div style="flex:1;">
-              <label style="font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">Title</label>
-              <input type="text" id="detail-title" style="width:100%; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:6px 8px; color:var(--text); font-size:13px;" />
+            <div class="job-detail__field">
+              <label class="job-detail__label" for="detail-title">Title</label>
+              <input type="text" class="job-detail__input" id="detail-title" />
             </div>
           </div>
-          <label style="font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:0.05em;">Job Description</label>
-          <textarea id="detail-jd" style="width:100%; height:120px; background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:8px; color:var(--text); font-size:12px; resize:vertical; line-height:1.4;"></textarea>
+          <label class="job-detail__label" for="detail-jd">Job Description</label>
+          <textarea class="job-detail__textarea" id="detail-jd"></textarea>
           <button class="btn btn--success" id="btn-mark-reviewed" style="width:100%; margin-top:8px; display:none;">Mark Reviewed</button>
         </div>
       </div>
@@ -1930,8 +1987,10 @@
         <!-- Editor Column -->
         <div class="editor-col" id="editor-col">
           <div class="editor-col__toolbar">
-            <button class="tab active" id="tab-resume" data-doc="resume">Resume</button>
-            <button class="tab" id="tab-cover" data-doc="cover">Cover Letter</button>
+            <div class="toolbar-group pill-switcher" role="tablist" aria-label="Document type">
+              <button class="tab active" id="tab-resume" data-doc="resume" aria-pressed="true">Resume</button>
+              <button class="tab" id="tab-cover" data-doc="cover" aria-pressed="false">Cover Letter</button>
+            </div>
           </div>
           <div class="editor-col__body" id="editor-body">
             <div id="editorSections">
@@ -2424,7 +2483,7 @@
       });
     }
 
-    function renderJobsMeta(visible, total) {
+    function renderJobsMeta(visibleCount, totalCount) {
       const statusEl = document.getElementById('jobs-status-text');
       const loadBtn = document.getElementById('btn-load-huntr');
       if (!statusEl || !loadBtn) return;
@@ -2439,16 +2498,16 @@
       }
 
       statusEl.className = 'jobs-meta__status';
-      if (total === 0) {
+      if (totalCount === 0) {
         statusEl.textContent = '';
         return;
       }
 
       const activeGroup = collectJobGroups().find((group) => group.key === state.jobListFilter);
       if (activeGroup && state.jobListFilter !== 'all') {
-        statusEl.textContent = `Showing ${visible.length} ${activeGroup.label} job${visible.length === 1 ? '' : 's'} of ${total} total.`;
+        statusEl.textContent = `Showing ${visibleCount} ${activeGroup.label} job${visibleCount === 1 ? '' : 's'} of ${totalCount} total.`;
       } else {
-        statusEl.textContent = `${total} job${total === 1 ? '' : 's'} loaded.`;
+        statusEl.textContent = `${totalCount} job${totalCount === 1 ? '' : 's'} loaded.`;
       }
     }
 
@@ -2459,6 +2518,7 @@
       const groupsEl = document.getElementById('job-groups');
 
       if (state.jobs.length === 0) {
+        state.activeJobId = null;
         listEl.innerHTML = '';
         if (groupsEl) {
           groupsEl.hidden = true;
@@ -2468,6 +2528,7 @@
         tailorBtn.disabled = true;
         tailorBtn.textContent = 'Tailor Selected';
         renderJobsMeta(0, 0);
+        renderJobDetail();
         return;
       }
 
@@ -2540,9 +2601,12 @@
     function renderJobDetail() {
       const detail = document.getElementById('job-detail');
       const job = state.jobs.find(j => j.id === state.activeJobId);
-      if (!job) { detail.style.display = 'none'; return; }
+      if (!job) {
+        detail.hidden = true;
+        return;
+      }
 
-      detail.style.display = '';
+      detail.hidden = false;
       document.getElementById('detail-company').value = job.company || '';
       document.getElementById('detail-title').value = job.title || '';
       document.getElementById('detail-jd').value = job.jd || '';
@@ -4362,21 +4426,26 @@
       const tabResume = document.getElementById('tab-resume');
       const tabCover = document.getElementById('tab-cover');
 
-      tabResume.addEventListener('click', () => {
-        state.activeDoc = 'resume';
-        tabResume.classList.add('active');
-        tabCover.classList.remove('active');
+      function setActiveDoc(doc) {
+        const isResume = doc === 'resume';
+        state.activeDoc = isResume ? 'resume' : 'cover';
+        tabResume.classList.toggle('active', isResume);
+        tabCover.classList.toggle('active', !isResume);
+        tabResume.setAttribute('aria-pressed', String(isResume));
+        tabCover.setAttribute('aria-pressed', String(!isResume));
         renderEditor();
         renderPreviewPanel();
+      }
+
+      tabResume.addEventListener('click', () => {
+        setActiveDoc('resume');
       });
 
       tabCover.addEventListener('click', () => {
-        state.activeDoc = 'cover';
-        tabCover.classList.add('active');
-        tabResume.classList.remove('active');
-        renderEditor();
-        renderPreviewPanel();
+        setActiveDoc('cover');
       });
+
+      setActiveDoc(state.activeDoc);
     }
 
     // ═══════════════════════════════════════════════════════
