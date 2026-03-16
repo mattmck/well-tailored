@@ -1636,6 +1636,8 @@
       sourceCoverLetter: '',
       sourceSupplemental: '',
       docsLoaded: false,
+      savedWorkspaces: [],
+      activeWorkspaceId: null,
     };
 
     function setRunFeedback(message, kind) {
@@ -3024,7 +3026,7 @@
       }
     }
 
-    function downloadFile(format) {
+    async function downloadFile(format) {
       const data = getEditorData();
       if (!data) return;
       let content, filename, mime;
@@ -3039,7 +3041,27 @@
         filename = 'resume.html';
         mime = 'text/html';
       } else if (format === 'pdf') {
-        window.print();
+        // Use server-side PDF rendering
+        const job = state.jobs.find(j => j.id === state.activeJobId);
+        const md = toMarkdown(data);
+        try {
+          const res = await fetch('/api/export/pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kind: 'resume', markdown: md, title: job?.title || 'Resume' }),
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `resume-${(job?.company || 'untitled').toLowerCase().replace(/\s+/g, '-')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+        } catch (e) { console.error('PDF export failed:', e); }
         return;
       } else {
         return;
@@ -3171,6 +3193,138 @@
     }
 
     // ═══════════════════════════════════════════════════════
+    //  WORKSPACES
+    // ═══════════════════════════════════════════════════════
+
+    async function loadWorkspaceList() {
+      try {
+        const res = await fetch('/api/workspaces');
+        const data = await res.json();
+        const datalist = document.getElementById('workspace-list');
+        datalist.innerHTML = (data.workspaces || [])
+          .map(w => `<option value="${escHtml(w.name || w.id)}" data-id="${escHtml(w.id)}">`)
+          .join('');
+        state.savedWorkspaces = data.workspaces || [];
+      } catch (e) {
+        console.error('Failed to load workspaces:', e);
+      }
+    }
+
+    function buildWorkspaceSnapshot() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      return {
+        company: job?.company || '',
+        jobTitle: job?.title || '',
+        jobDescription: job?.jd || '',
+        documents: {
+          resume: state.sourceResume,
+          bio: state.sourceBio,
+          baseCoverLetter: state.sourceCoverLetter,
+          resumeSupplemental: state.sourceSupplemental,
+        },
+        prompts: { resumeSystem: '', coverLetterSystem: '', scoringSystem: '' },
+        theme: state.previewTheme || {},
+        agents: { tailoringModel: state.tailorModel, scoringModel: state.scoreModel },
+        result: job?.result || null,
+      };
+    }
+
+    async function saveWorkspace() {
+      const picker = document.getElementById('workspace-picker');
+      const name = picker.value.trim();
+      if (!name) { picker.focus(); return; }
+
+      // Check if updating existing
+      const existing = (state.savedWorkspaces || []).find(w => w.name === name || w.id === name);
+      const btn = document.getElementById('btn-save');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        const res = await fetch('/api/workspaces/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: existing?.id || undefined,
+            name,
+            snapshot: buildWorkspaceSnapshot(),
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          state.activeWorkspaceId = data.id || name;
+          btn.textContent = 'Saved \u2713';
+          setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+          await loadWorkspaceList();
+        }
+      } catch (e) {
+        console.error('Save failed:', e);
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Save'; }, 1500);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadWorkspace(id) {
+      try {
+        const res = await fetch(`/api/workspaces/${encodeURIComponent(id)}`);
+        if (!res.ok) return;
+        const ws = await res.json();
+
+        // Restore state
+        state.sourceResume = ws.snapshot?.documents?.resume || ws.documents?.resume || '';
+        state.sourceBio = ws.snapshot?.documents?.bio || ws.documents?.bio || '';
+        state.sourceCoverLetter = ws.snapshot?.documents?.baseCoverLetter || ws.documents?.baseCoverLetter || '';
+        state.sourceSupplemental = ws.snapshot?.documents?.resumeSupplemental || ws.documents?.resumeSupplemental || '';
+
+        const snap = ws.snapshot || ws;
+        if (snap.company || snap.jobTitle) {
+          const job = {
+            id: sid(),
+            company: snap.company || '',
+            title: snap.jobTitle || '',
+            jd: snap.jobDescription || '',
+            status: snap.result ? 'tailored' : 'loaded',
+            checked: false,
+            result: snap.result || null,
+            error: null,
+            _editorData: null,
+          };
+          state.jobs = [job];
+          state.activeJobId = job.id;
+        }
+        state.activeWorkspaceId = id;
+
+        renderJobList();
+        renderJobDetail();
+        renderScoreCards();
+        renderEditor();
+        renderPreviewPanel();
+        renderMissingKeywords();
+      } catch (e) {
+        console.error('Load workspace failed:', e);
+      }
+    }
+
+    async function deleteWorkspace() {
+      const picker = document.getElementById('workspace-picker');
+      const name = picker.value.trim();
+      const ws = (state.savedWorkspaces || []).find(w => w.name === name || w.id === name);
+      if (!ws) return;
+      if (!confirm(`Delete workspace "${name}"?`)) return;
+
+      try {
+        await fetch(`/api/workspaces/${encodeURIComponent(ws.id)}`, { method: 'DELETE' });
+        picker.value = '';
+        state.activeWorkspaceId = null;
+        await loadWorkspaceList();
+      } catch (e) {
+        console.error('Delete failed:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
     //  RE-GRADE (scores + gap refresh)
     // ═══════════════════════════════════════════════════════
 
@@ -3283,6 +3437,20 @@
       document.getElementById('config-scoring-model').addEventListener('change', (e) => {
         state.scoreModel = e.target.value || state.tailorModel || 'auto';
       });
+
+      // Workspace buttons
+      document.getElementById('btn-save').addEventListener('click', () => {
+        saveWorkspace().catch(e => console.error(e));
+      });
+      document.getElementById('btn-delete').addEventListener('click', () => {
+        deleteWorkspace().catch(e => console.error(e));
+      });
+      document.getElementById('workspace-picker').addEventListener('change', (e) => {
+        const name = e.target.value.trim();
+        const ws = (state.savedWorkspaces || []).find(w => w.name === name || w.id === name);
+        if (ws) loadWorkspace(ws.id).catch(e => console.error(e));
+      });
+      loadWorkspaceList();
 
       // Re-grade button
       document.getElementById('btn-regrade').addEventListener('click', () => {
