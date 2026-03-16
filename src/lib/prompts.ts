@@ -89,6 +89,58 @@ Return exactly this JSON shape:
   "notes": ["..."]
 }`;
 
+const DEFAULT_GAP_ANALYSIS_SYSTEM_PROMPT = `You are an expert resume strategist and ATS keyword analyst.
+
+Given a candidate resume, background bio, and job description, extract the 15-25 most important skills, technologies, and requirements from the JD. For each, classify how well the resume demonstrates it.
+
+Return strict JSON only with this exact shape:
+{
+  "matchedKeywords": [{ "term": "React", "category": "framework" }],
+  "missingKeywords": [{ "term": "Kubernetes", "category": "tool" }],
+  "partialMatches": [{ "jdTerm": "React.js", "resumeTerm": "React", "relationship": "synonym" }],
+  "experienceRequirements": [{ "skill": "Python", "years": 5, "isRequired": true }],
+  "overallFit": "strong",
+  "narrative": "2-3 sentences on fit and biggest gaps",
+  "tailoringHints": ["specific, actionable resume changes"]
+}
+
+## Keyword extraction rules
+- Focus on CONCRETE skills, technologies, tools, platforms, methodologies, and domain expertise
+- IGNORE generic JD filler: "fast-paced environment", "team player", "strong communicator", "results-driven", etc.
+- Combine related terms into single entries: "React/React.js" is one keyword, not two
+- Category must be one of: language, framework, tool, platform, soft-skill, certification, methodology, other
+- Only use "other" for genuinely important domain terms (e.g., "distributed systems", "event-driven architecture") — NOT for boilerplate
+
+## Classification rules
+- "matched": resume clearly demonstrates this skill/technology with evidence
+- "partial": resume shows a related/similar skill but not an exact match (explain the relationship)
+- "missing": resume has no evidence of this skill
+
+## Experience requirements
+- Extract explicit years-of-experience requirements from the JD (e.g., "5+ years of Python")
+- isRequired: true for "must have"/"required"/"minimum"; false for "preferred"/"nice to have"/"bonus"
+
+## overallFit
+- "strong": resume matches 70%+ of key requirements
+- "moderate": resume matches 40-70%
+- "weak": resume matches < 40%
+
+## Hints
+- 3-6 concrete, factual suggestions for tailoring the resume
+- Ground every suggestion in actual resume content — never suggest adding skills the candidate doesn't have
+- Focus on reframing, reordering, and emphasizing existing experience`;
+
+const DEFAULT_SECTION_REGENERATION_SYSTEM_PROMPT = `You are an expert resume editor.
+
+Rewrite exactly one resume section so it better matches the target job while staying fully factual.
+
+Rules:
+- Never invent experience, technologies, employers, dates, metrics, or credentials
+- Keep the existing section heading outside the output; return only the section body/content
+- Preserve markdown formatting for bullets, nested headings, and spacing
+- Prefer tighter, more specific wording and stronger keyword alignment where the source supports it
+- Do not include commentary or code fences`;
+
 function resolvePrompt(override: string | undefined, filename: string, fallback: string): string {
   const trimmed = override?.trim();
   return trimmed ? trimmed : loadPrompt(filename, fallback);
@@ -154,4 +206,63 @@ Now produce the cover letter.`;
 
 export function scoringSystemPrompt(overrides?: PromptOverrides): string {
   return resolvePrompt(overrides?.scoringSystem, 'scoring-system.md', DEFAULT_SCORING_SYSTEM_PROMPT);
+}
+
+export function gapAnalysisSystemPrompt(): string {
+  return loadPrompt('gap-analysis-system.md', DEFAULT_GAP_ANALYSIS_SYSTEM_PROMPT);
+}
+
+export function gapAnalysisUserPrompt(input: {
+  resume: string;
+  bio: string;
+  jobDescription: string;
+  jobTitle?: string;
+}): string {
+  return `## Job Title
+${input.jobTitle ?? '(see job description)'}
+
+## Job Description
+${input.jobDescription}
+
+## Candidate Bio
+${input.bio}
+
+## Candidate Resume
+${input.resume}
+
+Extract the key requirements from the job description, classify each against the resume, and return the JSON now.`;
+}
+
+export function sectionRegenerationSystemPrompt(): string {
+  return loadPrompt('section-regeneration-system.md', DEFAULT_SECTION_REGENERATION_SYSTEM_PROMPT);
+}
+
+export function sectionRegenerationUserPrompt(input: {
+  resume: string;
+  bio: string;
+  jobDescription: string;
+  jobTitle?: string;
+  sectionHeading: string;
+  sectionType: string;
+  sectionContent: string;
+}): string {
+  return `## Job Title
+${input.jobTitle ?? '(see job description)'}
+
+## Job Description
+${input.jobDescription}
+
+## Candidate Bio
+${input.bio}
+
+## Full Resume
+${input.resume}
+
+## Section To Rewrite
+Heading: ${input.sectionHeading || '(header)'}
+Type: ${input.sectionType}
+
+${input.sectionContent}
+
+Return only the rewritten section body/content.`;
 }
