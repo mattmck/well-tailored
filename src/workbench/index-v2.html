@@ -245,6 +245,43 @@
       flex-shrink: 0;
     }
 
+    .panel-splitter {
+      width: 6px;
+      flex-shrink: 0;
+      position: relative;
+      background: var(--line);
+      cursor: col-resize;
+      transition: background 0.12s ease;
+    }
+
+    .panel-splitter[hidden] {
+      display: none !important;
+    }
+
+    .panel-splitter:hover,
+    .panel-splitter.active {
+      background: var(--accent);
+    }
+
+    .panel-splitter::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 1px;
+      width: 4px;
+      height: 36px;
+      transform: translateY(-50%);
+      border-radius: 999px;
+      background: var(--muted);
+      opacity: 0.45;
+    }
+
+    .panel-splitter:hover::after,
+    .panel-splitter.active::after {
+      background: #fff;
+      opacity: 0.82;
+    }
+
     /* Jobs panel specifics */
     #panel-jobs .panel__body {
       display: flex;
@@ -993,6 +1030,94 @@
       min-width: 200px;
     }
 
+    .preview-col__themebar {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .appearance-bar {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-strong);
+      padding: 8px 10px;
+    }
+
+    .appearance-bar__row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: thin;
+    }
+
+    .color-field-mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .color-field-mini label {
+      min-width: 38px;
+      text-align: right;
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .color-field-mini input[type="color"] {
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .color-field-mini input[type="text"] {
+      width: 76px;
+      padding: 4px 6px;
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+    }
+
+    .appearance-spacer {
+      flex: 1;
+      min-width: 8px;
+    }
+
+    .appearance-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .appearance-select label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .appearance-select select {
+      padding: 4px 8px;
+      font-size: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+    }
+
     .preview-col__toolbar {
       display: flex;
       align-items: center;
@@ -1005,15 +1130,6 @@
 
     .preview-col__toolbar .toolbar-spacer {
       flex: 1;
-    }
-
-    .preview-col__toolbar select {
-      padding: 4px 8px;
-      font-size: 12px;
-      background: var(--surface-strong);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-sm);
-      color: var(--text);
     }
 
     .preview-col__body {
@@ -2003,6 +2119,8 @@
       </div>
     </aside>
 
+    <div class="panel-splitter" id="panel-splitter"></div>
+
     <!-- ── MAIN CONTENT ─────────────────────────────────── -->
     <main class="main">
 
@@ -2046,6 +2164,34 @@
 
         <!-- Preview Column -->
         <div class="preview-col" id="preview-col">
+          <div class="preview-col__themebar">
+            <div class="appearance-bar" id="appearanceBar">
+              <div class="appearance-bar__row">
+                <div class="color-field-mini"><label>Bg</label><input type="color" id="themeBackgroundPicker"><input type="text" id="themeBackground"></div>
+                <div class="color-field-mini"><label>Body</label><input type="color" id="themeBodyPicker"><input type="text" id="themeBody"></div>
+                <div class="color-field-mini"><label>Accent</label><input type="color" id="themeAccentPicker"><input type="text" id="themeAccent"></div>
+                <div class="color-field-mini"><label>Sub</label><input type="color" id="themeSubheadingPicker"><input type="text" id="themeSubheading"></div>
+                <div class="color-field-mini"><label>Title</label><input type="color" id="themeJobTitlePicker"><input type="text" id="themeJobTitle"></div>
+                <div class="color-field-mini"><label>Date</label><input type="color" id="themeDatePicker"><input type="text" id="themeDate"></div>
+                <div class="color-field-mini"><label>Contact</label><input type="color" id="themeContactPicker"><input type="text" id="themeContact"></div>
+                <div class="color-field-mini"><label>Link</label><input type="color" id="themeLinkPicker"><input type="text" id="themeLink"></div>
+                <div class="appearance-spacer"></div>
+                <div class="appearance-select">
+                  <label for="theme-select">Preset</label>
+                  <select id="theme-select" title="Resume theme">
+                    <option value="default">Default</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="forest">Forest</option>
+                    <option value="slate">Slate</option>
+                    <option value="warm">Warm</option>
+                    <option value="mono">Monochrome</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <button class="btn" id="resetThemeBtn" type="button">Reset</button>
+              </div>
+            </div>
+          </div>
           <div class="preview-col__toolbar">
             <div class="toolbar-group export-buttons">
               <button class="btn btn-export" data-download="md" title="Download Markdown">md</button>
@@ -2059,14 +2205,6 @@
               <button class="tab active" id="tab-preview" data-view="preview">Preview</button>
               <button class="tab" id="tab-diff" data-view="diff">Diff</button>
             </div>
-            <select id="theme-select" title="Resume theme">
-              <option value="default">Default</option>
-              <option value="ocean">Ocean</option>
-              <option value="forest">Forest</option>
-              <option value="slate">Slate</option>
-              <option value="warm">Warm</option>
-              <option value="mono">Monochrome</option>
-            </select>
           </div>
           <div class="preview-col__body" id="preview-body">
             <div id="previewContent">
@@ -2263,6 +2401,11 @@
       docsLoaded: false,
       isLoadingHuntr: false,
       jobListFilter: 'all',
+      panelWidths: {
+        'panel-jobs': 300,
+        'panel-sources': 360,
+        'panel-config': 360,
+      },
       savedWorkspaces: [],
       activeWorkspaceId: null,
       runFeedbackTimer: null,
@@ -2307,6 +2450,62 @@
       if (kind === 'error') {
         el.classList.add('analysis-notes__text--error');
       }
+    }
+
+    function normalizeHex(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const prefixed = raw.startsWith('#') ? raw : `#${raw}`;
+      const normalized = prefixed.toUpperCase();
+      return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : '';
+    }
+
+    function currentPreviewTheme() {
+      return Object.assign({}, THEME_PRESETS.default, state.previewTheme || {});
+    }
+
+    function themePresetKey(theme) {
+      const resolved = Object.assign({}, THEME_PRESETS.default, theme || {});
+      for (const [key, preset] of Object.entries(THEME_PRESETS)) {
+        const matches = Object.keys(preset).every((field) => normalizeHex(resolved[field]) === normalizeHex(preset[field]));
+        if (matches) return key;
+      }
+      return 'custom';
+    }
+
+    const themeFields = [
+      ['background', 'themeBackground', 'themeBackgroundPicker'],
+      ['body', 'themeBody', 'themeBodyPicker'],
+      ['accent', 'themeAccent', 'themeAccentPicker'],
+      ['subheading', 'themeSubheading', 'themeSubheadingPicker'],
+      ['jobTitle', 'themeJobTitle', 'themeJobTitlePicker'],
+      ['date', 'themeDate', 'themeDatePicker'],
+      ['contact', 'themeContact', 'themeContactPicker'],
+      ['link', 'themeLink', 'themeLinkPicker'],
+    ];
+
+    function syncThemeFields(theme = currentPreviewTheme()) {
+      const resolved = Object.assign({}, THEME_PRESETS.default, theme || {});
+      state.previewTheme = resolved;
+
+      themeFields.forEach(([field, inputId, pickerId]) => {
+        const value = normalizeHex(resolved[field]) || normalizeHex(THEME_PRESETS.default[field]);
+        const input = document.getElementById(inputId);
+        const picker = document.getElementById(pickerId);
+        if (input) input.value = value;
+        if (picker) picker.value = value;
+      });
+
+      const select = document.getElementById('theme-select');
+      if (select) {
+        select.value = themePresetKey(resolved);
+      }
+    }
+
+    function refreshThemePreview() {
+      if (state.viewMode !== 'preview') return;
+      const preview = document.querySelector('.preview-render');
+      if (preview) applyPreviewTheme(currentPreviewTheme());
     }
 
     // ═══════════════════════════════════════════════════════
@@ -3682,7 +3881,7 @@
       });
       html += '</div>';
       content.innerHTML = html;
-      applyPreviewTheme(state.previewTheme || THEME_PRESETS.default);
+      applyPreviewTheme(currentPreviewTheme());
     }
 
     function applyPreviewTheme(theme) {
@@ -3791,7 +3990,7 @@
         return '<p>' + formatted + '</p>';
       }).filter(Boolean).join('\n');
       content.innerHTML = '<div class="preview-render cover-letter-preview" style="padding:24px; line-height:1.7; font-size:14px;">' + html + '</div>';
-      if (state.previewTheme) applyPreviewTheme(state.previewTheme);
+      applyPreviewTheme(currentPreviewTheme());
     }
 
     // ═══════════════════════════════════════════════════════
@@ -4319,10 +4518,10 @@
           mime = 'text/html';
         } else if (format === 'pdf') {
           try {
-            const res = await fetch('/api/export/pdf', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ kind: 'cover-letter', markdown: cl, title: job?.title || 'Cover Letter' }),
+              const res = await fetch('/api/export/pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ kind: 'cover-letter', markdown: cl, title: job?.title || 'Cover Letter', theme: currentPreviewTheme() }),
             });
             if (res.ok) {
               const blob = await res.blob();
@@ -4356,7 +4555,7 @@
             const res = await fetch('/api/export/pdf', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ kind: 'resume', markdown: md, title: job?.title || 'Resume' }),
+              body: JSON.stringify({ kind: 'resume', markdown: md, title: job?.title || 'Resume', theme: currentPreviewTheme() }),
             });
             if (res.ok) {
               const blob = await res.blob();
@@ -4393,7 +4592,6 @@
       const splitter = document.getElementById('splitter');
       const editorLayout = document.getElementById('editor-layout');
       const editor = document.getElementById('editor-col');
-      const keywordsColWidth = 130;
       const splitterWidth = 6;
       const minEditor = 200;
       const minPreview = 200;
@@ -4410,6 +4608,8 @@
       document.addEventListener('mousemove', (e) => {
         if (!dragging) return;
         const layoutRect = editorLayout.getBoundingClientRect();
+        const keywordsCol = document.getElementById('keywords-col');
+        const keywordsColWidth = keywordsCol ? keywordsCol.getBoundingClientRect().width : 0;
         const availableWidth = layoutRect.width - keywordsColWidth - splitterWidth;
         let editorWidth = e.clientX - layoutRect.left;
 
@@ -4430,6 +4630,73 @@
       });
     }
 
+    function currentOpenPanel() {
+      return document.querySelector('.panel.open');
+    }
+
+    function applyPanelWidth(panelId) {
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+      const width = state.panelWidths?.[panelId];
+      panel.style.width = width ? `${width}px` : '';
+    }
+
+    function syncPanelSplitter() {
+      const splitter = document.getElementById('panel-splitter');
+      const panel = currentOpenPanel();
+      if (!splitter) return;
+      splitter.hidden = !panel;
+      if (!panel) {
+        splitter.dataset.panelId = '';
+        return;
+      }
+      applyPanelWidth(panel.id);
+      splitter.dataset.panelId = panel.id;
+    }
+
+    function initPanelSplitter() {
+      const splitter = document.getElementById('panel-splitter');
+      const app = document.querySelector('.app');
+      let dragging = false;
+
+      splitter.addEventListener('mousedown', (e) => {
+        const panel = currentOpenPanel();
+        if (!panel) return;
+        e.preventDefault();
+        dragging = true;
+        splitter.dataset.panelId = panel.id;
+        splitter.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const panelId = splitter.dataset.panelId;
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (!panel || !app) return;
+
+        const panelRect = panel.getBoundingClientRect();
+        const appRect = app.getBoundingClientRect();
+        const minWidth = panelId === 'panel-jobs' ? 280 : 320;
+        const maxWidth = Math.min(720, Math.max(minWidth + 40, appRect.width - 280));
+        let width = e.clientX - panelRect.left;
+        width = Math.max(minWidth, Math.min(maxWidth, width));
+        panel.style.width = `${width}px`;
+        state.panelWidths[panelId] = width;
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        splitter.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+
+      syncPanelSplitter();
+    }
+
     function initIconRail() {
       const buttons = document.querySelectorAll('.icon-rail__btn');
       const panels = {
@@ -4448,6 +4715,7 @@
           if (targetPanel.classList.contains('open')) {
             targetPanel.classList.remove('open');
             btn.classList.remove('active');
+            syncPanelSplitter();
             return;
           }
 
@@ -4456,7 +4724,9 @@
           buttons.forEach((b) => b.classList.remove('active'));
 
           targetPanel.classList.add('open');
+          applyPanelWidth(targetId);
           btn.classList.add('active');
+          syncPanelSplitter();
         });
       });
     }
@@ -4485,14 +4755,6 @@
       });
 
       setPreviewMode(state.viewMode);
-
-      // Theme selector
-      const themeSelect = document.getElementById('theme-select');
-      themeSelect.addEventListener('change', () => {
-        const themeName = themeSelect.value;
-        state.previewTheme = THEME_PRESETS[themeName] || THEME_PRESETS.default;
-        applyPreviewTheme(state.previewTheme);
-      });
 
       // Export download buttons
       document.querySelectorAll('.btn-export[data-download]').forEach(btn => {
@@ -4531,6 +4793,48 @@
       setActiveDoc(state.activeDoc);
     }
 
+    function initThemeControls() {
+      const themeSelect = document.getElementById('theme-select');
+      const resetBtn = document.getElementById('resetThemeBtn');
+
+      themeFields.forEach(([field, inputId, pickerId]) => {
+        const input = document.getElementById(inputId);
+        const picker = document.getElementById(pickerId);
+
+        picker.addEventListener('input', () => {
+          const value = normalizeHex(picker.value) || normalizeHex(THEME_PRESETS.default[field]);
+          if (input) input.value = value;
+          state.previewTheme = Object.assign({}, currentPreviewTheme(), { [field]: value });
+          if (themeSelect) themeSelect.value = themePresetKey(state.previewTheme);
+          refreshThemePreview();
+        });
+
+        input.addEventListener('input', () => {
+          const value = normalizeHex(input.value);
+          if (!value) return;
+          input.value = value;
+          if (picker) picker.value = value;
+          state.previewTheme = Object.assign({}, currentPreviewTheme(), { [field]: value });
+          if (themeSelect) themeSelect.value = themePresetKey(state.previewTheme);
+          refreshThemePreview();
+        });
+      });
+
+      themeSelect.addEventListener('change', () => {
+        const themeName = themeSelect.value;
+        if (themeName === 'custom') return;
+        syncThemeFields(THEME_PRESETS[themeName] || THEME_PRESETS.default);
+        refreshThemePreview();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        syncThemeFields(THEME_PRESETS.default);
+        refreshThemePreview();
+      });
+
+      syncThemeFields(THEME_PRESETS.default);
+    }
+
     // ═══════════════════════════════════════════════════════
     //  WORKSPACES
     // ═══════════════════════════════════════════════════════
@@ -4561,9 +4865,9 @@
           baseCoverLetter: state.sourceCoverLetter,
           resumeSupplemental: state.sourceSupplemental,
         },
-        prompts: { resumeSystem: '', coverLetterSystem: '', scoringSystem: '' },
-        theme: state.previewTheme || {},
-        agents: { tailoringModel: state.tailorModel, scoringModel: state.scoreModel },
+        prompts: currentPromptOverrides(),
+        theme: currentPreviewTheme(),
+        agents: currentAgents(),
         uiState: { openPanels: [], jobListFilter: state.jobListFilter },
         result: job?.result || null,
       };
@@ -4620,6 +4924,40 @@
 
         const snap = ws.snapshot || ws;
         state.jobListFilter = snap.uiState?.jobListFilter || 'all';
+        syncThemeFields(snap.theme || THEME_PRESETS.default);
+        document.getElementById('config-resume-prompt').value = snap.prompts?.resumeSystem || '';
+        document.getElementById('config-cl-prompt').value = snap.prompts?.coverLetterSystem || '';
+        document.getElementById('config-scoring-prompt').value = snap.prompts?.scoringSystem || '';
+
+        if (snap.agents?.tailoringProvider) {
+          state.tailorProvider = snap.agents.tailoringProvider;
+          const providerSelect = document.getElementById('config-tailor-provider');
+          if ([...providerSelect.options].some((option) => option.value === state.tailorProvider)) {
+            providerSelect.value = state.tailorProvider;
+          }
+        }
+        if (snap.agents?.scoringProvider) {
+          state.scoreProvider = snap.agents.scoringProvider;
+          const providerSelect = document.getElementById('config-scoring-provider');
+          if ([...providerSelect.options].some((option) => option.value === state.scoreProvider)) {
+            providerSelect.value = state.scoreProvider;
+          }
+        }
+        syncModelSelects();
+        if (snap.agents?.tailoringModel) {
+          state.tailorModel = snap.agents.tailoringModel;
+          const modelSelect = document.getElementById('config-tailor-model');
+          if ([...modelSelect.options].some((option) => option.value === state.tailorModel)) {
+            modelSelect.value = state.tailorModel;
+          }
+        }
+        if (snap.agents?.scoringModel) {
+          state.scoreModel = snap.agents.scoringModel;
+          const modelSelect = document.getElementById('config-scoring-model');
+          if ([...modelSelect.options].some((option) => option.value === state.scoreModel)) {
+            modelSelect.value = state.scoreModel;
+          }
+        }
         if (snap.company || snap.jobTitle) {
           const job = {
             id: sid(),
@@ -4636,6 +4974,14 @@
           state.activeJobId = job.id;
         }
         state.activeWorkspaceId = id;
+        document.getElementById('source-resume-text').value = state.sourceResume;
+        document.getElementById('source-bio-text').value = state.sourceBio;
+        document.getElementById('source-cl-text').value = state.sourceCoverLetter;
+        document.getElementById('source-supp-text').value = state.sourceSupplemental;
+        document.getElementById('source-resume-status').textContent = state.sourceResume ? 'Loaded from workspace' : 'Empty';
+        document.getElementById('source-bio-status').textContent = state.sourceBio ? 'Loaded from workspace' : 'Empty';
+        document.getElementById('source-cl-status').textContent = state.sourceCoverLetter ? 'Loaded from workspace' : 'Empty';
+        document.getElementById('source-supp-status').textContent = state.sourceSupplemental ? 'Loaded from workspace' : 'Empty';
 
         renderJobList();
         renderJobDetail();
@@ -4779,7 +5125,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       initSplitter();
       initIconRail();
+      initPanelSplitter();
       initPreviewPanel();
+      initThemeControls();
       initDocTabs();
       renderJobList();
       renderScoreCards();

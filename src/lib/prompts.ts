@@ -54,6 +54,8 @@ const DEFAULT_COVER_LETTER_SYSTEM_PROMPT = `You are an expert cover letter write
 - Address why this candidate is a strong fit for this specific role at this specific company.
 - Reference concrete details from the job description — don't be generic.
 - Connect the candidate's experience to the employer's needs with specific examples.
+- If a base cover letter is provided, preserve its letter framing where possible: salutation, complimentary close, sign-off style, and any simple signature/name block.
+- Adapt the recipient/company details as needed, but do not strip the greeting or closing conventions that are already part of the candidate's voice.
 
 ## VOICE & FORMAT
 - Write in first person as the candidate. Sound human, confident, and genuine — not templated.
@@ -305,6 +307,7 @@ ${input.bio}
 ## My Resume
 ${input.resume}
 ${baseCoverLetterSection}
+If a base cover letter is provided, keep its greeting and sign-off conventions while tailoring the body to this role.
 Now produce the cover letter.`;
 }
 
