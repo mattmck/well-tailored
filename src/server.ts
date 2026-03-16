@@ -14,6 +14,7 @@ import { fileURLToPath } from 'url';
 import { homedir, tmpdir } from 'os';
 import { loadConfig } from './config.js';
 import { describeProvider } from './lib/ai.js';
+import { diffMarkdown } from './lib/diff.js';
 import { normalizeProviderChoice } from './lib/providers.js';
 import {
   coverLetterSystemPrompt,
@@ -29,6 +30,8 @@ import {
   requireHuntrClient,
 } from './services/huntr.js';
 import { runTailorWorkflow } from './services/runs.js';
+import { analyzeGap, analyzeGapWithAI } from './services/gap.js';
+import { regenerateResumeSection } from './services/review.js';
 import { listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
 import { resolveWorkspaceDocuments } from './services/workspace.js';
 import {
@@ -79,6 +82,30 @@ interface SaveWorkspaceBody {
   id?: string;
   name?: string;
   snapshot: WorkspaceSnapshot;
+}
+
+interface DiffBody {
+  before: string;
+  after: string;
+}
+
+interface GapBody {
+  resume: string;
+  bio?: string;
+  jobDescription: string;
+  jobTitle?: string;
+  useAI?: boolean;
+  model?: string;
+}
+
+interface RegenerateSectionBody {
+  resume: string;
+  bio: string;
+  jobDescription: string;
+  jobTitle?: string;
+  sectionId: string;
+  model?: string;
+  verbose?: boolean;
 }
 
 function sendJson(res: ServerResponse, status: number, payload: unknown): void {
@@ -514,6 +541,47 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
       promptOverrides: body.promptOverrides,
       theme: body.theme,
       includeScoring: body.includeScoring ?? true,
+      verbose: body.verbose ?? false,
+    });
+    sendJson(res, 200, result);
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/diff') {
+    const body = await readJsonBody<DiffBody>(req);
+    sendJson(res, 200, diffMarkdown(body.before ?? '', body.after ?? ''));
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/gap') {
+    const body = await readJsonBody<GapBody>(req);
+    if (body.useAI) {
+      const config = loadConfig();
+      const result = await analyzeGapWithAI(
+        body.resume ?? '',
+        body.bio ?? '',
+        body.jobDescription ?? '',
+        body.jobTitle,
+        body.model ?? config.tailoringModel,
+      );
+      sendJson(res, 200, result);
+      return;
+    }
+
+    sendJson(res, 200, analyzeGap(body.resume ?? '', body.jobDescription ?? '', body.jobTitle));
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/regenerate-section') {
+    const body = await readJsonBody<RegenerateSectionBody>(req);
+    const config = loadConfig();
+    const result = await regenerateResumeSection({
+      resume: body.resume ?? '',
+      bio: body.bio ?? '',
+      jobDescription: body.jobDescription ?? '',
+      jobTitle: body.jobTitle,
+      sectionId: body.sectionId,
+      model: body.model ?? config.tailoringModel,
       verbose: body.verbose ?? false,
     });
     sendJson(res, 200, result);

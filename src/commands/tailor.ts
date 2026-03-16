@@ -2,11 +2,15 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from '../config.js';
+import { formatGapAnalysisSummary } from './gap.js';
+import { formatDiffAnsi, diffMarkdown } from '../lib/diff.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
+import { analyzeGap } from '../services/gap.js';
+import { launchReviewTui } from '../tui/review.js';
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -35,6 +39,9 @@ export function registerTailorCommand(program: Command): void {
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .option('-m, --model <model>', 'Model/deployment name (e.g. gpt-4o, claude-opus-4-5). Default: auto — uses provider default')
     .option('--pdf', 'Generate PDF output (requires Chrome — run `npm run setup` first)')
+    .option('--diff', 'Show a colorized diff between the base resume and the tailored resume')
+    .option('--interactive', 'Open review mode after generation before writing the final resume')
+    .option('--no-gap', 'Skip the pre-tailor match gap analysis summary')
     .action(async (opts: {
       company: string;
       job: string;
@@ -46,6 +53,9 @@ export function registerTailorCommand(program: Command): void {
       verbose?: boolean;
       model?: string;
       pdf?: boolean;
+      diff?: boolean;
+      interactive?: boolean;
+      gap?: boolean;
     }) => {
       // Resolve input files
       let resumePath: string;
@@ -104,6 +114,11 @@ export function registerTailorCommand(program: Command): void {
       if (coverLetterPath) console.log(`Using cover letter: ${coverLetterPath}`);
       if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
       console.log(`Using AI:     ${describeProvider(model)}`);
+      if (opts.gap !== false) {
+        const gapAnalysis = analyzeGap(resume, jobDescription, opts.title);
+        console.log('');
+        console.log(formatGapAnalysisSummary(gapAnalysis));
+      }
       console.log(`\nTailoring for ${opts.company}${opts.title ? ` — ${opts.title}` : ''}...`);
       console.log('Generating resume and cover letter in parallel...\n');
 
@@ -117,6 +132,20 @@ export function registerTailorCommand(program: Command): void {
         jobDescription,
       }, opts.verbose));
 
+      let finalResume = output.resume;
+      if (opts.interactive) {
+        console.log('Launching review mode. Press q when you are ready to write the final resume.\n');
+        finalResume = await launchReviewTui({
+          baseResume: resume,
+          resume: output.resume,
+          bio,
+          company: opts.company,
+          jobTitle: opts.title,
+          jobDescription,
+          model,
+        });
+      }
+
       // Write outputs
       if (!existsSync(opts.output)) {
         mkdirSync(opts.output, { recursive: true });
@@ -127,12 +156,12 @@ export function registerTailorCommand(program: Command): void {
       const resumeOut = join(opts.output, `resume-${slug}.md`);
       const coverLetterOut = join(opts.output, `cover-letter-${slug}.md`);
 
-      writeFileSync(resumeOut, output.resume, 'utf8');
+      writeFileSync(resumeOut, finalResume, 'utf8');
       writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
       const resumeHtmlOut = join(opts.output, `resume-${slug}.html`);
       const coverLetterHtmlOut = join(opts.output, `cover-letter-${slug}.html`);
-      writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume - ${opts.company}`), 'utf8');
+      writeFileSync(resumeHtmlOut, renderResumeHtml(finalResume, `Resume - ${opts.company}`), 'utf8');
       writeFileSync(coverLetterHtmlOut, renderCoverLetterHtml(output.coverLetter, `Cover Letter - ${opts.company}`), 'utf8');
 
       console.log(`✓ resume       → ${resumeOut}`);
@@ -143,7 +172,7 @@ export function registerTailorCommand(program: Command): void {
       if (opts.pdf) {
         const resumePdfOut = join(opts.output, `resume-${slug}.pdf`);
         try {
-          const fit = await renderResumePdfFit(output.resume, `Resume - ${opts.company}`, resumeHtmlOut, resumePdfOut);
+          const fit = await renderResumePdfFit(finalResume, `Resume - ${opts.company}`, resumeHtmlOut, resumePdfOut);
           console.log(`✓ resume (pdf) → ${resumePdfOut}${fit ? '' : ' (compact: still >1 page)'}`);
         } catch (err) {
           console.warn(`⚠ PDF generation skipped: ${(err as Error).message}`);
@@ -157,6 +186,13 @@ export function registerTailorCommand(program: Command): void {
         } catch (err) {
           console.warn(`⚠ PDF generation skipped: ${(err as Error).message}`);
         }
+      }
+
+      if (opts.diff) {
+        const diff = diffMarkdown(resume, finalResume);
+        console.log('');
+        console.log(`Diff summary: +${diff.stats.added} / -${diff.stats.removed} / =${diff.stats.unchanged}`);
+        console.log(formatDiffAnsi(diff));
       }
     });
 }

@@ -854,6 +854,284 @@
       margin: 0;
     }
 
+    .gap-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .gap-summary {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #171717;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .gap-overall {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .gap-overall strong {
+      font-size: 16px;
+      color: var(--deep);
+      text-transform: capitalize;
+    }
+
+    .gap-overall[data-fit="strong"] strong { color: #74c19b; }
+    .gap-overall[data-fit="moderate"] strong { color: #dfbe76; }
+    .gap-overall[data-fit="weak"] strong { color: #de8a83; }
+
+    .gap-cluster {
+      display: grid;
+      gap: 6px;
+    }
+
+    .gap-cluster h4 {
+      margin: 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .keyword-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .keyword-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      font-size: 11px;
+      line-height: 1.2;
+      color: #d9d9d9;
+    }
+
+    .keyword-pill--matched {
+      border-color: rgba(78,157,120,0.4);
+      background: rgba(78,157,120,0.1);
+      color: #96d1b4;
+    }
+
+    .keyword-pill--missing {
+      border-color: rgba(198,92,82,0.36);
+      background: rgba(198,92,82,0.09);
+      color: #e1a19a;
+    }
+
+    .keyword-pill--partial {
+      border-color: rgba(184,138,53,0.36);
+      background: rgba(184,138,53,0.09);
+      color: #e6c98c;
+    }
+
+    .keyword-pill--hint {
+      border-color: rgba(59,114,168,0.32);
+      background: rgba(59,114,168,0.08);
+      color: #a8c7e6;
+    }
+
+    .diff-panel {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #161616;
+      overflow: auto;
+      max-height: 420px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .diff-panel-empty {
+      padding: 12px;
+      color: var(--muted);
+    }
+
+    .diff-line {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      padding: 2px 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .diff-line__prefix {
+      color: var(--muted);
+    }
+
+    .diff-line--added {
+      background: rgba(78,157,120,0.08);
+      color: #b7e2ce;
+    }
+
+    .diff-line--removed {
+      background: rgba(198,92,82,0.09);
+      color: #e6b3ad;
+    }
+
+    .diff-line--unchanged {
+      color: #9ea6ad;
+    }
+
+    .review-status {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .review-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .review-sections {
+      display: grid;
+      gap: 10px;
+      max-height: 680px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .review-empty {
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      padding: 16px;
+      color: var(--muted);
+      text-align: center;
+      background: var(--surface-strong);
+    }
+
+    .review-section {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #171717;
+      overflow: hidden;
+    }
+
+    .review-section[data-open="true"] {
+      border-color: rgba(190,80,60,0.3);
+      box-shadow: 0 0 0 1px rgba(190,80,60,0.12) inset;
+    }
+
+    .review-section__head {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      background: transparent;
+      border: 0;
+      color: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .review-section__title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .review-section__title strong {
+      font-size: 14px;
+      color: var(--deep);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .review-section__meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .review-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .review-tag--accepted {
+      border-color: rgba(78,157,120,0.35);
+      color: #93d0b1;
+      background: rgba(78,157,120,0.1);
+    }
+
+    .review-tag--matched {
+      border-color: rgba(78,157,120,0.3);
+      color: #9ad7b8;
+    }
+
+    .review-tag--partial {
+      border-color: rgba(184,138,53,0.32);
+      color: #e4c27f;
+    }
+
+    .review-section__body {
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .review-section__actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .review-markdown {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #101010;
+      padding: 12px;
+      white-space: pre-wrap;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #ddd;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .review-textarea {
+      width: 100%;
+      min-height: 220px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #101010;
+      color: #ececec;
+      padding: 12px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      resize: vertical;
+    }
+
     /* ── APPEARANCE BAR (inside results) ── */
 
     .appearance-bar {
@@ -1472,6 +1750,26 @@
           <div class="results-left" id="resultsLeft" hidden>
             <div class="score-grid" id="scores"></div>
             <div class="findings" id="notes"></div>
+            <div class="result-card" style="margin-top:12px">
+              <div class="result-card__header">
+                <h3>Gap Analysis</h3>
+              </div>
+              <div class="result-card__body">
+                <div id="gapAnalysis" class="review-empty">Run tailoring to see match gaps and strengths.</div>
+              </div>
+            </div>
+            <div class="result-card" style="margin-top:12px">
+              <div class="result-card__header">
+                <h3>Diff</h3>
+                <div class="result-card__actions">
+                  <button class="result-view-tab" id="diffBaseTab" data-diffview="base" aria-selected="true">vs Base</button>
+                  <button class="result-view-tab" id="diffPreviousTab" data-diffview="previous" aria-selected="false">vs Previous</button>
+                </div>
+              </div>
+              <div class="result-card__body">
+                <div id="diffPanel" class="diff-panel-empty">Generate a result to inspect the resume changes.</div>
+              </div>
+            </div>
           </div>
 
           <div class="results-right" id="resultsRight" hidden>
@@ -1515,6 +1813,18 @@
                 <div class="viewer" id="cover-markdown-viewer" hidden>
                   <pre id="coverLetterOutput"></pre>
                 </div>
+              </div>
+            </div>
+            <div class="result-card" style="margin-top:12px">
+              <div class="result-card__header">
+                <h3>Interactive Review</h3>
+                <div class="result-card__actions">
+                  <span class="review-status" id="reviewStatus">Section-by-section editor</span>
+                </div>
+              </div>
+              <div class="result-card__body">
+                <div class="review-summary" id="reviewCoverageSummary"></div>
+                <div class="review-sections" id="reviewSections"></div>
               </div>
             </div>
           </div>
@@ -1602,6 +1912,15 @@
       structuredEditorTarget: 'source', // 'source' or 'result'
       manualJobCounter: 0,
       jobResults: {},
+      diffView: 'base',
+      resultInsightsToken: 0,
+      reviewExpandedSectionId: '',
+      reviewEditingSectionId: '',
+      reviewBusySectionId: '',
+      reviewAcceptedSections: {},
+      reviewShowSectionDiff: {},
+      reviewDrafts: {},
+      reviewSectionDiffHtml: {},
     };
 
     // ═══════════════════════════════════════════
@@ -1631,11 +1950,18 @@
       scoringSystem: document.getElementById('scoringSystem'),
       scores: document.getElementById('scores'),
       notes: document.getElementById('notes'),
+      gapAnalysis: document.getElementById('gapAnalysis'),
+      diffPanel: document.getElementById('diffPanel'),
+      diffBaseTab: document.getElementById('diffBaseTab'),
+      diffPreviousTab: document.getElementById('diffPreviousTab'),
       resumeOutput: document.getElementById('resumeOutput'),
       coverLetterOutput: document.getElementById('coverLetterOutput'),
       resumeFrame: document.getElementById('resumeFrame'),
       coverLetterFrame: document.getElementById('coverLetterFrame'),
       resumeEditorFrame: document.getElementById('resumeEditorFrame'),
+      reviewSections: document.getElementById('reviewSections'),
+      reviewStatus: document.getElementById('reviewStatus'),
+      reviewCoverageSummary: document.getElementById('reviewCoverageSummary'),
       jobTableBody: document.getElementById('jobTableBody'),
       stageFilters: document.getElementById('stageFilters'),
       jobBadge: document.getElementById('jobBadge'),
@@ -1710,6 +2036,171 @@
 
     function slugify(text) {
       return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+    }
+
+    function currentJobId() {
+      return state.selectedHuntrJob?.id || '_manual';
+    }
+
+    function currentResultVersions() {
+      return state.jobResults[currentJobId()] || [];
+    }
+
+    function currentResultVersionIndex() {
+      return currentResultVersions().findIndex(v => v.result === state.lastResult);
+    }
+
+    function currentResultVersionEntry() {
+      return currentResultVersions().find(v => v.result === state.lastResult) || null;
+    }
+
+    function classifySectionTypeClient(heading) {
+      const lower = (heading || '').trim().toLowerCase();
+      if (/(experience|work history|employment)/i.test(lower)) return 'experience';
+      if (/(education|academic)/i.test(lower)) return 'education';
+      if (/(skill|technical|technologies|proficiencies|competencies)/i.test(lower)) return 'skills';
+      if (/project/i.test(lower)) return 'projects';
+      if (/(certification|certificate|license)/i.test(lower)) return 'certifications';
+      if (/(summary|objective|profile|about)/i.test(lower)) return 'summary';
+      return 'other';
+    }
+
+    function collectBulletsClient(content) {
+      return String(content || '')
+        .split('\n')
+        .filter(line => /^\s*[-*]\s+/.test(line))
+        .map(line => line.trim());
+    }
+
+    function parseResumeSectionsClient(markdown) {
+      const normalized = String(markdown || '').replace(/\r\n/g, '\n');
+      const lines = normalized.split('\n');
+      const sections = [];
+      const counts = new Map();
+      let headerLines = [];
+      let current = null;
+
+      const createId = (base) => {
+        const key = (base || 'section').toLowerCase();
+        const seen = counts.get(key) || 0;
+        counts.set(key, seen + 1);
+        return seen === 0 ? key : `${key}-${seen + 1}`;
+      };
+
+      const pushHeader = (force = false) => {
+        if (!force && !headerLines.length) return;
+        const content = headerLines.join('\n');
+        sections.push({
+          id: createId('header'),
+          type: 'header',
+          heading: '',
+          headingLevel: 0,
+          content,
+          bullets: collectBulletsClient(content),
+        });
+        headerLines = [];
+      };
+
+      const pushCurrent = () => {
+        if (!current) return;
+        const content = current.lines.join('\n');
+        sections.push({
+          id: createId(slugify(current.heading) || current.heading.toLowerCase() || 'section'),
+          type: sections.length === 0 && current.headingLevel === 1 ? 'header' : classifySectionTypeClient(current.heading),
+          heading: current.heading,
+          headingLevel: current.headingLevel,
+          content,
+          bullets: collectBulletsClient(content),
+        });
+        current = null;
+      };
+
+      lines.forEach((line) => {
+        const match = line.match(/^(#{1,6})[ \t]+(.+?)\s*$/);
+        if (match) {
+          if (current) pushCurrent();
+          else pushHeader();
+          current = { heading: match[2], headingLevel: match[1].length, lines: [] };
+          return;
+        }
+        if (current) current.lines.push(line);
+        else headerLines.push(line);
+      });
+
+      if (current) pushCurrent();
+      else pushHeader(true);
+
+      return sections;
+    }
+
+    function assembleSectionsClient(sections) {
+      return (sections || []).map(section => {
+        if (!section.headingLevel || !section.heading) return section.content || '';
+        return section.content
+          ? `${'#'.repeat(section.headingLevel)} ${section.heading}\n${section.content}`
+          : `${'#'.repeat(section.headingLevel)} ${section.heading}`;
+      }).filter((part, index, items) => part !== '' || index === items.length - 1).join('\n');
+    }
+
+    function renderKeywordPills(items, tone, emptyText) {
+      if (!items || !items.length) {
+        return `<span class="keyword-pill">${escHtml(emptyText || 'None')}</span>`;
+      }
+      return items.map(item => `<span class="keyword-pill keyword-pill--${tone}">${escHtml(item)}</span>`).join('');
+    }
+
+    function renderClientDiffHtml(diff) {
+      if (!diff?.hunks?.length) {
+        return '<div class="diff-panel-empty">No changes to show.</div>';
+      }
+      return `<div class="diff-panel">${
+        diff.hunks.flatMap(hunk =>
+          hunk.lines.map(line => `
+            <div class="diff-line diff-line--${hunk.type}">
+              <span class="diff-line__prefix">${hunk.type === 'added' ? '+' : hunk.type === 'removed' ? '-' : ' '}</span>
+              <span class="diff-line__content">${escHtml(line)}</span>
+            </div>`),
+        ).join('')
+      }</div>`;
+    }
+
+    function normalizeReviewState(sections) {
+      const ids = new Set((sections || []).map(section => section.id));
+      if (state.reviewExpandedSectionId && !ids.has(state.reviewExpandedSectionId)) state.reviewExpandedSectionId = '';
+      if (state.reviewEditingSectionId && !ids.has(state.reviewEditingSectionId)) state.reviewEditingSectionId = '';
+      state.reviewBusySectionId = ids.has(state.reviewBusySectionId) ? state.reviewBusySectionId : '';
+      state.reviewAcceptedSections = Object.fromEntries(
+        Object.entries(state.reviewAcceptedSections).filter(([id]) => ids.has(id)),
+      );
+      state.reviewShowSectionDiff = Object.fromEntries(
+        Object.entries(state.reviewShowSectionDiff).filter(([id]) => ids.has(id)),
+      );
+      state.reviewDrafts = Object.fromEntries(
+        Object.entries(state.reviewDrafts).filter(([id]) => ids.has(id)),
+      );
+      state.reviewSectionDiffHtml = Object.fromEntries(
+        Object.entries(state.reviewSectionDiffHtml).filter(([id]) => ids.has(id)),
+      );
+    }
+
+    async function computeDiff(before, after) {
+      return getJson('/api/diff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ before: before || '', after: after || '' }),
+      });
+    }
+
+    async function computeGap(resume) {
+      return getJson('/api/gap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resume: resume || '',
+          jobDescription: els.jobDescription.value || '',
+          jobTitle: els.jobTitle.value || '',
+        }),
+      });
     }
 
     // ═══════════════════════════════════════════
@@ -2138,12 +2629,8 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
           const { html } = await resp.json();
           if (state.lastResult) {
             state.lastResult.artifacts.resumeHtml = html;
-            // Also update jobResults version
-            const jobId = state.selectedHuntrJob?.id || '_manual';
-            const versions = state.jobResults[jobId];
-            if (versions?.length) {
-              versions[versions.length - 1].result.artifacts.resumeHtml = html;
-            }
+            const entry = currentResultVersionEntry();
+            if (entry) entry.result.artifacts.resumeHtml = html;
             updatePreviewTheme();
           }
         } catch (e) { /* silent */ }
@@ -2615,6 +3102,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
 
     function renderScores(result) {
       els.scores.innerHTML = '';
+      els.notes.innerHTML = '';
       if (!result.scorecard) return;
       const h = result.scorecard.heuristic;
       const e = result.scorecard.evaluator;
@@ -2641,6 +3129,318 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       renderFindingGroups(result);
     }
 
+    function sectionCoverageClient(section, analysis) {
+      const haystack = `${section.heading}\n${section.content}`.toLowerCase();
+      const matched = (analysis?.matchedKeywords || [])
+        .filter(keyword => haystack.includes((keyword.term || '').toLowerCase()))
+        .map(keyword => keyword.term)
+        .slice(0, 4);
+      const partial = (analysis?.partialMatches || [])
+        .filter(match =>
+          haystack.includes((match.jdTerm || '').toLowerCase()) || haystack.includes((match.resumeTerm || '').toLowerCase()))
+        .map(match => match.jdTerm)
+        .slice(0, 3);
+      return { matched, partial };
+    }
+
+    function rebuildClientSection(section, rawContent) {
+      let body = String(rawContent || '').replace(/\r\n/g, '\n').replace(/^\n+|\n+$/g, '');
+      if (section.headingLevel && section.heading) {
+        const headingLine = `${'#'.repeat(section.headingLevel)} ${section.heading}`;
+        if (body.startsWith(headingLine)) body = body.slice(headingLine.length).replace(/^\n+/, '');
+      }
+      const synthetic = section.headingLevel && section.heading
+        ? `${'#'.repeat(section.headingLevel)} ${section.heading}\n${body}`
+        : body;
+      const parsed = parseResumeSectionsClient(synthetic);
+      const rebuilt = parsed.find(candidate => candidate.heading === section.heading && candidate.headingLevel === section.headingLevel)
+        || parsed[0]
+        || section;
+      return { ...section, content: rebuilt.content, bullets: rebuilt.bullets };
+    }
+
+    function renderGapAnalysis(result) {
+      if (!els.gapAnalysis) return;
+      const analysis = result?.gapAnalysis;
+      if (!analysis) {
+        els.gapAnalysis.className = 'review-empty';
+        els.gapAnalysis.innerHTML = 'Analyzing resume fit...';
+        return;
+      }
+
+      const experience = (analysis.experienceRequirements || []).map(req =>
+        `${req.skill}: ${req.years}+ years ${req.isRequired ? 'required' : 'preferred'}`);
+      const partial = (analysis.partialMatches || []).map(match =>
+        `${match.jdTerm} ← ${match.resumeTerm}`);
+
+      els.gapAnalysis.className = '';
+      els.gapAnalysis.innerHTML = `
+        <div class="gap-grid">
+          <div class="gap-summary">
+            <div class="gap-overall" data-fit="${escHtml(analysis.overallFit || 'weak')}">
+              <span>Fit assessment</span>
+              <strong>${escHtml(analysis.overallFit || 'weak')}</strong>
+            </div>
+            ${analysis.narrative ? `<div>${escHtml(analysis.narrative)}</div>` : ''}
+          </div>
+          <div class="gap-cluster">
+            <h4>Matched keywords</h4>
+            <div class="keyword-pills">${renderKeywordPills((analysis.matchedKeywords || []).map(item => item.term), 'matched', 'No direct matches yet')}</div>
+          </div>
+          <div class="gap-cluster">
+            <h4>Missing keywords</h4>
+            <div class="keyword-pills">${renderKeywordPills((analysis.missingKeywords || []).map(item => item.term), 'missing', 'No major gaps')}</div>
+          </div>
+          <div class="gap-cluster">
+            <h4>Partial matches</h4>
+            <div class="keyword-pills">${renderKeywordPills(partial, 'partial', 'No partial matches')}</div>
+          </div>
+          <div class="gap-cluster">
+            <h4>Experience requirements</h4>
+            <div class="keyword-pills">${renderKeywordPills(experience, 'hint', 'No explicit years requirements')}</div>
+          </div>
+          ${analysis.tailoringHints?.length ? `
+            <div class="gap-cluster">
+              <h4>Tailoring hints</h4>
+              <div class="keyword-pills">${renderKeywordPills(analysis.tailoringHints, 'hint', '')}</div>
+            </div>` : ''}
+        </div>
+      `;
+    }
+
+    async function renderDiffCard(result, baseDiff) {
+      if (!els.diffPanel || !els.diffBaseTab || !els.diffPreviousTab) return;
+      if (!result) {
+        els.diffPanel.className = 'diff-panel-empty';
+        els.diffPanel.innerHTML = 'Generate a result to inspect the resume changes.';
+        return;
+      }
+
+      const versions = currentResultVersions();
+      const versionIndex = currentResultVersionIndex();
+      const hasPrevious = versionIndex > 0;
+      if (!hasPrevious && state.diffView === 'previous') state.diffView = 'base';
+      els.diffBaseTab.setAttribute('aria-selected', state.diffView === 'base' ? 'true' : 'false');
+      els.diffPreviousTab.setAttribute('aria-selected', state.diffView === 'previous' ? 'true' : 'false');
+      els.diffPreviousTab.disabled = !hasPrevious;
+
+      let diff = baseDiff;
+      if (state.diffView === 'previous' && hasPrevious) {
+        diff = await computeDiff(versions[versionIndex - 1].result.output.resume, result.output.resume);
+      } else if (!diff) {
+        diff = result.diff || await computeDiff(els.resume.value, result.output.resume);
+      }
+
+      els.diffPanel.className = '';
+      els.diffPanel.innerHTML = renderClientDiffHtml(diff);
+    }
+
+    function renderReviewSections(result) {
+      if (!els.reviewSections || !els.reviewCoverageSummary || !els.reviewStatus) return;
+      if (!result?.output?.resume) {
+        els.reviewCoverageSummary.innerHTML = '';
+        els.reviewSections.innerHTML = '<div class="review-empty">Generate a tailored resume to review sections.</div>';
+        els.reviewStatus.textContent = 'Section-by-section editor';
+        return;
+      }
+
+      const sections = parseResumeSectionsClient(result.output.resume);
+      const baseSections = new Map(parseResumeSectionsClient(els.resume.value).map(section => [section.id, section]));
+      normalizeReviewState(sections);
+
+      const coveredCount = sections.filter(section => sectionCoverageClient(section, result.gapAnalysis).matched.length > 0).length;
+      const acceptedCount = Object.values(state.reviewAcceptedSections).filter(Boolean).length;
+      els.reviewCoverageSummary.innerHTML = `
+        <span>${sections.length} sections</span>
+        <span>${coveredCount} covering matched keywords</span>
+        <span>${acceptedCount} accepted</span>
+      `;
+      els.reviewStatus.textContent = state.reviewBusySectionId
+        ? `Working on ${state.reviewBusySectionId}...`
+        : 'Section-by-section editor';
+
+      els.reviewSections.innerHTML = sections.length ? sections.map(section => {
+        const open = state.reviewExpandedSectionId === section.id;
+        const editing = state.reviewEditingSectionId === section.id;
+        const accepted = !!state.reviewAcceptedSections[section.id];
+        const diffOpen = !!state.reviewShowSectionDiff[section.id];
+        const busy = state.reviewBusySectionId === section.id;
+        const coverage = sectionCoverageClient(section, result.gapAnalysis);
+        const draft = state.reviewDrafts[section.id] ?? section.content;
+        const diffHtml = diffOpen
+          ? state.reviewSectionDiffHtml[section.id] || '<div class="diff-panel-empty">Loading section diff…</div>'
+          : '';
+        return `
+          <article class="review-section" data-open="${open ? 'true' : 'false'}">
+            <button class="review-section__head" data-review-toggle="${escHtml(section.id)}">
+              <div class="review-section__title">
+                <strong>${escHtml(section.heading || '(Header)')}</strong>
+                <div class="review-section__meta">
+                  <span class="review-tag">${escHtml(section.type)}</span>
+                  ${accepted ? '<span class="review-tag review-tag--accepted">accepted</span>' : ''}
+                  ${coverage.matched.map(item => `<span class="review-tag review-tag--matched">${escHtml(item)}</span>`).join('')}
+                  ${coverage.partial.map(item => `<span class="review-tag review-tag--partial">${escHtml(item)}</span>`).join('')}
+                </div>
+              </div>
+              <span class="review-tag">${busy ? 'working…' : open ? 'collapse' : 'expand'}</span>
+            </button>
+            ${open ? `
+              <div class="review-section__body">
+                <div class="review-section__actions">
+                  <button class="btn-icon" data-review-action="accept" data-section-id="${escHtml(section.id)}">${accepted ? 'Unaccept' : 'Accept'}</button>
+                  <button class="btn-icon" data-review-action="${editing ? 'apply' : 'edit'}" data-section-id="${escHtml(section.id)}">${editing ? 'Apply edit' : 'Edit inline'}</button>
+                  <button class="btn-icon" data-review-action="diff" data-section-id="${escHtml(section.id)}">${diffOpen ? 'Hide diff' : 'Show diff'}</button>
+                  <button class="btn-icon" data-review-action="regenerate" data-section-id="${escHtml(section.id)}" ${busy ? 'disabled' : ''}>Regenerate section</button>
+                </div>
+                ${editing
+                  ? `<textarea class="review-textarea" data-review-draft="${escHtml(section.id)}">${escHtml(draft)}</textarea>`
+                  : `<div class="review-markdown">${escHtml(section.content || '(empty)')}</div>`}
+                ${diffOpen ? diffHtml : ''}
+              </div>` : ''}
+          </article>
+        `;
+      }).join('') : '<div class="review-empty">No sections detected in the current resume.</div>';
+    }
+
+    async function refreshResultInsights(result = state.lastResult) {
+      if (!result) return;
+      const token = ++state.resultInsightsToken;
+      renderGapAnalysis(null);
+      if (els.diffPanel) {
+        els.diffPanel.className = 'diff-panel-empty';
+        els.diffPanel.innerHTML = 'Refreshing diff...';
+      }
+      try {
+        const [gapAnalysis, baseDiff] = await Promise.all([
+          computeGap(result.output.resume),
+          result.diff || computeDiff(els.resume.value, result.output.resume),
+        ]);
+        if (token !== state.resultInsightsToken || state.lastResult !== result) return;
+        result.gapAnalysis = gapAnalysis;
+        result.diff = baseDiff;
+        const entry = currentResultVersionEntry();
+        if (entry) {
+          entry.result.gapAnalysis = gapAnalysis;
+          entry.result.diff = baseDiff;
+        }
+        renderGapAnalysis(result);
+        renderReviewSections(result);
+        await renderDiffCard(result, baseDiff);
+      } catch (error) {
+        if (token !== state.resultInsightsToken) return;
+        if (els.gapAnalysis) {
+          els.gapAnalysis.className = 'review-empty';
+          els.gapAnalysis.innerHTML = escHtml(error.message || String(error));
+        }
+        if (els.diffPanel) {
+          els.diffPanel.className = 'diff-panel-empty';
+          els.diffPanel.innerHTML = escHtml(error.message || String(error));
+        }
+      }
+    }
+
+    function invalidateReviewDiffs() {
+      state.reviewSectionDiffHtml = {};
+      state.reviewShowSectionDiff = {};
+    }
+
+    function updateResultResume(markdown, refreshInsights = true) {
+      if (!state.lastResult) return;
+      state.lastResult.output.resume = markdown;
+      delete state.lastResult.scorecard;
+      delete state.lastResult.diff;
+      delete state.lastResult.gapAnalysis;
+      els.resumeOutput.textContent = markdown;
+      const entry = currentResultVersionEntry();
+      if (entry) {
+        entry.result.output.resume = markdown;
+        delete entry.result.scorecard;
+        delete entry.result.diff;
+        delete entry.result.gapAnalysis;
+      }
+      invalidateReviewDiffs();
+      reRenderResumeHtml(markdown);
+      renderScores(state.lastResult);
+      renderReviewSections(state.lastResult);
+      if (state.structuredEditorTarget === 'result') {
+        state.lastResumeEditorSync = '';
+        syncResumeEditor(markdown);
+      }
+      if (refreshInsights) {
+        void refreshResultInsights(state.lastResult);
+      }
+    }
+
+    function toggleReviewSectionOpen(sectionId) {
+      state.reviewExpandedSectionId = state.reviewExpandedSectionId === sectionId ? '' : sectionId;
+      renderReviewSections(state.lastResult);
+    }
+
+    function toggleReviewSectionAccepted(sectionId) {
+      state.reviewAcceptedSections[sectionId] = !state.reviewAcceptedSections[sectionId];
+      renderReviewSections(state.lastResult);
+    }
+
+    function toggleReviewSectionEdit(sectionId) {
+      const sections = parseResumeSectionsClient(state.lastResult?.output?.resume || '');
+      const section = sections.find(item => item.id === sectionId);
+      if (!section) return;
+      if (state.reviewEditingSectionId === sectionId) {
+        const updated = sections.map(item =>
+          item.id === sectionId ? rebuildClientSection(item, state.reviewDrafts[sectionId] ?? item.content) : item,
+        );
+        state.reviewEditingSectionId = '';
+        updateResultResume(assembleSectionsClient(updated));
+        return;
+      }
+      state.reviewExpandedSectionId = sectionId;
+      state.reviewEditingSectionId = sectionId;
+      state.reviewDrafts[sectionId] = state.reviewDrafts[sectionId] ?? section.content;
+      renderReviewSections(state.lastResult);
+    }
+
+    async function toggleReviewSectionDiff(sectionId) {
+      state.reviewShowSectionDiff[sectionId] = !state.reviewShowSectionDiff[sectionId];
+      renderReviewSections(state.lastResult);
+      if (!state.reviewShowSectionDiff[sectionId] || state.reviewSectionDiffHtml[sectionId]) return;
+      const sections = parseResumeSectionsClient(state.lastResult?.output?.resume || '');
+      const baseSections = parseResumeSectionsClient(els.resume.value);
+      const section = sections.find(item => item.id === sectionId);
+      const baseSection = baseSections.find(item => item.id === sectionId);
+      const diff = await computeDiff(baseSection?.content || '', section?.content || '');
+      state.reviewSectionDiffHtml[sectionId] = renderClientDiffHtml(diff);
+      if (state.reviewShowSectionDiff[sectionId]) renderReviewSections(state.lastResult);
+    }
+
+    async function regenerateReviewSection(sectionId) {
+      if (!state.lastResult) return;
+      state.reviewBusySectionId = sectionId;
+      renderReviewSections(state.lastResult);
+      try {
+        const result = await getJson('/api/regenerate-section', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resume: state.lastResult.output.resume,
+            bio: els.bio.value,
+            jobDescription: els.jobDescription.value,
+            jobTitle: els.jobTitle.value,
+            sectionId,
+            model: els.tailoringModel.value.trim() || 'auto',
+          }),
+        });
+        state.reviewEditingSectionId = '';
+        state.reviewExpandedSectionId = sectionId;
+        delete state.reviewDrafts[sectionId];
+        updateResultResume(result.markdown);
+      } catch (error) {
+        els.reviewStatus.textContent = error.message || String(error);
+      } finally {
+        state.reviewBusySectionId = '';
+        renderReviewSections(state.lastResult);
+      }
+    }
+
     // ═══════════════════════════════════════════
     //  RENDER RESULT
     // ═══════════════════════════════════════════
@@ -2653,6 +3453,30 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       els.coverLetterFrame.srcdoc = '';
       els.scores.innerHTML = '';
       els.notes.innerHTML = '';
+      if (els.gapAnalysis) {
+        els.gapAnalysis.className = 'review-empty';
+        els.gapAnalysis.innerHTML = 'Run tailoring to see match gaps and strengths.';
+      }
+      if (els.diffPanel) {
+        els.diffPanel.className = 'diff-panel-empty';
+        els.diffPanel.innerHTML = 'Generate a result to inspect the resume changes.';
+      }
+      if (els.reviewSections) {
+        els.reviewSections.innerHTML = '<div class="review-empty">Generate a tailored resume to review sections.</div>';
+      }
+      if (els.reviewCoverageSummary) {
+        els.reviewCoverageSummary.innerHTML = '';
+      }
+      if (els.reviewStatus) {
+        els.reviewStatus.textContent = 'Section-by-section editor';
+      }
+      state.reviewExpandedSectionId = '';
+      state.reviewEditingSectionId = '';
+      state.reviewBusySectionId = '';
+      state.reviewAcceptedSections = {};
+      state.reviewShowSectionDiff = {};
+      state.reviewDrafts = {};
+      state.reviewSectionDiffHtml = {};
       els.resultsEmpty.hidden = false;
       els.resultsLeft.hidden = true;
       els.resultsRight.hidden = true;
@@ -2666,6 +3490,12 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       els.coverLetterOutput.textContent = result.output.coverLetter;
       updatePreviewTheme();
       renderScores(result);
+      renderGapAnalysis(result);
+      renderReviewSections(result);
+      if (els.diffPanel) {
+        els.diffPanel.className = 'diff-panel-empty';
+        els.diffPanel.innerHTML = 'Refreshing diff...';
+      }
       // Show left/right columns, hide empty placeholder
       els.resultsEmpty.hidden = true;
       els.resultsLeft.hidden = false;
@@ -2686,6 +3516,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       // Auto-open results panel
       setPanelOpen('panel-results', true);
       setTimeout(() => document.getElementById('panel-results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      void refreshResultInsights(result);
     }
 
     // ═══════════════════════════════════════════
@@ -2711,6 +3542,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
     function renderResultVersions() {
       const jobId = state.selectedHuntrJob?.id || '_manual';
       const versions = state.jobResults[jobId] || [];
+      const activeIndex = versions.findIndex(v => v.result === state.lastResult);
       const area = document.getElementById('resultVersions');
       if (!area) return;
       if (versions.length <= 1) {
@@ -2722,10 +3554,11 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       versions.forEach((v, i) => {
         const btn = document.createElement('button');
         btn.className = 'btn-icon';
-        btn.style.cssText = i === versions.length - 1 ? 'border-color:var(--accent);color:var(--accent)' : '';
+        btn.style.cssText = i === activeIndex ? 'border-color:var(--accent);color:var(--accent)' : '';
         btn.textContent = v.label;
         btn.addEventListener('click', () => {
           renderResult(v.result);
+          renderResultVersions();
         });
         area.appendChild(btn);
 
@@ -2863,6 +3696,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       if (!btn) return;
       const br = state.batchResults[Number(btn.dataset.batchIdx)];
       if (br?.result) {
+        state.selectedHuntrJob = br.jobEntry;
         renderResult(br.result);
         els.company.value = br.jobEntry.company;
         els.jobTitle.value = br.jobEntry.title;
@@ -3112,6 +3946,48 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
       });
     });
 
+    document.querySelectorAll('.result-view-tab[data-diffview]').forEach(b => {
+      b.addEventListener('click', () => {
+        state.diffView = b.dataset.diffview === 'previous' ? 'previous' : 'base';
+        if (state.lastResult) void renderDiffCard(state.lastResult);
+      });
+    });
+
+    els.reviewSections.addEventListener('click', (event) => {
+      const toggle = event.target.closest('[data-review-toggle]');
+      if (toggle) {
+        toggleReviewSectionOpen(toggle.dataset.reviewToggle);
+        return;
+      }
+
+      const action = event.target.closest('[data-review-action]');
+      if (!action) return;
+      const sectionId = action.dataset.sectionId;
+      if (!sectionId) return;
+
+      if (action.dataset.reviewAction === 'accept') {
+        toggleReviewSectionAccepted(sectionId);
+        return;
+      }
+      if (action.dataset.reviewAction === 'edit' || action.dataset.reviewAction === 'apply') {
+        toggleReviewSectionEdit(sectionId);
+        return;
+      }
+      if (action.dataset.reviewAction === 'diff') {
+        void toggleReviewSectionDiff(sectionId);
+        return;
+      }
+      if (action.dataset.reviewAction === 'regenerate') {
+        void regenerateReviewSection(sectionId);
+      }
+    });
+
+    els.reviewSections.addEventListener('input', (event) => {
+      const textarea = event.target.closest('[data-review-draft]');
+      if (!textarea) return;
+      state.reviewDrafts[textarea.dataset.reviewDraft] = textarea.value;
+    });
+
     // Resume editor iframe messaging
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -3137,17 +4013,7 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
         if (!isFromResumeEditor) return;
         state.lastResumeEditorSync = msg.markdown;
         if (state.structuredEditorTarget === 'result' && state.lastResult) {
-          // Write back to result
-          state.lastResult.output.resume = msg.markdown;
-          els.resumeOutput.textContent = msg.markdown;
-          // Update jobResults version if tracked
-          const jobId = state.selectedHuntrJob?.id || '_manual';
-          const versions = state.jobResults[jobId];
-          if (versions?.length) {
-            versions[versions.length - 1].result.output.resume = msg.markdown;
-          }
-          // Re-render markdown → HTML and update preview (debounced)
-          reRenderResumeHtml(msg.markdown);
+          updateResultResume(msg.markdown);
         } else {
           // Write back to source
           if (els.resume.value !== msg.markdown) els.resume.value = msg.markdown;

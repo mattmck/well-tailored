@@ -2,11 +2,15 @@ import { Command } from 'commander';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig, resolveHuntrToken } from '../config.js';
+import { formatGapAnalysisSummary } from './gap.js';
+import { diffMarkdown, formatDiffAnsi } from '../lib/diff.js';
 import { tailorDocuments } from '../lib/tailor.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
+import { analyzeGap, analyzeGapWithAI } from '../services/gap.js';
+import { launchReviewTui } from '../tui/review.js';
 import {
   createHuntrClient as createSharedHuntrClient,
   extractCompanyName as extractSharedCompanyName,
@@ -284,6 +288,43 @@ export function registerHuntrCommand(program: Command): void {
       }
     });
 
+  huntr
+    .command('gap <jobId>')
+    .description('Analyze how well your base resume matches a Huntr job before tailoring.')
+    .option('--board <boardId>', 'Huntr board ID (auto-detected if omitted)')
+    .option(
+      '-r, --resume <file>',
+      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+    )
+    .option(
+      '-b, --bio <file>',
+      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted when --ai is used.`,
+    )
+    .option('--ai', 'Use AI to add a narrative summary and tailoring hints')
+    .option('-m, --model <model>', 'Model/deployment name for AI-enriched gap analysis')
+    .action(async (jobId: string, opts: { board?: string; resume?: string; bio?: string; ai?: boolean; model?: string }) => {
+      const token = await requireHuntrToken();
+      const client = createSharedHuntrClient(token);
+      const { resume, resumePath } = resolveResumeFile(opts.resume);
+      const { job } = await getSharedJob(client, jobId, opts.board);
+      const jobDescription = job.htmlDescription
+        ? stripHtml(job.htmlDescription)
+        : `Job title: ${job.title}`;
+      const bio = opts.ai ? resolveBioFile(opts.bio).bio : '';
+      const analysis = opts.ai
+        ? await analyzeGapWithAI(
+          resume,
+          bio,
+          jobDescription,
+          job.title,
+          opts.model ?? loadConfig().tailoringModel,
+        )
+        : analyzeGap(resume, jobDescription, job.title);
+
+      console.log(`\nUsing resume: ${resumePath}`);
+      console.log(formatGapAnalysisSummary(analysis));
+    });
+
   // huntr tailor <jobId> — fetch job and generate tailored docs
   huntr
     .command('tailor <jobId>')
@@ -305,6 +346,9 @@ export function registerHuntrCommand(program: Command): void {
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .option('-m, --model <model>', 'Model/deployment name (e.g. gpt-4o, claude-opus-4-5). Default: auto — uses provider default')
     .option('--pdf', 'Generate PDF output (requires Chrome — run `npm run setup` first)')
+    .option('--diff', 'Show a colorized diff between the base resume and the tailored resume')
+    .option('--interactive', 'Open review mode after generation before writing the final resume')
+    .option('--no-gap', 'Skip the pre-tailor match gap analysis summary')
     .action(async (jobId: string, opts: {
       board?: string;
       resume?: string;
@@ -314,6 +358,9 @@ export function registerHuntrCommand(program: Command): void {
       verbose?: boolean;
       model?: string;
       pdf?: boolean;
+      diff?: boolean;
+      interactive?: boolean;
+      gap?: boolean;
     }) => {
       const token = await requireHuntrToken();
       const client = createSharedHuntrClient(token);
@@ -333,7 +380,20 @@ export function registerHuntrCommand(program: Command): void {
       if (supplementalPath) console.log(`Using supplemental: ${supplementalPath}`);
       console.log(`Using AI:     ${describeProvider(model)}`);
 
-      await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir: opts.output, verbose: opts.verbose, pdf: opts.pdf });
+      await tailorAndWrite({
+        job,
+        resume,
+        bio,
+        baseCoverLetter,
+        resumeSupplemental,
+        model,
+        outputDir: opts.output,
+        verbose: opts.verbose,
+        pdf: opts.pdf,
+        showDiff: opts.diff,
+        interactive: opts.interactive,
+        showGap: opts.gap !== false,
+      });
     });
 
   // huntr tailor-all — tailor every wishlist job at once
@@ -354,6 +414,9 @@ export function registerHuntrCommand(program: Command): void {
     .option('-v, --verbose', 'Show per-call AI logging (model, prompt sizes, timing)')
     .option('-m, --model <model>', 'Model/deployment name (e.g. gpt-4o, claude-opus-4-5). Default: auto — uses provider default')
     .option('--pdf', 'Generate PDF output (requires Chrome — run `npm run setup` first)')
+    .option('--diff', 'Show a colorized diff between the base resume and the tailored resume')
+    .option('--interactive', 'Open review mode after generation before writing the final resume')
+    .option('--no-gap', 'Skip the pre-tailor match gap analysis summary')
     .action(async (opts: {
       board?: string;
       resume?: string;
@@ -363,6 +426,9 @@ export function registerHuntrCommand(program: Command): void {
       verbose?: boolean;
       model?: string;
       pdf?: boolean;
+      diff?: boolean;
+      interactive?: boolean;
+      gap?: boolean;
     }) => {
       const token = await requireHuntrToken();
       const client = createSharedHuntrClient(token);
@@ -391,7 +457,20 @@ export function registerHuntrCommand(program: Command): void {
       let failed = 0;
       for (const job of wishlistJobs) {
         try {
-          await tailorAndWrite({ job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir: opts.output, verbose: opts.verbose, pdf: opts.pdf });
+          await tailorAndWrite({
+            job,
+            resume,
+            bio,
+            baseCoverLetter,
+            resumeSupplemental,
+            model,
+            outputDir: opts.output,
+            verbose: opts.verbose,
+            pdf: opts.pdf,
+            showDiff: opts.diff,
+            interactive: opts.interactive,
+            showGap: opts.gap !== false,
+          });
           done++;
         } catch (err) {
           failed++;
@@ -458,6 +537,32 @@ function resolveBaseFiles(
   return { resume: readFile(resumePath), bio: readFile(bioPath), baseCoverLetter, resumeSupplemental, resumePath, bioPath, supplementalPath };
 }
 
+function resolveResumeFile(explicitResume?: string): { resume: string; resumePath: string } {
+  let resumePath: string;
+
+  try {
+    resumePath = findFile({ explicit: explicitResume, prefix: 'resume', label: 'Resume' });
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  return { resume: readFile(resumePath), resumePath };
+}
+
+function resolveBioFile(explicitBio?: string): { bio: string; bioPath: string } {
+  let bioPath: string;
+
+  try {
+    bioPath = findFile({ explicit: explicitBio, prefix: 'bio', label: 'Bio' });
+  } catch (err) {
+    console.error(`Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  return { bio: readFile(bioPath), bioPath };
+}
+
 async function tailorAndWrite(args: {
   job: HuntrJob;
   resume: string;
@@ -468,8 +573,24 @@ async function tailorAndWrite(args: {
   outputDir: string;
   verbose?: boolean;
   pdf?: boolean;
+  showDiff?: boolean;
+  interactive?: boolean;
+  showGap?: boolean;
 }): Promise<void> {
-  const { job, resume, bio, baseCoverLetter, resumeSupplemental, model, outputDir, verbose = false, pdf = false } = args;
+  const {
+    job,
+    resume,
+    bio,
+    baseCoverLetter,
+    resumeSupplemental,
+    model,
+    outputDir,
+    verbose = false,
+    pdf = false,
+    showDiff = false,
+    interactive = false,
+    showGap = true,
+  } = args;
   const companyName = extractCompanyName(job);
   const jobDescription = job.htmlDescription
     ? stripHtml(job.htmlDescription)
@@ -480,6 +601,9 @@ async function tailorAndWrite(args: {
   }
 
   console.log(`🎯  ${job.title} @ ${companyName}`);
+  if (showGap) {
+    console.log(formatGapAnalysisSummary(analyzeGap(resume, jobDescription, job.title)));
+  }
   console.log('    Generating resume and cover letter in parallel...');
 
   const output = await withSpinner('generating', () => tailorDocuments(model, {
@@ -492,6 +616,20 @@ async function tailorAndWrite(args: {
     jobDescription,
   }, verbose));
 
+  let finalResume = output.resume;
+  if (interactive) {
+    console.log('    Launching review mode. Press q when you are ready to write the final resume.\n');
+    finalResume = await launchReviewTui({
+      baseResume: resume,
+      resume: output.resume,
+      bio,
+      company: companyName,
+      jobTitle: job.title,
+      jobDescription,
+      model,
+    });
+  }
+
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
   const slugParts = [companyName, job.title, job.id].filter(Boolean).join(' ');
@@ -499,11 +637,11 @@ async function tailorAndWrite(args: {
   const resumeOut = join(outputDir, `resume-${slug}.md`);
   const coverLetterOut = join(outputDir, `cover-letter-${slug}.md`);
 
-  writeFileSync(resumeOut, output.resume, 'utf8');
+  writeFileSync(resumeOut, finalResume, 'utf8');
   writeFileSync(coverLetterOut, output.coverLetter, 'utf8');
 
   const resumeHtmlOut = join(outputDir, `resume-${slug}.html`);
-  writeFileSync(resumeHtmlOut, renderResumeHtml(output.resume, `Resume - ${companyName}`), 'utf8');
+  writeFileSync(resumeHtmlOut, renderResumeHtml(finalResume, `Resume - ${companyName}`), 'utf8');
 
   const coverLetterHtmlOut = join(outputDir, `cover-letter-${slug}.html`);
   writeFileSync(coverLetterHtmlOut, renderCoverLetterHtml(output.coverLetter, `Cover Letter - ${companyName}`), 'utf8');
@@ -516,7 +654,7 @@ async function tailorAndWrite(args: {
   if (pdf) {
     const resumePdfOut = join(outputDir, `resume-${slug}.pdf`);
     try {
-      const fit = await renderResumePdfFit(output.resume, `Resume - ${companyName}`, resumeHtmlOut, resumePdfOut);
+      const fit = await renderResumePdfFit(finalResume, `Resume - ${companyName}`, resumeHtmlOut, resumePdfOut);
       console.log(`    ✓ resume (pdf) → ${resumePdfOut}${fit ? '' : ' (compact: still >1 page)'}`);
     } catch (err) {
       console.warn(`    ⚠ PDF generation skipped: ${(err as Error).message}`);
@@ -529,5 +667,11 @@ async function tailorAndWrite(args: {
     } catch (err) {
       console.warn(`    ⚠ PDF generation skipped: ${(err as Error).message}`);
     }
+  }
+
+  if (showDiff) {
+    const diff = diffMarkdown(resume, finalResume);
+    console.log(`    Diff summary: +${diff.stats.added} / -${diff.stats.removed} / =${diff.stats.unchanged}`);
+    console.log(formatDiffAnsi(diff));
   }
 }

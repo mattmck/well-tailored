@@ -3,6 +3,9 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { registerDiffCommand } from './commands/diff.js';
+import { registerGapCommand } from './commands/gap.js';
+import { registerReviewCommand } from './commands/review.js';
 import { registerTailorCommand } from './commands/tailor.js';
 import { registerHuntrCommand } from './commands/huntr.js';
 import { registerServeCommand } from './commands/serve.js';
@@ -29,6 +32,9 @@ program
   .version(getVersion());
 
 registerTailorCommand(program);
+registerDiffCommand(program);
+registerGapCommand(program);
+registerReviewCommand(program);
 registerHuntrCommand(program);
 registerServeCommand(program);
 

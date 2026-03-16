@@ -112,6 +112,8 @@ export interface TailorRunResult {
   output: TailorOutput;
   artifacts: TailorArtifacts;
   scorecard?: RunScorecard;
+  diff?: DiffResult;
+  gapAnalysis?: GapAnalysis;
 }
 
 export interface SavedHuntrJob {
@@ -202,4 +204,89 @@ export interface Config {
   tailoringModels: string[];
   scoringModels: string[];
   providers: ProviderOption[];
+}
+
+// ── Diff ─────────────────────────────────────────────────────────────────
+
+/** A contiguous block of diff lines sharing the same change type. */
+export interface DiffHunk {
+  type: 'added' | 'removed' | 'unchanged';
+  lines: string[];
+}
+
+/** Result of diffing two documents. */
+export interface DiffResult {
+  hunks: DiffHunk[];
+  stats: { added: number; removed: number; unchanged: number };
+}
+
+// ── Gap Analysis ─────────────────────────────────────────────────────────
+
+/** Keyword categorization. */
+export type KeywordCategory =
+  | 'language'
+  | 'framework'
+  | 'tool'
+  | 'platform'
+  | 'soft-skill'
+  | 'certification'
+  | 'methodology'
+  | 'other';
+
+/** A categorized keyword or phrase extracted from a JD. */
+export interface CategorizedKeyword {
+  term: string;
+  category: KeywordCategory;
+}
+
+/** A partial match between a JD term and a resume term. */
+export interface PartialMatch {
+  jdTerm: string;
+  resumeTerm: string;
+  relationship: string;
+}
+
+/** Years-of-experience requirement extracted from a JD. */
+export interface ExperienceRequirement {
+  skill: string;
+  years: number;
+  isRequired: boolean;
+}
+
+/** Heuristic gap analysis result (no AI needed). */
+export interface GapAnalysis {
+  matchedKeywords: CategorizedKeyword[];
+  missingKeywords: CategorizedKeyword[];
+  partialMatches: PartialMatch[];
+  experienceRequirements: ExperienceRequirement[];
+  overallFit: 'strong' | 'moderate' | 'weak';
+}
+
+/** AI-enriched gap analysis (extends heuristic). */
+export interface EnrichedGapAnalysis extends GapAnalysis {
+  narrative: string;
+  tailoringHints: string[];
+}
+
+// ── Resume Sections ──────────────────────────────────────────────────────
+
+/** Type of resume section detected from heading content. */
+export type ResumeSectionType =
+  | 'header'
+  | 'summary'
+  | 'experience'
+  | 'education'
+  | 'skills'
+  | 'projects'
+  | 'certifications'
+  | 'other';
+
+/** A parsed section of a markdown resume. */
+export interface ResumeSection {
+  id: string;
+  type: ResumeSectionType;
+  heading: string;
+  headingLevel: number;
+  content: string;
+  bullets: string[];
 }
