@@ -658,6 +658,99 @@
       padding-top: 8px;
     }
 
+    /* ── PREVIEW RENDER ─────────────────────────────────── */
+
+    .preview-render {
+      background: #CEE6FE;
+      padding: 40px 54px;
+      border-radius: 4px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #323434;
+      max-width: 100%;
+      -webkit-font-smoothing: antialiased;
+    }
+    .preview-render h1 { font-size: 23px; font-weight: 700; color: #BE503C; line-height: 1.1; margin-bottom: 3px; }
+    .preview-render h2.role { font-size: 14px; font-weight: 700; color: #364D62; margin-bottom: 7px; }
+    .preview-render p.contact, .preview-render p.links { font-size: 11px; color: #323434; line-height: 1.4; }
+    .preview-render p.links { margin-bottom: 16px; }
+    .preview-render p.contact a, .preview-render p.links a { color: #255F91; text-decoration: none; }
+    .preview-render h2.section {
+      font-size: 13.5px; font-weight: 700; color: #BE503C;
+      margin-top: 14px; margin-bottom: 4px;
+      border-bottom: 1px solid rgba(50,52,52,0.15); padding-bottom: 3px;
+    }
+    .preview-render h3 { font-size: 11.5px; font-weight: 700; color: #182234; line-height: 1.3; margin-top: 10px; margin-bottom: 1px; }
+    .preview-render h2.section + h3 { margin-top: 4px; }
+    .preview-render h2.section + .job-header { margin-top: 4px; }
+    .preview-render .job-header { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; margin-bottom: 1px; }
+    .preview-render .job-header h3 { margin: 0; }
+    .preview-render .job-company { font-size: 11px; font-weight: 700; color: #364D62; white-space: nowrap; margin-left: 12px; }
+    .preview-render .job-sub { margin-top: 0; margin-bottom: 4px; }
+    .preview-render .job-sub .date { margin: 0; }
+    .preview-render .job-location { font-size: 11px; color: #3B72A8; white-space: nowrap; margin-left: 12px; }
+    .preview-render p.date { font-size: 11px; color: #3B72A8; line-height: 1.3; margin-bottom: 4px; }
+    .preview-render ul { list-style: disc; padding-left: 16px; margin: 0 0 2px 0; color: #323434; }
+    .preview-render li { font-size: 11px; line-height: 1.5; color: #323434; margin-bottom: 1px; }
+    .preview-render p { font-size: 11px; line-height: 1.5; color: #323434; margin-bottom: 3px; }
+    .preview-render a { color: #255F91; text-decoration: none; }
+
+    .preview-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      padding: 32px;
+    }
+
+    /* ── DIFF VIEW ───────────────────────────────────────── */
+
+    .diff-view { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.6; padding: 12px; }
+    .diff-hunk { margin-bottom: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+    .diff-add { color: #4caf50; background: rgba(76,175,80,0.08); padding: 1px 8px; white-space: pre-wrap; }
+    .diff-del { color: #f44336; background: rgba(244,67,54,0.08); padding: 1px 8px; white-space: pre-wrap; }
+    .diff-ctx { color: var(--muted); padding: 1px 8px; white-space: pre-wrap; }
+    .diff-empty { color: var(--muted); font-size: 13px; font-style: italic; padding: 32px; text-align: center; }
+    .diff-loading { color: var(--muted); font-size: 13px; font-style: italic; padding: 32px; text-align: center; }
+
+    /* ── MISSING KEYWORDS PILLS ──────────────────────────── */
+
+    .missing-pill {
+      display: inline-block;
+      padding: 4px 8px;
+      margin-bottom: 4px;
+      margin-right: 2px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: rgba(220,80,60,0.1);
+      color: #e8857a;
+      border: 1px solid rgba(220,80,60,0.25);
+    }
+    .missing-empty { font-size: 11px; color: var(--muted); padding: 8px 0; font-style: italic; }
+
+    #missingCount {
+      font-weight: 400;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ── EXPORT / COPY BUTTONS ───────────────────────────── */
+
+    .export-buttons { gap: 3px !important; }
+    .btn-copy {
+      padding: 4px 6px !important;
+      font-size: 11px !important;
+      min-width: unset;
+      transition: background 0.12s, border-color 0.12s, box-shadow 0.3s;
+    }
+    .btn-copy.copied {
+      color: #4caf50 !important;
+      border-color: #4caf50 !important;
+      box-shadow: 0 0 8px rgba(76,175,80,0.4);
+    }
+
     /* ── SCROLLBAR STYLING ───────────────────────────────── */
 
     ::-webkit-scrollbar {
@@ -676,6 +769,436 @@
 
     ::-webkit-scrollbar-thumb:hover {
       background: var(--muted);
+    }
+
+    /* ── MODAL ──────────────────────────────────────────── */
+
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .modal {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 12px; padding: 24px; max-width: 600px; width: 90%;
+      max-height: 80vh; overflow-y: auto;
+    }
+
+    .modal h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .modal-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .modal-body th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      padding: 4px 6px 8px;
+    }
+
+    .modal-body td {
+      padding: 4px 6px;
+    }
+
+    .modal-body input {
+      width: 100%;
+      padding: 5px 8px;
+      font-size: 12px;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .btn-icon {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--surface-raised);
+      color: var(--deep);
+      cursor: pointer;
+    }
+
+    .btn-icon:hover {
+      background: var(--surface);
+      border-color: var(--muted);
+    }
+
+    .primary {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .primary:hover {
+      background: #a54532;
+      border-color: #a54532;
+    }
+
+    .primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── JOB STATUS ICONS ───────────────────────────────── */
+
+    .job-item__status--loaded { color: var(--muted); }
+    .job-item__status--pending { color: #d4a843; }
+    .job-item__status--tailored { color: #4e9d78; }
+    .job-item__status--reviewed { color: #4e9d78; }
+
+    /* ── PASTE JD MODAL ─────────────────────────────────── */
+
+    .paste-modal textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 8px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+
+    .paste-modal .config-group {
+      margin-bottom: 12px;
+    }
+
+    /* ── STRUCTURED EDITOR ────────────────────────────────── */
+
+    .editor-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    .section-block {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .section-block.header-block {
+      border-color: rgba(190,80,60,0.27);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section-header .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .section-header .section-title.meta {
+      color: #7a8fa3;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .section-actions button {
+      font-size: 10px;
+      color: #666;
+      background: none;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .section-actions button:hover {
+      color: #ccc;
+      border-color: #555;
+    }
+
+    .section-actions button.danger:hover {
+      color: #e74c3c;
+      border-color: #e74c3c;
+    }
+
+    .editor-field-row {
+      margin-bottom: 8px;
+    }
+
+    .editor-field-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .editor-field-row label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: #777;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .editor-field-row input[type="text"],
+    .editor-field-row textarea {
+      width: 100%;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 6px 8px;
+      outline: none;
+      transition: border-color 0.15s;
+      resize: vertical;
+    }
+
+    .editor-field-row input[type="text"]:focus,
+    .editor-field-row textarea:focus {
+      border-color: #555;
+      color: #eee;
+    }
+
+    .sub-item {
+      background: #1e1e1e;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+
+    .sub-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .sub-item-label {
+      font-size: 10px;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .bullet-list {
+      list-style: none;
+    }
+
+    .bullet-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .bullet-list li::before {
+      content: '\2022';
+      color: #555;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .bullet-list li input {
+      flex: 1;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 6px 8px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .bullet-list li input:focus {
+      border-color: #555;
+      color: #eee;
+    }
+
+    .add-btn {
+      font-size: 10px;
+      color: #4caf50;
+      background: none;
+      border: 1px solid #2a4a2a;
+      border-radius: 4px;
+      padding: 3px 10px;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .add-btn:hover {
+      color: #6fcf70;
+      border-color: #4caf50;
+    }
+
+    .date-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .date-row select,
+    .date-row input[type="number"] {
+      font-size: 11px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 5px 6px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .date-row select:focus,
+    .date-row input[type="number"]:focus {
+      border-color: #555;
+      color: #eee;
+    }
+
+    .date-row select {
+      width: 80px;
+      cursor: pointer;
+    }
+
+    .date-row input[type="number"] {
+      width: 62px;
+    }
+
+    .date-row .sep {
+      color: #444;
+      font-size: 11px;
+    }
+
+    .date-row label.present-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: #666;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .date-row label.present-label input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+      accent-color: #3B72A8;
+    }
+
+    /* ── KEYWORD PILLS ────────────────────────────────────── */
+
+    .section-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .pill--matched {
+      background: rgba(78,157,120,0.15);
+      color: #93d0b1;
+      border: 1px solid rgba(78,157,120,0.3);
+    }
+
+    .pill--partial {
+      background: rgba(184,138,53,0.12);
+      color: #e4c27f;
+      border: 1px solid rgba(184,138,53,0.3);
+    }
+
+    /* ── SECTION FOOTER / REGENERATE ──────────────────────── */
+
+    .section-footer {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-regenerate {
+      font-size: 11px;
+      color: #6ea8d8;
+      background: none;
+      border: 1px solid rgba(110,168,216,0.3);
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-regenerate:hover {
+      color: #9ec8ed;
+      border-color: rgba(110,168,216,0.5);
+    }
+
+    .btn-regenerate:disabled {
+      color: #555;
+      border-color: #333;
+      cursor: wait;
+    }
+
+    .editor-add-section {
+      margin-top: 4px;
+      margin-bottom: 14px;
     }
   </style>
 </head>
@@ -829,15 +1352,15 @@
       <section class="scores-row" id="scores-row">
         <div class="score-cards" id="score-cards">
           <div class="score-card">
-            <span class="score-card__value score-card__value--empty" id="score-resume">—</span>
+            <span class="score-card__value score-card__value--empty" id="score-resume">&mdash;</span>
             <span class="score-card__label">Resume</span>
           </div>
           <div class="score-card">
-            <span class="score-card__value score-card__value--empty" id="score-cover">—</span>
+            <span class="score-card__value score-card__value--empty" id="score-cover">&mdash;</span>
             <span class="score-card__label">Cover</span>
           </div>
           <div class="score-card">
-            <span class="score-card__value score-card__value--empty" id="score-accuracy">—</span>
+            <span class="score-card__value score-card__value--empty" id="score-accuracy">&mdash;</span>
             <span class="score-card__label">Accuracy</span>
           </div>
         </div>
@@ -861,8 +1384,10 @@
             <button class="tab" id="tab-cover" data-doc="cover">Cover Letter</button>
           </div>
           <div class="editor-col__body" id="editor-body">
-            <div class="editor-placeholder" id="editor-placeholder">
-              Select a job and run tailoring to begin editing
+            <div id="editorSections">
+              <div class="editor-empty" id="editor-placeholder">
+                Select a job and run tailoring to begin editing
+              </div>
             </div>
           </div>
         </div>
@@ -873,33 +1398,44 @@
         <!-- Preview Column -->
         <div class="preview-col" id="preview-col">
           <div class="preview-col__toolbar">
-            <div class="toolbar-group">
-              <button class="btn" id="btn-copy-md" title="Copy Markdown">md</button>
-              <button class="btn" id="btn-copy-html" title="Copy HTML">html</button>
-              <button class="btn" id="btn-export-pdf" title="Export PDF">pdf</button>
+            <div class="toolbar-group export-buttons">
+              <button class="btn btn-export" data-download="md" title="Download Markdown">md</button>
+              <button class="btn btn-copy" data-copy="md" title="Copy Markdown to clipboard">&#x1F4CB;</button>
+              <button class="btn btn-export" data-download="html" title="Download HTML">html</button>
+              <button class="btn btn-copy" data-copy="html" title="Copy HTML to clipboard">&#x1F4CB;</button>
+              <button class="btn btn-export" data-download="pdf" title="Export PDF">pdf</button>
             </div>
             <div class="toolbar-spacer"></div>
-            <div class="toolbar-group">
+            <div class="toolbar-group view-switcher">
               <button class="tab active" id="tab-preview" data-view="preview">Preview</button>
               <button class="tab" id="tab-diff" data-view="diff">Diff</button>
             </div>
             <select id="theme-select" title="Resume theme">
-              <option value="default">Default theme</option>
+              <option value="default">Default</option>
+              <option value="ocean">Ocean</option>
+              <option value="forest">Forest</option>
+              <option value="slate">Slate</option>
+              <option value="warm">Warm</option>
+              <option value="mono">Monochrome</option>
             </select>
           </div>
           <div class="preview-col__body" id="preview-body">
-            <div class="preview-placeholder" id="preview-placeholder">
-              Preview will appear here
+            <div id="previewContent">
+              <div class="preview-placeholder" id="preview-placeholder">
+                Preview will appear here
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Missing Keywords Column -->
         <div class="keywords-col" id="keywords-col">
-          <div class="keywords-col__header">Missing</div>
+          <div class="keywords-col__header">Missing <span id="missingCount"></span></div>
           <div class="keywords-col__body" id="keywords-body">
-            <div class="keywords-empty" id="keywords-empty">
-              No gap analysis yet
+            <div id="missingPills">
+              <div class="keywords-empty" id="keywords-empty">
+                No gap analysis yet
+              </div>
             </div>
           </div>
         </div>
@@ -910,7 +1446,1414 @@
 
   </div>
 
-  <!-- No JS logic yet — skeleton only -->
+  <!-- ── TAILOR CONFIRMATION MODAL ──────────────────────── -->
+  <div class="modal-overlay" id="tailorModal" hidden>
+    <div class="modal">
+      <h3>Confirm Tailoring</h3>
+      <p class="modal-subtitle">Review company and title before tailoring.</p>
+      <div class="modal-body" id="confirmTableBody"></div>
+      <div class="modal-footer">
+        <button class="btn-icon" id="cancelTailorBtn">Cancel</button>
+        <button class="primary" id="confirmTailorBtn">Tailor All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PASTE JD MODAL ──────────────────────────────────── -->
+  <div class="modal-overlay" id="pasteJdModal" hidden>
+    <div class="modal paste-modal">
+      <h3>Paste Job Description</h3>
+      <p class="modal-subtitle">Enter company, title, and paste the JD.</p>
+      <div class="config-group">
+        <div class="config-group__label">Company</div>
+        <input type="text" id="paste-company" placeholder="Acme Corp" />
+      </div>
+      <div class="config-group">
+        <div class="config-group__label">Job Title</div>
+        <input type="text" id="paste-title" placeholder="Senior Engineer" />
+      </div>
+      <div class="config-group">
+        <div class="config-group__label">Job Description</div>
+        <textarea id="paste-jd" placeholder="Paste the full job description here..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-icon" id="cancelPasteBtn">Cancel</button>
+        <button class="primary" id="confirmPasteBtn">Add Job</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════════════════
+
+    function sid() { return Math.random().toString(36).slice(2, 9); }
+    function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function esc(s) { return escHtml(s); }
+    function inlineMd(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); }
+    function linkify(text) {
+      return (text || '').split('|').map(function(seg) {
+        var t = seg.trim();
+        if (!t) return '';
+        if (t.includes('@')) return '<a href="mailto:' + esc(t) + '">' + esc(t) + '</a>';
+        if (t.match(/^(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]+\/)/i)) {
+          var href = t.startsWith('http') ? t : 'https://' + t;
+          return '<a href="' + esc(href) + '">' + esc(t) + '</a>';
+        }
+        if (t.match(/^[a-z0-9-]+\.[a-z]{2,}/i) && t.includes('/')) {
+          return '<a href="https://' + esc(t) + '">' + esc(t) + '</a>';
+        }
+        return esc(t);
+      }).join(' &nbsp;|&nbsp; ');
+    }
+
+    // ── Date helpers (Agent C) ──
+    const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function ensureDateObj(job) {
+      if (!job.dateObj) {
+        job.dateObj = parseDateString(job.date || '');
+      }
+      return job.dateObj;
+    }
+
+    function parseDateString(str) {
+      const obj = { startMonth: 0, startYear: '', endMonth: 0, endYear: '', present: false };
+      if (!str) return obj;
+      const parts = str.split(/\s*[\u2013\u2014-]\s*/);
+      if (parts.length >= 1) {
+        const s = parseOneDate(parts[0].trim());
+        obj.startMonth = s.month;
+        obj.startYear = s.year;
+      }
+      if (parts.length >= 2) {
+        const end = parts[1].trim();
+        if (/present/i.test(end)) {
+          obj.present = true;
+        } else {
+          const e = parseOneDate(end);
+          obj.endMonth = e.month;
+          obj.endYear = e.year;
+        }
+      }
+      return obj;
+    }
+
+    function parseOneDate(s) {
+      const monthMatch = s.match(/^([A-Za-z]+)\s*(\d{4})$/);
+      if (monthMatch) {
+        const mName = monthMatch[1].toLowerCase().slice(0, 3);
+        const mIdx = MONTHS.findIndex(m => m.toLowerCase() === mName);
+        return { month: mIdx > 0 ? mIdx : 0, year: monthMatch[2] };
+      }
+      const yearOnly = s.match(/^(\d{4})$/);
+      if (yearOnly) return { month: 0, year: yearOnly[1] };
+      return { month: 0, year: '' };
+    }
+
+    function dateObjToString(d) {
+      const start = d.startMonth ? `${MONTHS[d.startMonth]} ${d.startYear}` : (d.startYear || '');
+      if (d.present) return start ? `${start} \u2013 Present` : '';
+      const end = d.endMonth ? `${MONTHS[d.endMonth]} ${d.endYear}` : (d.endYear || '');
+      if (!start && !end) return '';
+      if (!end) return start;
+      if (!start) return end;
+      return `${start} \u2013 ${end}`;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  STATE
+    // ═══════════════════════════════════════════════════════
+
+    const state = {
+      jobs: [],              // { id, company, title, jd, stage, status, checked, result, error, _editorData }
+      activeJobId: null,
+      workspaceName: '',
+      tailorModel: 'auto',
+      scoreModel: 'auto',
+      scoresStale: false,
+      viewMode: 'preview',   // 'preview' | 'diff'
+      previewTheme: null,
+      regeneratingSection: null,
+      sourceResume: '',
+      sourceBio: '',
+    };
+
+    const STATUS_ICONS = {
+      loaded:   '\u2014',   // --
+      pending:  '\u22EF',   // ...
+      tailored: '\u25CF',   // bullet
+      reviewed: '\u2713',   // check
+    };
+
+    // ═══════════════════════════════════════════════════════
+    //  JOB LIST (Agent B)
+    // ═══════════════════════════════════════════════════════
+
+    function renderJobList() {
+      const listEl = document.getElementById('job-list');
+      const emptyEl = document.getElementById('jobs-empty');
+      const tailorBtn = document.getElementById('btn-tailor-selected');
+
+      if (state.jobs.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = '';
+        tailorBtn.disabled = true;
+        tailorBtn.textContent = 'Tailor Selected';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      const checkedCount = state.jobs.filter(j => j.checked).length;
+      tailorBtn.disabled = checkedCount === 0;
+      tailorBtn.textContent = checkedCount > 0
+        ? `Tailor Selected (${checkedCount})`
+        : 'Tailor Selected';
+
+      listEl.innerHTML = state.jobs.map(job => {
+        const isActive = job.id === state.activeJobId;
+        const statusClass = 'job-item__status--' + (job.status || 'loaded');
+        const statusIcon = STATUS_ICONS[job.status] || STATUS_ICONS.loaded;
+        return `
+          <li class="job-item${isActive ? ' selected' : ''}" data-job-id="${escHtml(job.id)}">
+            <input type="checkbox" class="job-item__check" ${job.checked ? 'checked' : ''} data-job-check="${escHtml(job.id)}" />
+            <div class="job-item__info">
+              <div class="job-item__company">${escHtml(job.company) || '(no company)'}</div>
+              <div class="job-item__title">${escHtml(job.title) || '(no title)'}</div>
+            </div>
+            <span class="job-item__status ${statusClass}">${statusIcon}</span>
+          </li>`;
+      }).join('');
+
+      // Bind click handlers
+      listEl.querySelectorAll('.job-item').forEach(el => {
+        const jobId = el.dataset.jobId;
+
+        // Checkbox toggle
+        const checkbox = el.querySelector('.job-item__check');
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const job = state.jobs.find(j => j.id === jobId);
+          if (job) {
+            job.checked = checkbox.checked;
+            renderJobList();
+          }
+        });
+
+        // Row click => set active
+        el.addEventListener('click', (e) => {
+          if (e.target === checkbox) return;
+          state.activeJobId = jobId;
+          renderJobList();
+          renderEditor();
+          renderPreviewPanel();
+          renderMissingKeywords();
+        });
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  LOAD HUNTR JOBS (Agent B)
+    // ═══════════════════════════════════════════════════════
+
+    async function loadHuntrJobs() {
+      try {
+        const res = await fetch('/api/huntr/jobs');
+        const data = await res.json();
+        if (data.jobs) {
+          state.jobs = data.jobs.map(j => ({
+            id: j.id || sid(),
+            company: j.company || '',
+            title: j.title || '',
+            jd: j.description || '',
+            stage: j.stage || '',
+            status: 'loaded',
+            checked: false,
+            result: null,
+            error: null,
+            _editorData: null,
+          }));
+          renderJobList();
+        }
+      } catch (e) {
+        console.error('Failed to load Huntr jobs:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  ADD MANUAL JOB (Agent B)
+    // ═══════════════════════════════════════════════════════
+
+    function addManualJob() {
+      const modal = document.getElementById('pasteJdModal');
+      document.getElementById('paste-company').value = '';
+      document.getElementById('paste-title').value = '';
+      document.getElementById('paste-jd').value = '';
+      modal.hidden = false;
+    }
+
+    function confirmPasteJob() {
+      const company = document.getElementById('paste-company').value.trim();
+      const title = document.getElementById('paste-title').value.trim();
+      const jd = document.getElementById('paste-jd').value.trim();
+      const modal = document.getElementById('pasteJdModal');
+      modal.hidden = true;
+
+      const job = {
+        id: sid(),
+        company: company || 'Manual',
+        title: title || 'Untitled',
+        jd: jd,
+        stage: '',
+        status: 'loaded',
+        checked: false,
+        result: null,
+        error: null,
+        _editorData: null,
+      };
+      state.jobs.push(job);
+      state.activeJobId = job.id;
+      renderJobList();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  TAILOR CONFIRMATION MODAL (Agent B)
+    // ═══════════════════════════════════════════════════════
+
+    function showTailorConfirmation() {
+      const checked = state.jobs.filter(j => j.checked);
+      if (checked.length === 0) return;
+
+      const modal = document.getElementById('tailorModal');
+      const body = document.getElementById('confirmTableBody');
+
+      body.innerHTML = `
+        <table>
+          <thead><tr><th>Company</th><th>Title</th></tr></thead>
+          <tbody>
+            ${checked.map(job => `
+              <tr data-confirm-id="${escHtml(job.id)}">
+                <td><input type="text" class="confirm-company" value="${escHtml(job.company)}" /></td>
+                <td><input type="text" class="confirm-title" value="${escHtml(job.title)}" /></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+
+      modal.hidden = false;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  EXECUTE BATCH TAILOR (Agent B)
+    // ═══════════════════════════════════════════════════════
+
+    async function executeBatchTailor() {
+      const modal = document.getElementById('tailorModal');
+      const rows = modal.querySelectorAll('tr[data-confirm-id]');
+
+      // Read edited company/title from modal inputs
+      rows.forEach(row => {
+        const jobId = row.dataset.confirmId;
+        const job = state.jobs.find(j => j.id === jobId);
+        if (job) {
+          job.company = row.querySelector('.confirm-company').value.trim() || job.company;
+          job.title = row.querySelector('.confirm-title').value.trim() || job.title;
+        }
+      });
+
+      // Set checked jobs to pending
+      const toTailor = state.jobs.filter(j => j.checked);
+      toTailor.forEach(j => { j.status = 'pending'; j.error = null; });
+
+      // Close modal, re-render
+      modal.hidden = true;
+      renderJobList();
+
+      let firstCompletedId = null;
+
+      // Process each job
+      for (const job of toTailor) {
+        try {
+          const res = await fetch('/api/tailor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              input: {
+                resume: state.sourceResume,
+                bio: state.sourceBio,
+                jobDescription: job.jd,
+                company: job.company,
+                jobTitle: job.title,
+              },
+              models: {
+                tailoringModel: state.tailorModel,
+              },
+            }),
+          });
+
+          if (!res.ok) {
+            throw new Error(await res.text() || res.statusText);
+          }
+
+          const result = await res.json();
+          job.status = 'tailored';
+          job.result = result;
+          job.error = null;
+          job._editorData = null;
+
+          if (!firstCompletedId) {
+            firstCompletedId = job.id;
+          }
+        } catch (e) {
+          console.error(`Tailor failed for ${job.company} - ${job.title}:`, e);
+          job.status = 'loaded';
+          job.error = e.message || String(e);
+        }
+
+        renderJobList();
+      }
+
+      // Auto-select first completed job and render all panels
+      if (firstCompletedId) {
+        state.activeJobId = firstCompletedId;
+        renderJobList();
+        renderEditor();
+        renderPreviewPanel();
+        renderMissingKeywords();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  MARKDOWN PARSER (Agent C)
+    // ═══════════════════════════════════════════════════════
+
+    function parseMarkdown(md) {
+      const lines = md.split('\n');
+      const parsed = { name: '', role: '', contact: '', links: '', sections: [] };
+      let h2Count = 0;
+      let currentSection = null;
+      let currentJob = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) {
+          parsed.name = trimmed.slice(2).trim();
+          continue;
+        }
+
+        if (trimmed.startsWith('## ') && !trimmed.startsWith('### ')) {
+          h2Count++;
+          if (h2Count === 1) {
+            parsed.role = trimmed.slice(3).trim();
+            continue;
+          }
+          currentJob = null;
+          currentSection = {
+            id: sid(),
+            title: trimmed.slice(3).trim(),
+            type: 'text',
+            content: '',
+            items: [],
+            jobs: [],
+          };
+          parsed.sections.push(currentSection);
+          continue;
+        }
+
+        if (trimmed.startsWith('### ')) {
+          if (currentSection) {
+            currentSection.type = 'jobs';
+            const h3Text = trimmed.slice(4).trim();
+            let jTitle = '', jCompany = '', jLocation = '';
+            const pipeParts = h3Text.split(/\s*\|\s*/).filter(Boolean);
+            if (pipeParts.length >= 2) {
+              jTitle = pipeParts[0] || '';
+              jCompany = pipeParts[1] || '';
+              jLocation = pipeParts[2] || '';
+            } else {
+              const stripped = h3Text.replace(/\s*\([^)]*\)\s*$/, '').trim();
+              const dashMatch = stripped.match(/^(.+?)\s+[\u2014\u2013-]{1,2}\s+(.+)$/);
+              if (dashMatch) {
+                jTitle = dashMatch[1].trim();
+                const rest = dashMatch[2].trim();
+                const restParts = rest.split(',').map(s => s.trim());
+                if (restParts.length >= 3 && restParts[restParts.length - 1].length <= 3) {
+                  jCompany = restParts[0];
+                  jLocation = restParts.slice(1).join(', ');
+                } else if (restParts.length >= 2) {
+                  jCompany = restParts.slice(0, -1).join(', ');
+                  jLocation = restParts[restParts.length - 1];
+                } else {
+                  jCompany = rest;
+                }
+              } else {
+                const atMatch = stripped.match(/^(.+?)\s+at\s+(.+)$/i);
+                if (atMatch) {
+                  jTitle = atMatch[1].trim();
+                  jCompany = atMatch[2].trim();
+                } else {
+                  jTitle = h3Text;
+                }
+              }
+            }
+            currentJob = {
+              id: sid(),
+              title: jTitle,
+              company: jCompany,
+              location: jLocation,
+              date: '',
+              bullets: [],
+            };
+            currentSection.jobs.push(currentJob);
+          }
+          continue;
+        }
+
+        if (h2Count <= 1 && !currentSection) {
+          if (trimmed && !parsed.contact) {
+            parsed.contact = trimmed;
+          } else if (trimmed && !parsed.links) {
+            parsed.links = trimmed;
+          }
+          continue;
+        }
+
+        if (!currentSection) continue;
+
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          const text = trimmed.slice(2).trim();
+          if (currentJob) {
+            currentJob.bullets.push({ id: sid(), text });
+          } else {
+            if (currentSection.type !== 'bullets') {
+              currentSection.type = 'bullets';
+              if (!currentSection.items) currentSection.items = [];
+            }
+            currentSection.items.push({ id: sid(), text });
+          }
+          continue;
+        }
+
+        if (currentJob && !currentJob.date && trimmed && (/^\d{4}/.test(trimmed) || /^(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}/i.test(trimmed))) {
+          currentJob.date = trimmed;
+          continue;
+        }
+
+        if (trimmed && currentSection.type === 'text') {
+          currentSection.content += (currentSection.content ? '\n' : '') + trimmed;
+        }
+      }
+
+      // Clean up
+      parsed.sections.forEach(sec => {
+        if (sec.type === 'jobs' && sec.jobs.length === 0) sec.type = 'text';
+        if (sec.type === 'bullets' && sec.items.length === 0) sec.type = 'text';
+        if (sec.type === 'text' && sec.content) {
+          if (/^[\u2022\u00B7]\s/.test(sec.content.trim()) || /\s[\u2022\u00B7]\s/.test(sec.content)) {
+            const parts = sec.content.split(/\s*[\u2022\u00B7]\s+/).filter(s => s.trim());
+            if (parts.length > 1) {
+              sec.type = 'bullets';
+              sec.items = parts.map(t => ({ id: sid(), text: t.trim() }));
+              sec.content = '';
+            }
+          } else if (sec.content.includes('\n- ') || sec.content.startsWith('- ')) {
+            const parts = sec.content.split('\n').filter(l => l.trim());
+            const allBullets = parts.every(l => l.trim().startsWith('- ') || l.trim().startsWith('* '));
+            if (allBullets) {
+              sec.type = 'bullets';
+              sec.items = parts.map(l => ({ id: sid(), text: l.trim().replace(/^[-*]\s+/, '') }));
+              sec.content = '';
+            }
+          }
+        }
+      });
+
+      return parsed;
+    }
+
+    // ── Markdown serializer ──
+    function toMarkdown(data) {
+      if (!data) return '';
+      let md = '';
+      md += '# ' + (data.name || '') + '\n\n';
+      md += '## ' + (data.role || '') + '\n\n';
+      if (data.contact) md += data.contact + '\n';
+      if (data.links) md += data.links + '\n';
+      md += '\n';
+
+      (data.sections || []).forEach(sec => {
+        md += '## ' + sec.title + '\n\n';
+        if (sec.type === 'text') md += (sec.content || '') + '\n\n';
+        if (sec.type === 'bullets') {
+          (sec.items || []).forEach(b => { if (b.text) md += '- ' + b.text + '\n'; });
+          md += '\n';
+        }
+        if (sec.type === 'jobs') {
+          (sec.jobs || []).forEach(j => {
+            const fullTitle = [j.title, j.company, j.location].filter(Boolean).join(' | ');
+            if (fullTitle) md += '### ' + fullTitle + '\n\n';
+            if (j.date) md += j.date + '\n\n';
+            (j.bullets || []).forEach(b => { if (b.text) md += '- ' + b.text + '\n'; });
+            md += '\n';
+          });
+        }
+      });
+      return md.trimEnd() + '\n';
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  STRUCTURED EDITOR (Agent C)
+    // ═══════════════════════════════════════════════════════
+
+    // ── Active-job editor data ──
+    function getEditorData() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      if (!job?.result?.output?.resume) {
+        // Fallback: check for pre-existing _editorData
+        if (job && job._editorData) return job._editorData;
+        return null;
+      }
+      if (!job._editorData) {
+        job._editorData = parseMarkdown(job.result.output.resume);
+      }
+      return job._editorData;
+    }
+
+    function syncEditorToResult() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      if (!job?._editorData) return;
+      if (job.result && job.result.output) {
+        job.result.output.resume = toMarkdown(job._editorData);
+      }
+      state.scoresStale = true;
+      renderPreviewPanel();
+    }
+
+    // ── Keyword coverage per section ──
+    function getActiveGapAnalysis() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      return job?.result?.gapAnalysis || null;
+    }
+
+    function getSectionText(sec) {
+      if (sec.type === 'text') return sec.content || '';
+      if (sec.type === 'bullets') return (sec.items || []).map(b => b.text).join(' ');
+      if (sec.type === 'jobs') {
+        return (sec.jobs || []).map(j =>
+          [j.title, j.company, j.location, ...(j.bullets || []).map(b => b.text)].join(' ')
+        ).join(' ');
+      }
+      return '';
+    }
+
+    function computeSectionCoverage(sectionText, gapAnalysis) {
+      if (!gapAnalysis) return { matched: [], partial: [] };
+      const hay = sectionText.toLowerCase();
+      const matched = (gapAnalysis.matchedKeywords || [])
+        .map(k => k.term || k)
+        .filter(t => hay.includes(t.toLowerCase()))
+        .slice(0, 5);
+      const partial = (gapAnalysis.partialMatches || [])
+        .filter(p => hay.includes(p.jdTerm.toLowerCase()) || hay.includes(p.resumeTerm.toLowerCase()))
+        .slice(0, 3);
+      return { matched, partial };
+    }
+
+    function renderSectionPills(sec) {
+      const gapAnalysis = getActiveGapAnalysis();
+      const sectionText = getSectionText(sec);
+      const { matched, partial } = computeSectionCoverage(sectionText, gapAnalysis);
+      if (matched.length === 0 && partial.length === 0) return '';
+      let html = '<div class="section-pills">';
+      matched.forEach(t => {
+        html += `<span class="pill pill--matched">${esc(t)}</span>`;
+      });
+      partial.forEach(p => {
+        html += `<span class="pill pill--partial">${esc(p.resumeTerm)}\u2248${esc(p.jdTerm)}</span>`;
+      });
+      html += '</div>';
+      return html;
+    }
+
+    // ── Editor rendering ──
+    function renderEditor() {
+      const el = document.getElementById('editorSections');
+      const data = getEditorData();
+      if (!data) {
+        el.innerHTML = '<div class="editor-empty">Select a tailored job to start reviewing.</div>';
+        return;
+      }
+      el.innerHTML = '';
+      el.appendChild(makeHeaderBlock(data));
+      data.sections.forEach((sec, i) => {
+        el.appendChild(makeSectionBlock(sec, i, data));
+      });
+      // Add section button at the bottom
+      const addBtn = document.createElement('div');
+      addBtn.className = 'editor-add-section';
+      addBtn.innerHTML = '<button class="add-btn" onclick="editorAddSection()">+ Add Section</button>';
+      el.appendChild(addBtn);
+    }
+
+    function makeHeaderBlock(data) {
+      const div = document.createElement('div');
+      div.className = 'section-block header-block';
+      div.innerHTML = `
+        <div class="section-header">
+          <span class="section-title meta">Header</span>
+        </div>
+        <div class="editor-field-row">
+          <label>Name</label>
+          <input type="text" value="${esc(data.name)}" oninput="getEditorData().name=this.value;syncEditorToResult()">
+        </div>
+        <div class="editor-field-row">
+          <label>Role / Title</label>
+          <input type="text" value="${esc(data.role)}" oninput="getEditorData().role=this.value;syncEditorToResult()">
+        </div>
+        <div class="editor-field-row">
+          <label>Contact (pipe-separated)</label>
+          <input type="text" value="${esc(data.contact)}" oninput="getEditorData().contact=this.value;syncEditorToResult()">
+        </div>
+        <div class="editor-field-row">
+          <label>Links (pipe-separated)</label>
+          <input type="text" value="${esc(data.links)}" oninput="getEditorData().links=this.value;syncEditorToResult()">
+        </div>`;
+      return div;
+    }
+
+    function makeSectionBlock(sec, idx, data) {
+      const div = document.createElement('div');
+      div.className = 'section-block';
+      div.dataset.id = sec.id;
+
+      const canUp = idx > 0;
+      const canDown = idx < data.sections.length - 1;
+      const isRegenerating = state.regeneratingSection === sec.id;
+
+      let inner = renderSectionPills(sec);
+
+      inner += `
+        <div class="section-header">
+          <input type="text" value="${esc(sec.title)}" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:0;width:200px;"
+            oninput="getEditorData().sections[${idx}].title=this.value;syncEditorToResult()">
+          <div class="section-actions">
+            <select style="font-size:10px;background:#1a1a1a;color:#888;border:1px solid #333;border-radius:4px;padding:2px 4px;cursor:pointer;"
+              onchange="editorChangeType(${idx},this.value)">
+              <option value="text" ${sec.type==='text'?'selected':''}>Text</option>
+              <option value="bullets" ${sec.type==='bullets'?'selected':''}>Bullets</option>
+              <option value="jobs" ${sec.type==='jobs'?'selected':''}>Jobs</option>
+            </select>
+            ${canUp ? `<button onclick="editorMoveSection(${idx},-1)" title="Move up">&#x25B2;</button>` : ''}
+            ${canDown ? `<button onclick="editorMoveSection(${idx},1)" title="Move down">&#x25BC;</button>` : ''}
+            <button class="danger" onclick="editorRemoveSection(${idx})" title="Remove">&times;</button>
+          </div>
+        </div>`;
+
+      if (sec.type === 'text') {
+        inner += `
+          <div class="editor-field-row">
+            <textarea rows="3" oninput="getEditorData().sections[${idx}].content=this.value;syncEditorToResult()">${esc(sec.content || '')}</textarea>
+          </div>`;
+      }
+
+      if (sec.type === 'bullets') {
+        const items = sec.items || [];
+        inner += '<ul class="bullet-list">';
+        items.forEach((b, bi) => {
+          inner += `<li>
+            <input type="text" value="${esc(b.text)}" oninput="getEditorData().sections[${idx}].items[${bi}].text=this.value;syncEditorToResult()">
+            <button style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;" onclick="editorRemoveBullet(${idx},${bi})" title="Remove">&times;</button>
+          </li>`;
+        });
+        inner += `</ul>
+          <button class="add-btn" onclick="editorAddBullet(${idx})">+ bullet</button>`;
+      }
+
+      if (sec.type === 'jobs') {
+        const jobs = sec.jobs || [];
+        jobs.forEach((job, ji) => {
+          inner += `<div class="sub-item">
+            <div class="sub-item-header">
+              <span class="sub-item-label">Job ${ji+1}</span>
+              <div class="section-actions">
+                ${ji > 0 ? `<button onclick="editorMoveJob(${idx},${ji},-1)">&#x25B2;</button>` : ''}
+                ${ji < jobs.length-1 ? `<button onclick="editorMoveJob(${idx},${ji},1)">&#x25BC;</button>` : ''}
+                <button class="danger" onclick="editorRemoveJob(${idx},${ji})">&times;</button>
+              </div>
+            </div>
+            <div class="editor-field-row">
+              <label>Job Title</label>
+              <input type="text" value="${esc(job.title)}" oninput="getEditorData().sections[${idx}].jobs[${ji}].title=this.value;syncEditorToResult()">
+            </div>
+            <div class="editor-field-row">
+              <label>Company</label>
+              <input type="text" value="${esc(job.company || '')}" oninput="getEditorData().sections[${idx}].jobs[${ji}].company=this.value;syncEditorToResult()">
+            </div>
+            <div class="editor-field-row">
+              <label>Location</label>
+              <input type="text" value="${esc(job.location || '')}" oninput="getEditorData().sections[${idx}].jobs[${ji}].location=this.value;syncEditorToResult()">
+            </div>
+            <div class="editor-field-row">
+              <label>Date</label>
+              ${renderDatePicker(idx, ji, job)}
+            </div>
+            <label style="display:block;font-size:10px;font-weight:600;color:#777;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em;">Bullets</label>
+            <ul class="bullet-list">`;
+          (job.bullets || []).forEach((b, bi) => {
+            inner += `<li>
+              <input type="text" value="${esc(b.text)}" oninput="getEditorData().sections[${idx}].jobs[${ji}].bullets[${bi}].text=this.value;syncEditorToResult()">
+              <button style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;" onclick="editorRemoveJobBullet(${idx},${ji},${bi})">&times;</button>
+            </li>`;
+          });
+          inner += `</ul>
+            <button class="add-btn" onclick="editorAddJobBullet(${idx},${ji})">+ bullet</button>
+          </div>`;
+        });
+        inner += `<button class="add-btn" onclick="editorAddJob(${idx})" style="margin-top:10px">+ job</button>`;
+      }
+
+      // Regenerate button
+      inner += `
+        <div class="section-footer">
+          <button class="btn-regenerate" data-regenerate="${esc(sec.id)}" ${isRegenerating ? 'disabled' : ''}>
+            ${isRegenerating ? 'Regenerating\u2026' : 'Regenerate \u21BB'}
+          </button>
+        </div>`;
+
+      div.innerHTML = inner;
+      return div;
+    }
+
+    function renderDatePicker(secIdx, jobIdx, job) {
+      const d = ensureDateObj(job);
+      const base = `getEditorData().sections[${secIdx}].jobs[${jobIdx}].dateObj`;
+      const change = `editorOnDateChange(${secIdx},${jobIdx})`;
+
+      const monthOpts = (sel) => MONTHS.map((m, i) =>
+        `<option value="${i}" ${i===sel?'selected':''}>${i === 0 ? '\u2014' : m}</option>`
+      ).join('');
+
+      const endDisabled = d.present ? 'disabled style="opacity:0.35"' : '';
+
+      return `<div class="date-row">
+        <select onchange="${base}.startMonth=+this.value;${change}">${monthOpts(d.startMonth)}</select>
+        <input type="number" placeholder="Year" value="${d.startYear}" min="1970" max="2040"
+          oninput="${base}.startYear=this.value;${change}">
+        <span class="sep">\u2013</span>
+        <select ${endDisabled} onchange="${base}.endMonth=+this.value;${change}" id="endm-${secIdx}-${jobIdx}">${monthOpts(d.endMonth)}</select>
+        <input type="number" placeholder="Year" value="${d.endYear}" min="1970" max="2040" ${endDisabled}
+          oninput="${base}.endYear=this.value;${change}" id="endy-${secIdx}-${jobIdx}">
+        <label class="present-label">
+          <input type="checkbox" ${d.present?'checked':''} onchange="${base}.present=this.checked;${change};renderEditor()">
+          Present
+        </label>
+      </div>`;
+    }
+
+    function editorOnDateChange(secIdx, jobIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      const job = data.sections[secIdx].jobs[jobIdx];
+      job.date = dateObjToString(job.dateObj);
+      syncEditorToResult();
+    }
+
+    // ── Section operations ──
+    function editorAddSection() {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections.push({ id: sid(), title: 'New Section', type: 'text', content: '' });
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorRemoveSection(idx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections.splice(idx, 1);
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorMoveSection(idx, dir) {
+      const data = getEditorData();
+      if (!data) return;
+      const s = data.sections;
+      const target = idx + dir;
+      [s[idx], s[target]] = [s[target], s[idx]];
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorChangeType(idx, newType) {
+      const data = getEditorData();
+      if (!data) return;
+      const sec = data.sections[idx];
+      if (sec.type === newType) return;
+      sec.type = newType;
+      if (newType === 'text') { sec.content = sec.content || ''; }
+      if (newType === 'bullets') { sec.items = sec.items || [{ id: sid(), text: '' }]; }
+      if (newType === 'jobs') { sec.jobs = sec.jobs || [{ id: sid(), title: '', date: '', bullets: [{ id: sid(), text: '' }] }]; }
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    // Bullet operations
+    function editorAddBullet(secIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].items.push({ id: sid(), text: '' });
+      syncEditorToResult();
+      renderEditor();
+      setTimeout(() => {
+        const inputs = document.querySelectorAll(`[data-id="${data.sections[secIdx].id}"] .bullet-list input`);
+        inputs[inputs.length - 1]?.focus();
+      }, 0);
+    }
+
+    function editorRemoveBullet(secIdx, bulletIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].items.splice(bulletIdx, 1);
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    // Job operations
+    function editorAddJob(secIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].jobs.push({
+        id: sid(), title: '', company: '', location: '', date: '',
+        dateObj: { startMonth: 0, startYear: '', endMonth: 0, endYear: '', present: false },
+        bullets: [{ id: sid(), text: '' }]
+      });
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorRemoveJob(secIdx, jobIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].jobs.splice(jobIdx, 1);
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorMoveJob(secIdx, jobIdx, dir) {
+      const data = getEditorData();
+      if (!data) return;
+      const jobs = data.sections[secIdx].jobs;
+      const target = jobIdx + dir;
+      [jobs[jobIdx], jobs[target]] = [jobs[target], jobs[jobIdx]];
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    function editorAddJobBullet(secIdx, jobIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].jobs[jobIdx].bullets.push({ id: sid(), text: '' });
+      syncEditorToResult();
+      renderEditor();
+      setTimeout(() => {
+        const sectionEl = document.querySelectorAll('.section-block')[secIdx + 1]; // +1 for header
+        const jobEls = sectionEl?.querySelectorAll('.sub-item');
+        const inputs = jobEls?.[jobIdx]?.querySelectorAll('.bullet-list input');
+        inputs?.[inputs.length - 1]?.focus();
+      }, 0);
+    }
+
+    function editorRemoveJobBullet(secIdx, jobIdx, bulletIdx) {
+      const data = getEditorData();
+      if (!data) return;
+      data.sections[secIdx].jobs[jobIdx].bullets.splice(bulletIdx, 1);
+      syncEditorToResult();
+      renderEditor();
+    }
+
+    // ── Regenerate section ──
+    async function regenerateSection(sectionId) {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      if (!job?.result) return;
+      state.regeneratingSection = sectionId;
+      renderEditor();
+      try {
+        const res = await fetch('/api/regenerate-section', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resume: job.result.output.resume,
+            bio: state.sourceBio,
+            jobDescription: job.jd,
+            jobTitle: job.title,
+            sectionId,
+            model: state.tailorModel || 'auto',
+          }),
+        });
+        const result = await res.json();
+        job.result.output.resume = result.markdown;
+        job._editorData = parseMarkdown(result.markdown);
+        state.scoresStale = true;
+      } catch (error) {
+        console.error('Regeneration failed:', error);
+      } finally {
+        state.regeneratingSection = null;
+        renderEditor();
+        renderPreviewPanel();
+        renderMissingKeywords();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  PREVIEW & DIFF (Agent D)
+    // ═══════════════════════════════════════════════════════
+
+    const THEME_PRESETS = {
+      default: {
+        background: '#CEE6FE', body: '#323434', accent: '#BE503C',
+        subheading: '#364D62', jobTitle: '#182234', date: '#3B72A8',
+        contact: '#323434', link: '#255F91',
+      },
+      ocean: {
+        background: '#E0F0FF', body: '#1a2b3c', accent: '#1565C0',
+        subheading: '#0D47A1', jobTitle: '#0a1929', date: '#1976D2',
+        contact: '#1a2b3c', link: '#1565C0',
+      },
+      forest: {
+        background: '#E8F5E9', body: '#1b2e1b', accent: '#2E7D32',
+        subheading: '#1B5E20', jobTitle: '#0d260d', date: '#388E3C',
+        contact: '#1b2e1b', link: '#2E7D32',
+      },
+      slate: {
+        background: '#ECEFF1', body: '#263238', accent: '#455A64',
+        subheading: '#37474F', jobTitle: '#1c2a30', date: '#546E7A',
+        contact: '#263238', link: '#455A64',
+      },
+      warm: {
+        background: '#FFF3E0', body: '#3E2723', accent: '#BF360C',
+        subheading: '#4E342E', jobTitle: '#1b0f0b', date: '#D84315',
+        contact: '#3E2723', link: '#BF360C',
+      },
+      mono: {
+        background: '#FAFAFA', body: '#212121', accent: '#424242',
+        subheading: '#616161', jobTitle: '#212121', date: '#757575',
+        contact: '#212121', link: '#424242',
+      },
+    };
+
+    function renderPreviewPanel() {
+      const content = document.getElementById('previewContent');
+      const data = getEditorData();
+
+      if (!data) {
+        content.innerHTML = '<div class="preview-empty">No resume to preview.</div>';
+        return;
+      }
+
+      if (state.viewMode === 'diff') {
+        renderDiffPanel();
+        return;
+      }
+
+      // Render themed HTML preview
+      let html = '<div class="preview-render">';
+      html += '<h1>' + inlineMd(data.name || '') + '</h1>';
+      html += '<h2 class="role">' + inlineMd(data.role || '') + '</h2>';
+      if (data.contact) html += '<p class="contact">' + linkify(data.contact) + '</p>';
+      if (data.links) html += '<p class="links">' + linkify(data.links) + '</p>';
+
+      (data.sections || []).forEach(sec => {
+        html += '<h2 class="section">' + esc(sec.title) + '</h2>';
+
+        if (sec.type === 'text') {
+          html += '<p>' + inlineMd(sec.content || '') + '</p>';
+        }
+
+        if (sec.type === 'bullets') {
+          html += '<ul>';
+          (sec.items || []).forEach(b => {
+            if (b.text) html += '<li>' + inlineMd(b.text) + '</li>';
+          });
+          html += '</ul>';
+        }
+
+        if (sec.type === 'jobs') {
+          (sec.jobs || []).forEach(j => {
+            if (j.title || j.company) {
+              html += '<div class="job-header"><h3>' + inlineMd(j.title || '') + '</h3>';
+              if (j.company) html += '<span class="job-company">' + esc(j.company) + '</span>';
+              html += '</div>';
+            }
+            if (j.date || j.location) {
+              html += '<div class="job-header job-sub"><p class="date">' + (j.date ? esc(j.date) : '') + '</p>';
+              if (j.location) html += '<span class="job-location">' + esc(j.location) + '</span>';
+              html += '</div>';
+            }
+            if (j.bullets && j.bullets.length) {
+              html += '<ul>';
+              j.bullets.forEach(b => {
+                if (b.text) html += '<li>' + inlineMd(b.text) + '</li>';
+              });
+              html += '</ul>';
+            }
+          });
+        }
+      });
+      html += '</div>';
+      content.innerHTML = html;
+      applyPreviewTheme(state.previewTheme || THEME_PRESETS.default);
+    }
+
+    function applyPreviewTheme(theme) {
+      if (!theme) return;
+      const el = document.querySelector('.preview-render');
+      if (!el) return;
+
+      let style = document.getElementById('preview-theme-override');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'preview-theme-override';
+        document.head.appendChild(style);
+      }
+      style.textContent =
+        '.preview-render { background: ' + (theme.background || '#CEE6FE') + '; }' +
+        '.preview-render, .preview-render li, .preview-render p, .preview-render ul { color: ' + (theme.body || '#323434') + '; }' +
+        '.preview-render h1, .preview-render h2.section { color: ' + (theme.accent || '#BE503C') + '; }' +
+        '.preview-render h2.role, .preview-render .job-company { color: ' + (theme.subheading || '#364D62') + '; }' +
+        '.preview-render h3 { color: ' + (theme.jobTitle || '#182234') + '; }' +
+        '.preview-render p.date, .preview-render .job-location { color: ' + (theme.date || '#3B72A8') + '; }' +
+        '.preview-render p.contact, .preview-render p.links { color: ' + (theme.contact || '#323434') + '; }' +
+        '.preview-render p.contact a, .preview-render p.links a, .preview-render a { color: ' + (theme.link || '#255F91') + '; }';
+    }
+
+    // ── Diff Panel ──
+    async function renderDiffPanel() {
+      const content = document.getElementById('previewContent');
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      if (!job?.result?.output?.resume) {
+        content.innerHTML = '<div class="preview-empty">No diff available.</div>';
+        return;
+      }
+      content.innerHTML = '<div class="diff-loading">Computing diff...</div>';
+      try {
+        const res = await fetch('/api/diff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ before: state.sourceResume, after: job.result.output.resume }),
+        });
+        const diff = await res.json();
+        content.innerHTML = renderDiffHtml(diff);
+      } catch (e) {
+        // Fallback: client-side line diff
+        content.innerHTML = renderClientDiffHtml(state.sourceResume, job.result.output.resume);
+      }
+    }
+
+    function renderDiffHtml(diff) {
+      if (!diff?.hunks?.length) return '<div class="diff-empty">No changes detected.</div>';
+      return '<div class="diff-view">' + diff.hunks.map(hunk =>
+        '<div class="diff-hunk">' + hunk.lines.map((line, i) => {
+          const type = (hunk.types && hunk.types[i]) || hunk.type || 'context';
+          const prefix = type === 'added' ? '+' : type === 'removed' ? '-' : ' ';
+          const cls = type === 'added' ? 'diff-add' : type === 'removed' ? 'diff-del' : 'diff-ctx';
+          return '<div class="' + cls + '">' + prefix + ' ' + esc(line) + '</div>';
+        }).join('') + '</div>'
+      ).join('') + '</div>';
+    }
+
+    function renderClientDiffHtml(before, after) {
+      if (!before && !after) return '<div class="diff-empty">No changes detected.</div>';
+      const beforeLines = (before || '').split('\n');
+      const afterLines = (after || '').split('\n');
+      let html = '<div class="diff-view"><div class="diff-hunk">';
+      let i = 0, j = 0;
+      while (i < beforeLines.length || j < afterLines.length) {
+        if (i < beforeLines.length && j < afterLines.length && beforeLines[i] === afterLines[j]) {
+          html += '<div class="diff-ctx">  ' + esc(beforeLines[i]) + '</div>';
+          i++; j++;
+        } else if (j < afterLines.length && (i >= beforeLines.length || beforeLines[i] !== afterLines[j])) {
+          if (i < beforeLines.length && beforeLines[i] !== afterLines[j]) {
+            html += '<div class="diff-del">- ' + esc(beforeLines[i]) + '</div>';
+            html += '<div class="diff-add">+ ' + esc(afterLines[j]) + '</div>';
+            i++; j++;
+          } else {
+            html += '<div class="diff-add">+ ' + esc(afterLines[j]) + '</div>';
+            j++;
+          }
+        } else {
+          html += '<div class="diff-del">- ' + esc(beforeLines[i]) + '</div>';
+          i++;
+        }
+      }
+      html += '</div></div>';
+      return html;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  MISSING KEYWORDS (Agent D)
+    // ═══════════════════════════════════════════════════════
+
+    function renderMissingKeywords() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      const gapAnalysis = job?.result?.gapAnalysis;
+      const header = document.getElementById('missingCount');
+      const pills = document.getElementById('missingPills');
+
+      if (!gapAnalysis?.missingKeywords?.length) {
+        header.textContent = '';
+        pills.innerHTML = '<div class="missing-empty">No gaps detected.</div>';
+        return;
+      }
+
+      const missing = gapAnalysis.missingKeywords;
+      header.textContent = '(' + missing.length + ')';
+      pills.innerHTML = missing.map(kw => {
+        const term = typeof kw === 'string' ? kw : (kw.term || kw.keyword || '');
+        return '<div class="missing-pill">' + escHtml(term) + '</div>';
+      }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  COPY TO CLIPBOARD & FILE DOWNLOAD (Agent D)
+    // ═══════════════════════════════════════════════════════
+
+    async function copyToClipboard(format, btnEl) {
+      const data = getEditorData();
+      if (!data) return;
+      let textContent;
+      if (format === 'md') {
+        textContent = toMarkdown(data);
+      } else if (format === 'html') {
+        const el = document.querySelector('.preview-render');
+        textContent = el ? el.innerHTML : '';
+      } else {
+        return; // PDF copy not supported
+      }
+
+      try {
+        await navigator.clipboard.writeText(textContent);
+        if (btnEl) {
+          const original = btnEl.innerHTML;
+          btnEl.textContent = '\u2713';
+          btnEl.classList.add('copied');
+          setTimeout(() => {
+            btnEl.innerHTML = original;
+            btnEl.classList.remove('copied');
+          }, 1500);
+        }
+      } catch (e) {
+        console.error('Copy failed:', e);
+      }
+    }
+
+    function downloadFile(format) {
+      const data = getEditorData();
+      if (!data) return;
+      let content, filename, mime;
+
+      if (format === 'md') {
+        content = toMarkdown(data);
+        filename = 'resume.md';
+        mime = 'text/markdown';
+      } else if (format === 'html') {
+        const el = document.querySelector('.preview-render');
+        content = el ? el.outerHTML : '';
+        filename = 'resume.html';
+        mime = 'text/html';
+      } else if (format === 'pdf') {
+        window.print();
+        return;
+      } else {
+        return;
+      }
+
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  SPLITTER & ICON RAIL (Agent A)
+    // ═══════════════════════════════════════════════════════
+
+    function initSplitter() {
+      const splitter = document.getElementById('splitter');
+      const editorLayout = document.getElementById('editor-layout');
+      const editor = document.getElementById('editor-col');
+      const keywordsColWidth = 130;
+      const splitterWidth = 6;
+      const minEditor = 200;
+      const minPreview = 200;
+      let dragging = false;
+
+      splitter.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        splitter.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const layoutRect = editorLayout.getBoundingClientRect();
+        const availableWidth = layoutRect.width - keywordsColWidth - splitterWidth;
+        let editorWidth = e.clientX - layoutRect.left;
+
+        // Clamp to min widths
+        editorWidth = Math.max(minEditor, editorWidth);
+        editorWidth = Math.min(availableWidth - minPreview, editorWidth);
+
+        editor.style.flex = 'none';
+        editor.style.width = editorWidth + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        splitter.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+    }
+
+    function initIconRail() {
+      const buttons = document.querySelectorAll('.icon-rail__btn');
+      const panels = {
+        'panel-jobs': document.getElementById('panel-jobs'),
+        'panel-sources': document.getElementById('panel-sources'),
+        'panel-config': document.getElementById('panel-config'),
+      };
+
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.dataset.panel;
+          const targetPanel = panels[targetId];
+          if (!targetPanel) return;
+
+          // If already open, close it (toggle off)
+          if (targetPanel.classList.contains('open')) {
+            targetPanel.classList.remove('open');
+            btn.classList.remove('active');
+            return;
+          }
+
+          // Otherwise, close all panels and open the target
+          Object.values(panels).forEach((p) => p.classList.remove('open'));
+          buttons.forEach((b) => b.classList.remove('active'));
+
+          targetPanel.classList.add('open');
+          btn.classList.add('active');
+        });
+      });
+    }
+
+    function initPreviewPanel() {
+      // View switcher (Preview / Diff)
+      const tabPreview = document.getElementById('tab-preview');
+      const tabDiff = document.getElementById('tab-diff');
+
+      tabPreview.addEventListener('click', () => {
+        state.viewMode = 'preview';
+        tabPreview.classList.add('active');
+        tabDiff.classList.remove('active');
+        renderPreviewPanel();
+      });
+
+      tabDiff.addEventListener('click', () => {
+        state.viewMode = 'diff';
+        tabDiff.classList.add('active');
+        tabPreview.classList.remove('active');
+        renderPreviewPanel();
+      });
+
+      // Theme selector
+      const themeSelect = document.getElementById('theme-select');
+      themeSelect.addEventListener('change', () => {
+        const themeName = themeSelect.value;
+        state.previewTheme = THEME_PRESETS[themeName] || THEME_PRESETS.default;
+        applyPreviewTheme(state.previewTheme);
+      });
+
+      // Export download buttons
+      document.querySelectorAll('.btn-export[data-download]').forEach(btn => {
+        btn.addEventListener('click', () => downloadFile(btn.dataset.download));
+      });
+
+      // Copy buttons
+      document.querySelectorAll('.btn-copy[data-copy]').forEach(btn => {
+        btn.addEventListener('click', () => copyToClipboard(btn.dataset.copy, btn));
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  INITIALIZATION
+    // ═══════════════════════════════════════════════════════
+
+    // Event delegation for regenerate buttons (Agent C)
+    document.getElementById('editorSections').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-regenerate]');
+      if (btn && !btn.disabled) regenerateSection(btn.dataset.regenerate);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initSplitter();
+      initIconRail();
+      initPreviewPanel();
+      renderJobList();
+      renderEditor();
+
+      // Job panel buttons
+      document.getElementById('btn-load-huntr').addEventListener('click', () => {
+        loadHuntrJobs().catch(e => console.error(e));
+      });
+
+      document.getElementById('btn-paste-jd').addEventListener('click', () => {
+        addManualJob();
+      });
+
+      document.getElementById('btn-tailor-selected').addEventListener('click', () => {
+        showTailorConfirmation();
+      });
+
+      // Tailor confirmation modal buttons
+      document.getElementById('cancelTailorBtn').addEventListener('click', () => {
+        document.getElementById('tailorModal').hidden = true;
+      });
+
+      document.getElementById('confirmTailorBtn').addEventListener('click', () => {
+        executeBatchTailor().catch(e => console.error('Batch tailor error:', e));
+      });
+
+      // Paste JD modal buttons
+      document.getElementById('cancelPasteBtn').addEventListener('click', () => {
+        document.getElementById('pasteJdModal').hidden = true;
+      });
+
+      document.getElementById('confirmPasteBtn').addEventListener('click', () => {
+        confirmPasteJob();
+      });
+
+      // Close modals on overlay click
+      document.getElementById('tailorModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+      });
+
+      document.getElementById('pasteJdModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+      });
+    });
+  </script>
 
 </body>
 </html>
