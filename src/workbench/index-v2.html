@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>job-shit workbench v2</title>
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23BE503C"/%3E%3Cpath d="M18 24h28v18H18z" fill="none" stroke="%23fff" stroke-width="4" stroke-linejoin="round"/%3E%3Cpath d="M26 24v-4a6 6 0 0 1 12 0v4" fill="none" stroke="%23fff" stroke-width="4" stroke-linecap="round"/%3E%3C/svg%3E'>
   <style>
     :root {
       --accent: #BE503C;
@@ -276,6 +277,7 @@
       font-size: 11px;
       color: var(--muted);
       line-height: 1.4;
+      font-variant-numeric: tabular-nums;
     }
 
     .jobs-meta__status--loading {
@@ -826,9 +828,34 @@
       overflow: hidden;
     }
 
+    .analysis-notes__text--loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--deep);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .analysis-notes__text--loading::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(190,80,60,0.45);
+      animation: jobs-pulse 1.15s ease-in-out infinite;
+    }
+
     .analysis-notes__text--empty {
       color: var(--muted);
       font-style: italic;
+    }
+
+    .analysis-notes__text--error {
+      color: #d98f8f;
     }
 
     .analysis-notes__actions {
@@ -1008,7 +1035,7 @@
 
     /* Missing keywords column */
     .keywords-col {
-      width: 130px;
+      width: 176px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
@@ -1032,6 +1059,13 @@
       flex: 1;
       overflow-y: auto;
       padding: 8px 10px;
+    }
+
+    #missingPills {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 6px;
     }
 
     .keyword-tag {
@@ -1113,17 +1147,20 @@
     /* ── MISSING KEYWORDS PILLS ──────────────────────────── */
 
     .missing-pill {
-      display: inline-block;
-      padding: 4px 8px;
-      margin-bottom: 4px;
-      margin-right: 2px;
-      border-radius: 999px;
+      display: inline-flex;
+      align-items: flex-start;
+      max-width: 100%;
+      padding: 5px 8px;
+      border-radius: 10px;
       font-size: 10px;
+      line-height: 1.35;
       background: rgba(220,80,60,0.1);
       color: #e8857a;
       border: 1px solid rgba(220,80,60,0.25);
+      white-space: normal;
+      word-break: break-word;
     }
-    .missing-empty { font-size: 11px; color: var(--muted); padding: 8px 0; font-style: italic; }
+    .missing-empty { width: 100%; font-size: 11px; color: var(--muted); padding: 8px 0; font-style: italic; }
 
     #missingCount {
       font-weight: 400;
@@ -1171,7 +1208,9 @@
     .modal-overlay {
       position: fixed; inset: 0; z-index: 1000;
       background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: flex-start; justify-content: center;
+      overflow-y: auto;
+      padding: 24px 16px;
     }
     .modal-overlay[hidden] {
       display: none !important;
@@ -1181,6 +1220,7 @@
       background: var(--surface); border: 1px solid var(--line);
       border-radius: 12px; padding: 24px; max-width: 600px; width: 90%;
       max-height: 80vh; overflow-y: auto;
+      margin: auto 0;
     }
 
     .modal h3 {
@@ -2120,16 +2160,22 @@
     function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function esc(s) { return escHtml(s); }
     function inlineMd(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>'); }
+    function formatElapsed(startedAt) {
+      const totalSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return minutes > 0 ? `${minutes}m ${String(seconds).padStart(2, '0')}s` : `${seconds}s`;
+    }
     function linkify(text) {
-      return (text || '').split('|').map(function(seg) {
+      return (text || '').split(/\s*[|•·]\s*/).map(function(seg) {
         var t = seg.trim();
         if (!t) return '';
         if (t.includes('@')) return '<a href="mailto:' + esc(t) + '">' + esc(t) + '</a>';
-        if (t.match(/^(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]+\/)/i)) {
+        if (t.match(/^(https?:\/\/|www\.)/i)) {
           var href = t.startsWith('http') ? t : 'https://' + t;
           return '<a href="' + esc(href) + '">' + esc(t) + '</a>';
         }
-        if (t.match(/^[a-z0-9-]+\.[a-z]{2,}/i) && t.includes('/')) {
+        if (t.match(/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i)) {
           return '<a href="https://' + esc(t) + '">' + esc(t) + '</a>';
         }
         return esc(t);
@@ -2219,14 +2265,48 @@
       jobListFilter: 'all',
       savedWorkspaces: [],
       activeWorkspaceId: null,
+      runFeedbackTimer: null,
+      runFeedbackStartedAt: 0,
+      runFeedbackBaseText: '',
     };
+
+    function clearRunFeedbackTimer() {
+      if (state.runFeedbackTimer) {
+        clearInterval(state.runFeedbackTimer);
+        state.runFeedbackTimer = null;
+      }
+      state.runFeedbackStartedAt = 0;
+      state.runFeedbackBaseText = '';
+    }
 
     function setRunFeedback(message, kind) {
       const el = document.getElementById('analysis-text');
       if (!el) return;
-      el.textContent = message || 'Run tailoring to see scores and analysis';
-      el.classList.toggle('analysis-notes__text--empty', !message);
-      el.style.color = kind === 'error' ? '#d98f8f' : '';
+      clearRunFeedbackTimer();
+      el.className = 'analysis-notes__text';
+
+      if (!message) {
+        el.textContent = 'Run tailoring to see scores and analysis';
+        el.classList.add('analysis-notes__text--empty');
+        return;
+      }
+
+      if (kind === 'working') {
+        state.runFeedbackBaseText = message;
+        state.runFeedbackStartedAt = Date.now();
+        const renderTick = () => {
+          el.textContent = `${state.runFeedbackBaseText} (${formatElapsed(state.runFeedbackStartedAt)})`;
+        };
+        el.classList.add('analysis-notes__text--loading');
+        renderTick();
+        state.runFeedbackTimer = setInterval(renderTick, 1000);
+        return;
+      }
+
+      el.textContent = message;
+      if (kind === 'error') {
+        el.classList.add('analysis-notes__text--error');
+      }
     }
 
     // ═══════════════════════════════════════════════════════
@@ -2662,8 +2742,9 @@
           }));
           state.jobs = manualJobs.concat(huntrJobs);
           const groups = collectJobGroups();
+          const persisted = groups.find((group) => group.key === state.jobListFilter);
           const preferred = groups.find((group) => group.label.toLowerCase() === 'wishlist');
-          state.jobListFilter = preferred?.key || 'all';
+          state.jobListFilter = persisted?.key || preferred?.key || 'all';
           ensureVisibleActiveJob(visibleJobs());
           renderJobList();
           renderJobDetail();
@@ -2793,6 +2874,7 @@
         toTailor.length === 1
           ? `Starting tailoring for ${toTailor[0].company || 'selected job'}...`
           : `Starting tailoring for ${toTailor.length} selected jobs...`,
+        'working',
       );
       renderJobList();
 
@@ -2803,7 +2885,7 @@
       for (const job of toTailor) {
         try {
           console.info(`Tailoring started: ${job.company} — ${job.title}`);
-          setRunFeedback(`Tailoring ${job.company || 'Company'} — ${job.title || 'Role'}...`);
+          setRunFeedback(`Tailoring ${job.company || 'Company'} — ${job.title || 'Role'}...`, 'working');
           const res = await fetch('/api/runs/manual', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3965,6 +4047,7 @@
     function renderAnalysisSummary(cards, scorecard) {
       const analysisText = document.getElementById('analysis-text');
       if (!analysisText) return;
+      clearRunFeedbackTimer();
 
       if (state.scoresStale) {
         analysisText.textContent = 'Edited since last scoring. Re-grade to refresh the details.';
@@ -4481,6 +4564,7 @@
         prompts: { resumeSystem: '', coverLetterSystem: '', scoringSystem: '' },
         theme: state.previewTheme || {},
         agents: { tailoringModel: state.tailorModel, scoringModel: state.scoreModel },
+        uiState: { openPanels: [], jobListFilter: state.jobListFilter },
         result: job?.result || null,
       };
     }
@@ -4535,6 +4619,7 @@
         state.sourceSupplemental = ws.snapshot?.documents?.resumeSupplemental || ws.documents?.resumeSupplemental || '';
 
         const snap = ws.snapshot || ws;
+        state.jobListFilter = snap.uiState?.jobListFilter || 'all';
         if (snap.company || snap.jobTitle) {
           const job = {
             id: sid(),
@@ -4591,6 +4676,7 @@
       const btn = document.getElementById('btn-regrade');
       btn.disabled = true;
       btn.textContent = 'Re-grading...';
+      setRunFeedback(`Re-grading ${job.company || 'Company'} — ${job.title || 'Role'}...`, 'working');
 
       try {
         const selectedProvider = state.scoreProvider || state.tailorProvider || 'auto';

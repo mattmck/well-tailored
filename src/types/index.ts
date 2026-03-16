@@ -211,7 +211,10 @@ export interface WorkspaceSnapshot {
   /** Manually added jobs. */
   manualJobs?: SavedHuntrJob[];
   /** Persisted UI layout state. */
-  uiState?: { openPanels: string[] };
+  uiState?: {
+    openPanels: string[];
+    jobListFilter?: string;
+  };
 }
 
 export interface SavedWorkspace {

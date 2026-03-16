@@ -19,6 +19,8 @@ const DEFAULT_RESUME_SYSTEM_PROMPT = `You are an expert resume writer specializi
 - Professional, confident, third-person implied (no "I").
 - Maintain the candidate's authentic voice — do not sound like a template.
 - Preserve the established markdown structure so downstream rendering stays stable.
+- For Skills sections, prefer short category bullets such as \`- Languages: ...\` or \`- Cloud/Tools: ...\` instead of one giant pipe-separated line.
+- Only include the categories and skills that are genuinely relevant to this target role; omit irrelevant skills rather than dumping everything.
 - CRITICAL FORMAT RULE — each experience entry MUST have exactly this structure:
   \`\`\`
   ### Job Title | Company Name | City, ST
