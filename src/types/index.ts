@@ -191,10 +191,21 @@ export interface WorkspaceSnapshot {
     baseCoverLetter: string;
     resumeSupplemental: string;
   };
+  documentSources?: {
+    resume?: string;
+    bio?: string;
+    baseCoverLetter?: string;
+    resumeSupplemental?: string;
+  };
   prompts: {
     resumeSystem: string;
     coverLetterSystem: string;
     scoringSystem: string;
+  };
+  promptSources?: {
+    resumeSystem?: string;
+    coverLetterSystem?: string;
+    scoringSystem?: string;
   };
   theme: ResumeTheme;
   agents: AgentSelection;

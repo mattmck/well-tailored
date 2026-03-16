@@ -122,6 +122,18 @@ jane@example.com | mattmcknight.com
     const html = renderResumeHtml('## Summary\n\nNo name here.');
     expect(html).toContain('<title>Resume</title>');
   });
+
+  it('uses the lighter default resume background theme', () => {
+    const html = renderResumeHtml(SAMPLE);
+    expect(html).toContain('background: var(--resume-background, #E5F2FF);');
+    expect(html).toContain('html, body, .resume { background: #E5F2FF; }');
+  });
+
+  it('keeps compact date rows flush with the job heading', () => {
+    const html = renderResumeHtml(SAMPLE, undefined, true);
+    expect(html).toContain('.job-sub { margin-top: 0 !important; margin-bottom: 4px !important; }');
+    expect(html).toContain('.job-sub .date { margin: 0 !important; }');
+  });
 });
 
 describe('normalizeContactLinks / isUrlLike', () => {

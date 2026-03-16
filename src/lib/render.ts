@@ -9,7 +9,7 @@ import { ResumeTheme } from '../types/index.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const DEFAULT_RESUME_THEME: ResumeTheme = {
-  background: '#CEE6FE',
+  background: '#E5F2FF',
   body: '#323434',
   accent: '#BE503C',
   subheading: '#364D62',
@@ -264,6 +264,8 @@ const COMPACT_CSS = `
   h2.section { margin-top: 10px !important; margin-bottom: 3px !important; }
   h3 { margin-top: 7px !important; margin-bottom: 1px !important; }
   .job-header { margin-top: 7px !important; }
+  .job-sub { margin-top: 0 !important; margin-bottom: 4px !important; }
+  .job-sub .date { margin: 0 !important; }
   p.links { margin-bottom: 10px !important; }
   ul { margin: 0 0 1px 0 !important; }
 `;

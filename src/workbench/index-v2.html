@@ -96,6 +96,11 @@
       border-color: var(--muted);
     }
 
+    .btn--mini {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
     .btn--accent {
       background: var(--accent);
       border-color: var(--accent);
@@ -556,6 +561,13 @@
       border-bottom: 1px solid var(--line);
     }
 
+    .source-item__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
     .source-item__label {
       font-size: 11px;
       font-weight: 600;
@@ -563,6 +575,16 @@
       letter-spacing: 0.04em;
       color: var(--muted);
       margin-bottom: 4px;
+    }
+
+    .source-item__actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .source-item input[type="file"] {
+      display: none;
     }
 
     .source-item__path {
@@ -605,6 +627,29 @@
       letter-spacing: 0.04em;
       color: var(--muted);
       margin-bottom: 6px;
+    }
+
+    .config-group__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .config-group__actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .config-group__meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .config-group input[type="file"] {
+      display: none;
     }
 
     .config-group textarea,
@@ -851,7 +896,7 @@
 
     .analysis-notes {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
       min-width: 0;
@@ -897,8 +942,9 @@
 
     .analysis-notes__actions {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: flex-end;
+      align-self: flex-start;
       flex-shrink: 0;
     }
 
@@ -1206,7 +1252,7 @@
     /* ── PREVIEW RENDER ─────────────────────────────────── */
 
     .preview-render {
-      background: #CEE6FE;
+      background: #E5F2FF;
       padding: 40px 54px;
       border-radius: 4px;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -2044,25 +2090,53 @@
       </div>
       <div class="panel__body">
         <div class="source-item">
-          <div class="source-item__label">Resume</div>
+          <div class="source-item__header">
+            <div class="source-item__label">Resume</div>
+            <div class="source-item__actions">
+              <button class="btn btn--mini" type="button" id="source-resume-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="source-resume-clear">Clear</button>
+            </div>
+          </div>
+          <input type="file" id="source-resume-file" accept=".md,.txt,text/plain,text/markdown">
           <div class="source-item__path" id="source-resume-path">Not loaded</div>
           <div class="source-item__status" id="source-resume-status"></div>
           <textarea id="source-resume-text" placeholder="Resume markdown will load here..."></textarea>
         </div>
         <div class="source-item">
-          <div class="source-item__label">Bio</div>
+          <div class="source-item__header">
+            <div class="source-item__label">Bio</div>
+            <div class="source-item__actions">
+              <button class="btn btn--mini" type="button" id="source-bio-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="source-bio-clear">Clear</button>
+            </div>
+          </div>
+          <input type="file" id="source-bio-file" accept=".md,.txt,text/plain,text/markdown">
           <div class="source-item__path" id="source-bio-path">Not loaded</div>
           <div class="source-item__status" id="source-bio-status"></div>
           <textarea id="source-bio-text" placeholder="Bio/background notes will load here..."></textarea>
         </div>
         <div class="source-item">
-          <div class="source-item__label">Cover Letter Base</div>
+          <div class="source-item__header">
+            <div class="source-item__label">Cover Letter Base</div>
+            <div class="source-item__actions">
+              <button class="btn btn--mini" type="button" id="source-cl-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="source-cl-clear">Clear</button>
+            </div>
+          </div>
+          <input type="file" id="source-cl-file" accept=".md,.txt,text/plain,text/markdown">
           <div class="source-item__path" id="source-cl-path">Not loaded</div>
           <div class="source-item__status" id="source-cl-status"></div>
           <textarea id="source-cl-text" placeholder="Optional base cover letter will load here..."></textarea>
         </div>
         <div class="source-item">
-          <div class="source-item__label">Resume Supplemental</div>
+          <div class="source-item__header">
+            <div class="source-item__label">Resume Supplemental</div>
+            <div class="source-item__actions">
+              <button class="btn btn--mini" type="button" id="source-supp-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="source-supp-clear">Clear</button>
+            </div>
+          </div>
+          <input type="file" id="source-supp-file" accept=".md,.txt,text/plain,text/markdown">
           <div class="source-item__path" id="source-supp-path">Not loaded</div>
           <div class="source-item__status" id="source-supp-status"></div>
           <textarea id="source-supp-text" placeholder="Optional supplemental resume details will load here..."></textarea>
@@ -2105,15 +2179,39 @@
           </select>
         </div>
         <div class="config-group">
-          <div class="config-group__label">Resume System Prompt</div>
+          <div class="config-group__header">
+            <div class="config-group__label">Resume System Prompt</div>
+            <div class="config-group__actions">
+              <button class="btn btn--mini" type="button" id="config-resume-prompt-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="config-resume-prompt-clear">Clear</button>
+            </div>
+          </div>
+          <div class="config-group__meta" id="config-resume-prompt-source">Using built-in default</div>
+          <input type="file" id="config-resume-prompt-file" accept=".md,.txt,text/plain,text/markdown">
           <textarea id="config-resume-prompt" rows="6" placeholder="Leave blank for default..."></textarea>
         </div>
         <div class="config-group">
-          <div class="config-group__label">Cover Letter System Prompt</div>
+          <div class="config-group__header">
+            <div class="config-group__label">Cover Letter System Prompt</div>
+            <div class="config-group__actions">
+              <button class="btn btn--mini" type="button" id="config-cl-prompt-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="config-cl-prompt-clear">Clear</button>
+            </div>
+          </div>
+          <div class="config-group__meta" id="config-cl-prompt-source">Using built-in default</div>
+          <input type="file" id="config-cl-prompt-file" accept=".md,.txt,text/plain,text/markdown">
           <textarea id="config-cl-prompt" rows="6" placeholder="Leave blank for default..."></textarea>
         </div>
         <div class="config-group">
-          <div class="config-group__label">Scoring System Prompt</div>
+          <div class="config-group__header">
+            <div class="config-group__label">Scoring System Prompt</div>
+            <div class="config-group__actions">
+              <button class="btn btn--mini" type="button" id="config-scoring-prompt-pick">Choose file</button>
+              <button class="btn btn--mini" type="button" id="config-scoring-prompt-clear">Clear</button>
+            </div>
+          </div>
+          <div class="config-group__meta" id="config-scoring-prompt-source">Using built-in default</div>
+          <input type="file" id="config-scoring-prompt-file" accept=".md,.txt,text/plain,text/markdown">
           <textarea id="config-scoring-prompt" rows="6" placeholder="Leave blank for default..."></textarea>
         </div>
       </div>
@@ -2201,7 +2299,7 @@
               <button class="btn btn-export" data-download="pdf" title="Export PDF">pdf</button>
             </div>
             <div class="toolbar-spacer"></div>
-            <div class="toolbar-group view-switcher">
+            <div class="toolbar-group pill-switcher view-switcher" role="tablist" aria-label="Preview mode">
               <button class="tab active" id="tab-preview" data-view="preview">Preview</button>
               <button class="tab" id="tab-diff" data-view="diff">Diff</button>
             </div>
@@ -2398,6 +2496,8 @@
       sourceBio: '',
       sourceCoverLetter: '',
       sourceSupplemental: '',
+      sourcePaths: {},
+      promptSources: {},
       docsLoaded: false,
       isLoadingHuntr: false,
       jobListFilter: 'all',
@@ -2412,6 +2512,43 @@
       runFeedbackStartedAt: 0,
       runFeedbackBaseText: '',
     };
+
+    const SOURCE_FIELDS = [
+      { key: 'resume', stateKey: 'sourceResume', pathId: 'source-resume-path', statusId: 'source-resume-status', textId: 'source-resume-text', fileId: 'source-resume-file' },
+      { key: 'bio', stateKey: 'sourceBio', pathId: 'source-bio-path', statusId: 'source-bio-status', textId: 'source-bio-text', fileId: 'source-bio-file' },
+      { key: 'baseCoverLetter', stateKey: 'sourceCoverLetter', pathId: 'source-cl-path', statusId: 'source-cl-status', textId: 'source-cl-text', fileId: 'source-cl-file' },
+      { key: 'resumeSupplemental', stateKey: 'sourceSupplemental', pathId: 'source-supp-path', statusId: 'source-supp-status', textId: 'source-supp-text', fileId: 'source-supp-file' },
+    ];
+
+    const PROMPT_FIELDS = [
+      { key: 'resumeSystem', textId: 'config-resume-prompt', metaId: 'config-resume-prompt-source', fileId: 'config-resume-prompt-file' },
+      { key: 'coverLetterSystem', textId: 'config-cl-prompt', metaId: 'config-cl-prompt-source', fileId: 'config-cl-prompt-file' },
+      { key: 'scoringSystem', textId: 'config-scoring-prompt', metaId: 'config-scoring-prompt-source', fileId: 'config-scoring-prompt-file' },
+    ];
+
+    function fallbackSourceLabel(key, value) {
+      if (!value) return 'Not loaded';
+      return 'Loaded from workspace';
+    }
+
+    function fallbackPromptLabel(value) {
+      return value ? 'Loaded from local defaults' : 'Using built-in default';
+    }
+
+    function updateDocsIndicator() {
+      const indicator = document.getElementById('docs-status');
+      if (!indicator) return;
+      const hasAnyDoc = Boolean(state.sourceResume || state.sourceBio || state.sourceCoverLetter || state.sourceSupplemental);
+      indicator.textContent = hasAnyDoc ? '● Docs loaded' : '○ No docs loaded';
+      indicator.style.color = hasAnyDoc ? '#6a6' : '#a66';
+    }
+
+    function updateSourceEmptyState() {
+      const emptyEl = document.getElementById('sources-empty');
+      if (!emptyEl) return;
+      const hasAnyDoc = SOURCE_FIELDS.some((entry) => Boolean(state[entry.stateKey]));
+      emptyEl.style.display = hasAnyDoc ? 'none' : '';
+    }
 
     function clearRunFeedbackTimer() {
       if (state.runFeedbackTimer) {
@@ -2606,29 +2743,146 @@
     }
 
     function syncSourcePanel(paths) {
-      const sourceMeta = [
-        { key: 'resume', pathId: 'source-resume-path', statusId: 'source-resume-status', textId: 'source-resume-text', value: state.sourceResume },
-        { key: 'bio', pathId: 'source-bio-path', statusId: 'source-bio-status', textId: 'source-bio-text', value: state.sourceBio },
-        { key: 'baseCoverLetter', pathId: 'source-cl-path', statusId: 'source-cl-status', textId: 'source-cl-text', value: state.sourceCoverLetter },
-        { key: 'resumeSupplemental', pathId: 'source-supp-path', statusId: 'source-supp-status', textId: 'source-supp-text', value: state.sourceSupplemental },
-      ];
-
-      let anyLoaded = false;
-      sourceMeta.forEach((entry) => {
+      SOURCE_FIELDS.forEach((entry) => {
         const pathEl = document.getElementById(entry.pathId);
         const statusEl = document.getElementById(entry.statusId);
         const textEl = document.getElementById(entry.textId);
+        const textValue = state[entry.stateKey] || '';
         const pathValue = paths?.[entry.key];
-        const textValue = entry.value || '';
 
-        if (pathEl) pathEl.textContent = pathValue || 'Not loaded';
+        if (pathEl) pathEl.textContent = pathValue || fallbackSourceLabel(entry.key, textValue);
         if (statusEl) statusEl.textContent = textValue ? `Loaded ${textValue.split('\n').length} line(s)` : 'Empty';
         if (textEl) textEl.value = textValue;
-        if (textValue) anyLoaded = true;
       });
+      updateSourceEmptyState();
+      updateDocsIndicator();
+    }
 
-      const emptyEl = document.getElementById('sources-empty');
-      if (emptyEl) emptyEl.style.display = anyLoaded ? 'none' : '';
+    function syncPromptPanel() {
+      PROMPT_FIELDS.forEach((entry) => {
+        const textEl = document.getElementById(entry.textId);
+        const metaEl = document.getElementById(entry.metaId);
+        const value = textEl?.value || '';
+        if (metaEl) {
+          metaEl.textContent = state.promptSources?.[entry.key] || fallbackPromptLabel(value);
+        }
+      });
+    }
+
+    async function loadTextFile(file) {
+      return file ? await file.text() : '';
+    }
+
+    function setSourceField(entry, value, pathLabel, statusText) {
+      state[entry.stateKey] = value;
+      state.sourcePaths = Object.assign({}, state.sourcePaths || {}, {
+        [entry.key]: pathLabel || '',
+      });
+      syncSourcePanel(state.sourcePaths);
+      const statusEl = document.getElementById(entry.statusId);
+      if (statusEl) {
+        statusEl.textContent = statusText || (value ? `Loaded ${value.split('\n').length} line(s)` : 'Empty');
+      }
+    }
+
+    function setPromptField(entry, value, sourceLabel) {
+      const textEl = document.getElementById(entry.textId);
+      if (textEl) textEl.value = value;
+      state.promptSources = Object.assign({}, state.promptSources || {}, {
+        [entry.key]: sourceLabel || '',
+      });
+      syncPromptPanel();
+    }
+
+    function initSourcePickers() {
+      SOURCE_FIELDS.forEach((entry) => {
+        const pickBtn = document.getElementById(entry.fileId.replace('-file', '-pick'));
+        const clearBtn = document.getElementById(entry.fileId.replace('-file', '-clear'));
+        const fileInput = document.getElementById(entry.fileId);
+        const textArea = document.getElementById(entry.textId);
+
+        if (pickBtn && fileInput) {
+          pickBtn.addEventListener('click', () => fileInput.click());
+        }
+
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            setSourceField(entry, '', '', 'Empty');
+            if (fileInput) fileInput.value = '';
+          });
+        }
+
+        if (fileInput) {
+          fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const text = await loadTextFile(file);
+            setSourceField(entry, text, `Picked file: ${file.name}`, 'Loaded from picked file');
+          });
+        }
+
+        if (textArea) {
+          textArea.addEventListener('input', (event) => {
+            state[entry.stateKey] = event.target.value;
+            if (!state.sourcePaths?.[entry.key] && event.target.value) {
+              state.sourcePaths = Object.assign({}, state.sourcePaths || {}, {
+                [entry.key]: 'Typed locally',
+              });
+            }
+            const statusEl = document.getElementById(entry.statusId);
+            if (statusEl) statusEl.textContent = event.target.value ? 'Edited locally' : 'Empty';
+            if (!event.target.value) {
+              state.sourcePaths = Object.assign({}, state.sourcePaths || {}, {
+                [entry.key]: '',
+              });
+            }
+            const pathEl = document.getElementById(entry.pathId);
+            if (pathEl) {
+              pathEl.textContent = state.sourcePaths?.[entry.key] || fallbackSourceLabel(entry.key, event.target.value);
+            }
+            updateSourceEmptyState();
+            updateDocsIndicator();
+          });
+        }
+      });
+    }
+
+    function initPromptPickers() {
+      PROMPT_FIELDS.forEach((entry) => {
+        const pickBtn = document.getElementById(entry.fileId.replace('-file', '-pick'));
+        const clearBtn = document.getElementById(entry.fileId.replace('-file', '-clear'));
+        const fileInput = document.getElementById(entry.fileId);
+        const textArea = document.getElementById(entry.textId);
+
+        if (pickBtn && fileInput) {
+          pickBtn.addEventListener('click', () => fileInput.click());
+        }
+
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            setPromptField(entry, '', '');
+            if (fileInput) fileInput.value = '';
+          });
+        }
+
+        if (fileInput) {
+          fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const text = await loadTextFile(file);
+            setPromptField(entry, text, `Picked file: ${file.name}`);
+          });
+        }
+
+        if (textArea) {
+          textArea.addEventListener('input', (event) => {
+            state.promptSources = Object.assign({}, state.promptSources || {}, {
+              [entry.key]: event.target.value ? 'Edited locally' : '',
+            });
+            syncPromptPanel();
+          });
+        }
+      });
     }
 
     async function loadSourceDocs() {
@@ -2640,26 +2894,23 @@
         state.sourceBio = data.documents?.bio || '';
         state.sourceCoverLetter = data.documents?.baseCoverLetter || '';
         state.sourceSupplemental = data.documents?.resumeSupplemental || '';
+        state.sourcePaths = Object.assign({}, data.paths || {});
         state.docsLoaded = true;
         document.getElementById('config-resume-prompt').value = data.prompts?.resumeSystem || '';
         document.getElementById('config-cl-prompt').value = data.prompts?.coverLetterSystem || '';
         document.getElementById('config-scoring-prompt').value = data.prompts?.scoringSystem || '';
-        syncSourcePanel(data.paths || {});
-
-        // Update status indicator
-        const indicator = document.getElementById('docs-status');
-        if (indicator) {
-          indicator.textContent = state.sourceResume ? '● Docs loaded' : '○ No resume found';
-          indicator.style.color = state.sourceResume ? '#6a6' : '#a66';
-        }
+        state.promptSources = {
+          resumeSystem: data.prompts?.resumeSystem ? 'Loaded from local defaults' : '',
+          coverLetterSystem: data.prompts?.coverLetterSystem ? 'Loaded from local defaults' : '',
+          scoringSystem: data.prompts?.scoringSystem ? 'Loaded from local defaults' : '',
+        };
+        syncSourcePanel(state.sourcePaths);
+        syncPromptPanel();
       } catch (e) {
         console.error('Failed to load source docs:', e);
-        syncSourcePanel({});
-        const indicator = document.getElementById('docs-status');
-        if (indicator) {
-          indicator.textContent = '✗ Doc load failed';
-          indicator.style.color = '#a66';
-        }
+        state.sourcePaths = {};
+        syncSourcePanel(state.sourcePaths);
+        updateDocsIndicator();
       }
     }
 
@@ -3784,7 +4035,7 @@
 
     const THEME_PRESETS = {
       default: {
-        background: '#CEE6FE', body: '#323434', accent: '#BE503C',
+        background: '#E5F2FF', body: '#323434', accent: '#BE503C',
         subheading: '#364D62', jobTitle: '#182234', date: '#3B72A8',
         contact: '#323434', link: '#255F91',
       },
@@ -3896,7 +4147,7 @@
         document.head.appendChild(style);
       }
       style.textContent =
-        '.preview-render { background: ' + (theme.background || '#CEE6FE') + '; }' +
+        '.preview-render { background: ' + (theme.background || '#E5F2FF') + '; }' +
         '.preview-render, .preview-render li, .preview-render p, .preview-render ul { color: ' + (theme.body || '#323434') + '; }' +
         '.preview-render h1, .preview-render h2.section { color: ' + (theme.accent || '#BE503C') + '; }' +
         '.preview-render h2.role, .preview-render .job-company { color: ' + (theme.subheading || '#364D62') + '; }' +
@@ -4453,6 +4704,43 @@
       }).join('');
     }
 
+    async function renderCurrentDocumentHtml() {
+      const job = state.jobs.find(j => j.id === state.activeJobId);
+      const isCover = state.activeDoc === 'cover';
+      const markdown = isCover
+        ? (job?.result?.output?.coverLetter || '')
+        : (() => {
+            const data = getEditorData();
+            return data ? toMarkdown(data) : '';
+          })();
+
+      if (!markdown) return '';
+
+      const payload = {
+        kind: isCover ? 'coverLetter' : 'resume',
+        markdown,
+        title: job?.title || (isCover ? 'Cover Letter' : 'Resume'),
+        theme: currentPreviewTheme(),
+      };
+
+      try {
+        const response = await fetch('/api/render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          throw new Error('Render failed with status ' + response.status);
+        }
+        const rendered = await response.json();
+        return rendered?.html || '';
+      } catch (error) {
+        console.error('HTML render failed:', error);
+        const fallback = document.querySelector('.preview-render');
+        return fallback ? fallback.outerHTML : '';
+      }
+    }
+
     // ═══════════════════════════════════════════════════════
     //  COPY TO CLIPBOARD & FILE DOWNLOAD (Agent D)
     // ═══════════════════════════════════════════════════════
@@ -4468,8 +4756,7 @@
         if (format === 'md') {
           textContent = cl;
         } else if (format === 'html') {
-          const el = document.querySelector('.preview-render');
-          textContent = el ? el.innerHTML : '';
+          textContent = await renderCurrentDocumentHtml();
         } else { return; }
       } else {
         const data = getEditorData();
@@ -4477,8 +4764,7 @@
         if (format === 'md') {
           textContent = toMarkdown(data);
         } else if (format === 'html') {
-          const el = document.querySelector('.preview-render');
-          textContent = el ? el.innerHTML : '';
+          textContent = await renderCurrentDocumentHtml();
         } else { return; }
       }
 
@@ -4512,8 +4798,7 @@
           filename = `cover-letter-${slug}.md`;
           mime = 'text/markdown';
         } else if (format === 'html') {
-          const el = document.querySelector('.preview-render');
-          content = el ? el.outerHTML : '';
+          content = await renderCurrentDocumentHtml();
           filename = `cover-letter-${slug}.html`;
           mime = 'text/html';
         } else if (format === 'pdf') {
@@ -4545,8 +4830,7 @@
           filename = `resume-${slug}.md`;
           mime = 'text/markdown';
         } else if (format === 'html') {
-          const el = document.querySelector('.preview-render');
-          content = el ? el.outerHTML : '';
+          content = await renderCurrentDocumentHtml();
           filename = `resume-${slug}.html`;
           mime = 'text/html';
         } else if (format === 'pdf') {
@@ -4865,7 +5149,9 @@
           baseCoverLetter: state.sourceCoverLetter,
           resumeSupplemental: state.sourceSupplemental,
         },
+        documentSources: state.sourcePaths,
         prompts: currentPromptOverrides(),
+        promptSources: state.promptSources,
         theme: currentPreviewTheme(),
         agents: currentAgents(),
         uiState: { openPanels: [], jobListFilter: state.jobListFilter },
@@ -4921,6 +5207,13 @@
         state.sourceBio = ws.snapshot?.documents?.bio || ws.documents?.bio || '';
         state.sourceCoverLetter = ws.snapshot?.documents?.baseCoverLetter || ws.documents?.baseCoverLetter || '';
         state.sourceSupplemental = ws.snapshot?.documents?.resumeSupplemental || ws.documents?.resumeSupplemental || '';
+        const savedDocumentSources = ws.snapshot?.documentSources || {};
+        state.sourcePaths = Object.keys(savedDocumentSources).length ? savedDocumentSources : {
+          resume: state.sourceResume ? 'Loaded from workspace' : '',
+          bio: state.sourceBio ? 'Loaded from workspace' : '',
+          baseCoverLetter: state.sourceCoverLetter ? 'Loaded from workspace' : '',
+          resumeSupplemental: state.sourceSupplemental ? 'Loaded from workspace' : '',
+        };
 
         const snap = ws.snapshot || ws;
         state.jobListFilter = snap.uiState?.jobListFilter || 'all';
@@ -4928,6 +5221,12 @@
         document.getElementById('config-resume-prompt').value = snap.prompts?.resumeSystem || '';
         document.getElementById('config-cl-prompt').value = snap.prompts?.coverLetterSystem || '';
         document.getElementById('config-scoring-prompt').value = snap.prompts?.scoringSystem || '';
+        const savedPromptSources = snap.promptSources || {};
+        state.promptSources = Object.keys(savedPromptSources).length ? savedPromptSources : {
+          resumeSystem: snap.prompts?.resumeSystem ? 'Loaded from workspace' : '',
+          coverLetterSystem: snap.prompts?.coverLetterSystem ? 'Loaded from workspace' : '',
+          scoringSystem: snap.prompts?.scoringSystem ? 'Loaded from workspace' : '',
+        };
 
         if (snap.agents?.tailoringProvider) {
           state.tailorProvider = snap.agents.tailoringProvider;
@@ -4974,14 +5273,8 @@
           state.activeJobId = job.id;
         }
         state.activeWorkspaceId = id;
-        document.getElementById('source-resume-text').value = state.sourceResume;
-        document.getElementById('source-bio-text').value = state.sourceBio;
-        document.getElementById('source-cl-text').value = state.sourceCoverLetter;
-        document.getElementById('source-supp-text').value = state.sourceSupplemental;
-        document.getElementById('source-resume-status').textContent = state.sourceResume ? 'Loaded from workspace' : 'Empty';
-        document.getElementById('source-bio-status').textContent = state.sourceBio ? 'Loaded from workspace' : 'Empty';
-        document.getElementById('source-cl-status').textContent = state.sourceCoverLetter ? 'Loaded from workspace' : 'Empty';
-        document.getElementById('source-supp-status').textContent = state.sourceSupplemental ? 'Loaded from workspace' : 'Empty';
+        syncSourcePanel(state.sourcePaths);
+        syncPromptPanel();
 
         renderJobList();
         renderJobDetail();
@@ -5129,28 +5422,13 @@
       initPreviewPanel();
       initThemeControls();
       initDocTabs();
+      initSourcePickers();
+      initPromptPickers();
       renderJobList();
       renderScoreCards();
       renderEditor();
       loadSourceDocs();
       loadConfig();
-
-      document.getElementById('source-resume-text').addEventListener('input', (e) => {
-        state.sourceResume = e.target.value;
-        document.getElementById('source-resume-status').textContent = state.sourceResume ? 'Edited locally' : 'Empty';
-      });
-      document.getElementById('source-bio-text').addEventListener('input', (e) => {
-        state.sourceBio = e.target.value;
-        document.getElementById('source-bio-status').textContent = state.sourceBio ? 'Edited locally' : 'Empty';
-      });
-      document.getElementById('source-cl-text').addEventListener('input', (e) => {
-        state.sourceCoverLetter = e.target.value;
-        document.getElementById('source-cl-status').textContent = state.sourceCoverLetter ? 'Edited locally' : 'Empty';
-      });
-      document.getElementById('source-supp-text').addEventListener('input', (e) => {
-        state.sourceSupplemental = e.target.value;
-        document.getElementById('source-supp-status').textContent = state.sourceSupplemental ? 'Edited locally' : 'Empty';
-      });
 
       document.getElementById('config-tailor-provider').addEventListener('change', (e) => {
         state.tailorProvider = e.target.value || 'auto';
