@@ -1753,6 +1753,9 @@
             <div class="result-card" style="margin-top:12px">
               <div class="result-card__header">
                 <h3>Gap Analysis</h3>
+                <div class="result-card__actions">
+                  <button class="btn-icon async-action" id="reanalyzeBtn" title="Re-run gap analysis on current resume">Re-analyze</button>
+                </div>
               </div>
               <div class="result-card__body">
                 <div id="gapAnalysis" class="review-empty">Run tailoring to see match gaps and strengths.</div>
@@ -2191,14 +2194,16 @@
       });
     }
 
-    async function computeGap(resume) {
+    async function computeGap(resume, useAI = true) {
       return getJson('/api/gap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resume: resume || '',
+          bio: els.bio?.value || '',
           jobDescription: els.jobDescription.value || '',
           jobTitle: els.jobTitle.value || '',
+          useAI,
         }),
       });
     }
@@ -4098,6 +4103,27 @@ p.contact a, p.links a, a { color: ${theme.link}; }`;
     document.getElementById('addManualJobBtn').addEventListener('click', addManualJob);
     document.getElementById('runBtn').addEventListener('click', () => runTailoring().catch(e => setStatus(els.runStatus, e.message)));
     document.getElementById('runBatchBtn').addEventListener('click', () => runBatch().catch(e => setStatus(els.runStatus, e.message)));
+
+    document.getElementById('reanalyzeBtn').addEventListener('click', async () => {
+      if (!state.lastResult) return;
+      const btn = document.getElementById('reanalyzeBtn');
+      btn.disabled = true;
+      btn.textContent = 'Analyzing...';
+      try {
+        delete state.lastResult.gapAnalysis;
+        delete state.lastResult.diff;
+        renderGapAnalysis(null);
+        await refreshResultInsights(state.lastResult);
+      } catch (e) {
+        if (els.gapAnalysis) {
+          els.gapAnalysis.className = 'review-empty';
+          els.gapAnalysis.innerHTML = escHtml(e.message || String(e));
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Re-analyze';
+      }
+    });
 
     // Markdown tabs (results-left)
     document.querySelectorAll('[data-viewer="resume-markdown"], [data-viewer="cover-markdown"]').forEach(tab => {
