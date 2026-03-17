@@ -2863,7 +2863,7 @@
         if (textEl) textEl.value = textValue;
       });
       updateSourceEmptyState();
-      updateDocsIndicator();
+      syncTopBarStatus();
     }
 
     function syncPromptPanel() {
@@ -2949,7 +2949,7 @@
               pathEl.textContent = state.sourcePaths?.[entry.key] || fallbackSourceLabel(entry.key, event.target.value);
             }
             updateSourceEmptyState();
-            updateDocsIndicator();
+            syncTopBarStatus();
           });
         }
       });
@@ -3018,7 +3018,7 @@
         console.error('Failed to load source docs:', e);
         state.sourcePaths = {};
         syncSourcePanel(state.sourcePaths);
-        updateDocsIndicator();
+        syncTopBarStatus();
       }
     }
 
