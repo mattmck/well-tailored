@@ -3180,6 +3180,7 @@
       const reviewBtn = document.getElementById('btn-mark-reviewed');
       if (job.status === 'tailored') {
         reviewBtn.style.display = '';
+        reviewBtn.disabled = false;
         reviewBtn.textContent = 'Mark Reviewed \u2713';
       } else if (job.status === 'reviewed') {
         reviewBtn.style.display = '';
