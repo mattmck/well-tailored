@@ -2520,7 +2520,12 @@
       tailorModel: 'auto',
       scoreProvider: 'auto',
       scoreModel: 'auto',
-      isTailoring: false,
+      tailorQueue: [],       // string[] — job IDs waiting to run
+      tailorRunning: null,   // string | null — ID of currently-running job
+      tailorDoneTimer: null, // setTimeout handle for post-run fade
+      queueTickTimer: null,
+      tailorRunningStartedAt: 0,
+      tailorLastSummary: null,  // { tailored: N, failed: N } | null
       scoresStale: false,
       activeDoc: 'resume',   // 'resume' | 'cover'
       viewMode: 'preview',   // 'preview' | 'diff'
