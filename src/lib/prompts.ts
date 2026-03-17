@@ -27,7 +27,12 @@ VOICE
 LENGTH — must fit on one page when rendered as a PDF. Be ruthless:
   * Summary: 2 sentences max
   * Selected Impact: 2-3 bullets max, tightest possible phrasing
-  * Include EVERY employer from the source resume — do not drop any. Place the most relevant employers in ## Experience (1-3 bullets each). Move remaining employers into ## Additional Experience (placed after ## Experience, before ## Education) — one strong bullet each showing technical scope or outcome; if space is extremely tight, a compact line: **Company** (Dates) — industry/tech descriptor.
+  * Include EVERY employer from the source resume — do not drop any. Place the most relevant employers in ## Experience (1-3 bullets each). Move remaining employers into ## Additional Experience (placed after ## Experience, before ## Education) as a bullet list. Each bullet is ONE line in this exact format:
+    - **Role, Company** (Dates) — one-sentence scope/outcome
+    Example:
+    - **Senior Software Engineer, Philips Healthcare** (2017 – 2018) — Built real-time ICU monitoring features in ASP.NET MVC/WPF serving tens of thousands of beds.
+    - **Software Engineer, Fearless** (2018) — Orchestrated multi-region AWS environments with Terraform and CI/CD automation.
+    Do NOT use ### headings, separate date lines, or multi-bullet entries for Additional Experience jobs.
   * Skills: a single comma-separated list of the most relevant technologies. If space allows (e.g. fewer than 6 total employers or short summary), you MAY use 2-3 tight sub-sections (e.g. **Backend:** Java, Spring Boot, etc.) instead.
   * Cut anything that doesn't directly serve this application
 
@@ -37,7 +42,7 @@ LENGTH — must fit on one page when rendered as a PDF. Be ruthless:
   - Role subtitle (if present) as '## Role Title' immediately after the name
   - Contact/links lines as plain paragraphs immediately after the name/role heading — DO NOT MODIFY LINKS
   - Section headings as '## Section' (e.g., '## Summary', '## Experience', '## Education', '## Skills')
-  - CRITICAL — employer heading format. You MUST use EXACTLY this pipe-separated format for EVERY employer under Experience and Additional Experience. Do NOT use dashes, parentheses, or any other format:
+  - CRITICAL — employer heading format. You MUST use EXACTLY this pipe-separated format for EVERY employer under ## Experience. Do NOT use dashes, parentheses, or any other format:
 
     ### Job Title | Company Name
     Dates | Location
@@ -54,7 +59,9 @@ LENGTH — must fit on one page when rendered as a PDF. Be ruthless:
     The heading line has EXACTLY two pipe-separated fields: Title | Company. Nothing else on that line.
     The date/location line is a plain paragraph on the NEXT line: Dates | Location. NOT a heading.
 
-  - Optional '## Additional Experience' section (after '## Experience', before '## Education'): same heading format (### Title | Company with date/location on next line), then 1 strong bullet summarizing technical scope or outcome. If space is extremely tight, a compact line: '**Company** (Dates) — industry/tech descriptor'
+  - CRITICAL — '## Additional Experience' section (after '## Experience', before '## Education') must be a BULLET LIST. Each entry is a single bullet line:
+    - **Role, Company** (Dates) — one-sentence description
+    Do NOT use ### headings or date/location lines for Additional Experience. Do NOT smash multiple entries onto one line. Each entry gets its own bullet starting with '- '.
   - Under '## Skills', use either a comma-separated list or bolded sub-sections (e.g., '**Backend:** Node.js, Go | **Cloud:** AWS, Azure'). Do NOT use nested bullet lists for skills.
   - If the source resume has a '<!-- tech: … -->' HTML comment for an employer, reproduce it verbatim on its own line immediately after the date/location line
   - Bullet points as '- bullet text' (standard markdown list items)
