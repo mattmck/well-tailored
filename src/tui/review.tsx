@@ -327,16 +327,29 @@ function ReviewApp(props: {
   );
 }
 
+const REVIEW_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 export async function launchReviewTui(args: ReviewSessionArgs): Promise<string> {
-  return new Promise<string>((resolve) => {
-    const instance = render(
-      <ReviewApp
-        args={args}
-        onDone={(markdown) => {
-          resolve(markdown);
-          instance.unmount();
-        }}
-      />,
-    );
+  return new Promise<string>((resolve, reject) => {
+    let instance: ReturnType<typeof render>;
+    try {
+      instance = render(
+        <ReviewApp
+          args={args}
+          onDone={(markdown) => {
+            resolve(markdown);
+            instance.unmount();
+          }}
+        />,
+      );
+    } catch (err) {
+      reject(new Error(`Failed to launch review TUI: ${err instanceof Error ? err.message : String(err)}`));
+      return;
+    }
+
+    setTimeout(() => {
+      instance.unmount();
+      reject(new Error('Review TUI timed out after 30 minutes of inactivity.'));
+    }, REVIEW_TIMEOUT_MS);
   });
 }

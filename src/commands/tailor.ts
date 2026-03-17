@@ -144,15 +144,20 @@ export function registerTailorCommand(program: Command): void {
       let finalResume = output.resume;
       if (opts.interactive) {
         console.log('Launching review mode. Press q when you are ready to write the final resume.\n');
-        finalResume = await launchReviewTui({
-          baseResume: resume,
-          resume: output.resume,
-          bio,
-          company: opts.company,
-          jobTitle: opts.title,
-          jobDescription,
-          model,
-        });
+        try {
+          finalResume = await launchReviewTui({
+            baseResume: resume,
+            resume: output.resume,
+            bio,
+            company: opts.company,
+            jobTitle: opts.title,
+            jobDescription,
+            model,
+          });
+        } catch (err) {
+          console.error(`Review TUI error: ${err instanceof Error ? err.message : String(err)}`);
+          console.log('Using unreviewed resume output.');
+        }
       }
 
       // Write outputs

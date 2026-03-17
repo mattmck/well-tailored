@@ -2240,6 +2240,8 @@
           jobDescription: els.jobDescription.value || '',
           jobTitle: els.jobTitle.value || '',
           useAI,
+          provider: els.tailoringProvider?.value || 'auto',
+          model: els.tailoringModel?.value?.trim() || 'auto',
         }),
       });
     }
