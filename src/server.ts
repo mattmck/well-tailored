@@ -72,7 +72,7 @@ interface HuntrRunBody {
 }
 
 interface ExportPdfBody {
-  kind: 'resume' | 'coverLetter';
+  kind: 'resume' | 'coverLetter' | 'cover-letter';
   title?: string;
   markdown?: string;
   html?: string;
