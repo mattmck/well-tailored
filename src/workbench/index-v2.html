@@ -2594,6 +2594,63 @@
       indicator.style.color = hasAnyDoc ? '#6a6' : '#a66';
     }
 
+    function syncTopBarStatus() {
+      const el = document.getElementById('docs-status');
+      if (!el) return;
+
+      // If a done-fade timer is pending, cancel it whenever we re-sync
+      if (state.tailorDoneTimer) {
+        clearTimeout(state.tailorDoneTimer);
+        state.tailorDoneTimer = null;
+      }
+      // Also cancel any existing tick timer
+      if (state.queueTickTimer) {
+        clearInterval(state.queueTickTimer);
+        state.queueTickTimer = null;
+      }
+
+      const running = state.tailorRunning
+        ? state.jobs.find(j => j.id === state.tailorRunning)
+        : null;
+
+      if (running) {
+        // Show live progress with elapsed time
+        const queuedCount = state.tailorQueue.length;
+        const startedAt = state.tailorRunningStartedAt || Date.now();
+        const renderTick = () => {
+          const elapsed = formatElapsed(startedAt);
+          const label = `${running.company || 'Job'} \u2014 ${running.title || ''}`.trim().replace(/\s*\u2014\s*$/, '');
+          const queued = queuedCount > 0 ? ` \u00B7 ${queuedCount} queued` : '';
+          el.textContent = `\u27F3 ${label}... (${elapsed})${queued}`;
+          el.style.color = '#d4a843';
+        };
+        renderTick();
+        state.queueTickTimer = setInterval(renderTick, 1000);
+        return;
+      }
+
+      // Not running — check if we just finished (tailorLastSummary set by onQueueDrained)
+      if (state.tailorLastSummary) {
+        const { tailored, failed } = state.tailorLastSummary;
+        if (failed > 0) {
+          el.textContent = `\u2713 ${tailored} tailored \u00B7 \u26A0 ${failed} failed \u2014 see job list`;
+          el.style.color = '#c0392b';
+        } else {
+          el.textContent = `\u2713 Tailored ${tailored} job${tailored === 1 ? '' : 's'}.`;
+          el.style.color = '#4e9d78';
+          // Fade back to docs status after 4s
+          state.tailorDoneTimer = setTimeout(() => {
+            state.tailorLastSummary = null;
+            updateDocsIndicator();
+          }, 4000);
+        }
+        return;
+      }
+
+      // Idle — show docs status
+      updateDocsIndicator();
+    }
+
     function updateSourceEmptyState() {
       const emptyEl = document.getElementById('sources-empty');
       if (!emptyEl) return;
