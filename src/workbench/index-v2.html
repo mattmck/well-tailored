@@ -3303,20 +3303,35 @@
         const res = await fetch('/api/huntr/jobs');
         const data = await res.json();
         if (data.jobs) {
+          // Build a lookup of existing jobs by ID to preserve status/results
+          const existingById = new Map(state.jobs.map(j => [j.id, j]));
+
+          const huntrJobs = data.jobs.map(j => {
+            const existing = existingById.get(j.id);
+            if (existing && existing.source === 'huntr') {
+              // Refresh metadata only — preserve status, result, error, checked, _editorData
+              existing.company = j.company || existing.company;
+              existing.title = j.title || existing.title;
+              existing.jd = j.descriptionText || j.description || existing.jd;
+              existing.stage = j.listName || j.stage || existing.stage;
+              return existing;
+            }
+            return {
+              id: j.id || sid(),
+              company: j.company || '',
+              title: j.title || '',
+              jd: j.descriptionText || j.description || '',
+              stage: j.listName || j.stage || '',
+              source: 'huntr',
+              status: 'loaded',
+              checked: false,
+              result: null,
+              error: null,
+              _editorData: null,
+            };
+          });
+
           const manualJobs = state.jobs.filter((job) => job.source === 'manual');
-          const huntrJobs = data.jobs.map(j => ({
-            id: j.id || sid(),
-            company: j.company || '',
-            title: j.title || '',
-            jd: j.descriptionText || j.description || '',
-            stage: j.listName || j.stage || '',
-            source: 'huntr',
-            status: 'loaded',
-            checked: false,
-            result: null,
-            error: null,
-            _editorData: null,
-          }));
           state.jobs = manualJobs.concat(huntrJobs);
           const groups = collectJobGroups();
           const persisted = groups.find((group) => group.key === state.jobListFilter);
