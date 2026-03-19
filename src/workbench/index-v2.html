@@ -2541,7 +2541,12 @@
       activeDoc: 'resume',   // 'resume' | 'cover'
       viewMode: 'preview',   // 'preview' | 'diff'
       previewTheme: null,
-      regeneratingSection: null,
+      regenerationQueue: [],
+      regenerationRunning: null,
+      regenerationDoneTimer: null,
+      regenerationTickTimer: null,
+      regenerationRunningStartedAt: 0,
+      regenerationLastSummary: null,
       activeScoreDetailsId: null,
       sourceResume: '',
       sourceBio: '',
@@ -2608,6 +2613,14 @@
         clearInterval(state.queueTickTimer);
         state.queueTickTimer = null;
       }
+      if (state.regenerationDoneTimer) {
+        clearTimeout(state.regenerationDoneTimer);
+        state.regenerationDoneTimer = null;
+      }
+      if (state.regenerationTickTimer) {
+        clearInterval(state.regenerationTickTimer);
+        state.regenerationTickTimer = null;
+      }
 
       const running = state.tailorRunning
         ? state.jobs.find(j => j.id === state.tailorRunning)
@@ -2629,6 +2642,22 @@
         return;
       }
 
+      if (state.regenerationRunning) {
+        const { sectionTitle, jobLabel } = state.regenerationRunning;
+        const queuedCount = state.regenerationQueue.length;
+        const startedAt = state.regenerationRunningStartedAt || Date.now();
+        const renderTick = () => {
+          const elapsed = formatElapsed(startedAt);
+          const target = [sectionTitle, jobLabel].filter(Boolean).join(' · ');
+          const queued = queuedCount > 0 ? ` · ${queuedCount} queued` : '';
+          el.textContent = `↻ Regenerating ${target}... (${elapsed})${queued}`;
+          el.style.color = '#d4a843';
+        };
+        renderTick();
+        state.regenerationTickTimer = setInterval(renderTick, 1000);
+        return;
+      }
+
       // Not running — check if we just finished (tailorLastSummary set by onQueueDrained)
       if (state.tailorLastSummary) {
         const { tailored, failed } = state.tailorLastSummary;
@@ -2647,8 +2676,117 @@
         return;
       }
 
+      if (state.regenerationLastSummary) {
+        const { regenerated, failed } = state.regenerationLastSummary;
+        if (failed > 0) {
+          el.textContent = `⚠ Regenerated ${regenerated} section${regenerated === 1 ? '' : 's'} · ${failed} failed`;
+          el.style.color = '#c0392b';
+        } else {
+          el.textContent = `✓ Regenerated ${regenerated} section${regenerated === 1 ? '' : 's'}.`;
+          el.style.color = '#4e9d78';
+        }
+        state.regenerationDoneTimer = setTimeout(() => {
+          state.regenerationLastSummary = null;
+          updateDocsIndicator();
+        }, 4000);
+        return;
+      }
+
       // Idle — show docs status
       updateDocsIndicator();
+    }
+
+    function getSectionRegenerationKey(jobId, section, sectionIndex) {
+      return `${jobId}::${sectionIndex}::${section?.title || ''}`;
+    }
+
+    function getSectionButtonState(jobId, section, sectionIndex) {
+      const key = getSectionRegenerationKey(jobId, section, sectionIndex);
+      if (state.regenerationRunning?.sectionKey === key) return 'running';
+      if (state.regenerationQueue.some((entry) => entry.sectionKey === key)) return 'queued';
+      return null;
+    }
+
+    function resolveQueuedSection(job, request) {
+      if (!job?.result?.output?.resume) return null;
+      const data = job._editorData || parseMarkdown(job.result.output.resume);
+      if (!job._editorData) {
+        job._editorData = data;
+      }
+
+      let section = data.sections.find((entry) => entry.id === request.sectionId);
+      if (section) return section;
+
+      section = data.sections[request.sectionIndex];
+      if (section && (!request.sectionTitle || section.title === request.sectionTitle)) {
+        return section;
+      }
+
+      if (!request.sectionTitle) return null;
+      const exactTitleMatches = data.sections.filter((entry) => entry.title === request.sectionTitle);
+      return exactTitleMatches.length === 1 ? exactTitleMatches[0] : null;
+    }
+
+    function ensureRegenerationLoop() {
+      if (state.regenerationRunning) return;
+      if (state.regenerationQueue.length === 0) return;
+      void regenerationLoop();
+    }
+
+    async function regenerationLoop() {
+      let regeneratedCount = 0;
+      let failedCount = 0;
+
+      while (state.regenerationQueue.length > 0) {
+        const request = state.regenerationQueue.shift();
+        const job = state.jobs.find((entry) => entry.id === request?.jobId);
+        if (!request || !job?.result?.output?.resume) continue;
+
+        state.regenerationRunning = request;
+        state.regenerationRunningStartedAt = Date.now();
+        syncTopBarStatus();
+        renderEditor();
+
+        try {
+          const section = resolveQueuedSection(job, request);
+          if (!section) {
+            throw new Error(`Section "${request.sectionTitle || 'unknown'}" is no longer available.`);
+          }
+
+          const res = await fetch('/api/regenerate-section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              resume: job.result.output.resume,
+              bio: state.sourceBio,
+              jobDescription: job.jd,
+              jobTitle: job.title,
+              sectionId: section.id,
+              model: state.tailorModel || 'auto',
+            }),
+          });
+          if (!res.ok) throw new Error(await res.text() || res.statusText);
+
+          const result = await res.json();
+          job.result.output.resume = result.markdown;
+          job._editorData = parseMarkdown(result.markdown);
+          state.scoresStale = true;
+          regeneratedCount++;
+        } catch (error) {
+          failedCount++;
+          console.error('Regeneration failed:', error);
+        } finally {
+          state.regenerationRunning = null;
+          state.regenerationRunningStartedAt = 0;
+          syncTopBarStatus();
+          renderEditor();
+          renderPreviewPanel();
+          renderMissingKeywords();
+        }
+      }
+
+      state.regenerationLastSummary = { regenerated: regeneratedCount, failed: failedCount };
+      syncTopBarStatus();
     }
 
     function updateSourceEmptyState() {
@@ -3551,6 +3689,7 @@
       toEnqueue.forEach(j => { j.status = 'pending'; j.error = null; });
       state.tailorQueue.push(...toEnqueue.map(j => j.id));
       state.tailorLastSummary = null;
+      state.regenerationLastSummary = null;
 
       // Close modal, re-render
       modal.hidden = true;
@@ -3952,7 +4091,9 @@
 
       const canUp = idx > 0;
       const canDown = idx < data.sections.length - 1;
-      const isRegenerating = state.regeneratingSection === sec.id;
+      const regenerationState = getSectionButtonState(state.activeJobId, sec, idx);
+      const isRegenerating = regenerationState === 'running';
+      const isQueued = regenerationState === 'queued';
 
       let inner = renderSectionPills(sec);
 
@@ -4039,8 +4180,8 @@
       // Regenerate button
       inner += `
         <div class="section-footer">
-          <button class="btn-regenerate" data-regenerate="${esc(sec.id)}" ${isRegenerating ? 'disabled' : ''}>
-            ${isRegenerating ? 'Regenerating\u2026' : 'Regenerate \u21BB'}
+          <button class="btn-regenerate" data-regenerate="${esc(sec.id)}" ${isRegenerating || isQueued ? 'disabled' : ''}>
+            ${isRegenerating ? 'Regenerating\u2026' : isQueued ? 'Queued\u2026' : 'Regenerate \u21BB'}
           </button>
         </div>`;
 
@@ -4197,36 +4338,37 @@
     }
 
     // ── Regenerate section ──
-    async function regenerateSection(sectionId) {
+    function regenerateSection(sectionId) {
       const job = state.jobs.find(j => j.id === state.activeJobId);
-      if (!job?.result) return;
-      state.regeneratingSection = sectionId;
-      renderEditor();
-      try {
-        const res = await fetch('/api/regenerate-section', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            resume: job.result.output.resume,
-            bio: state.sourceBio,
-            jobDescription: job.jd,
-            jobTitle: job.title,
-            sectionId,
-            model: state.tailorModel || 'auto',
-          }),
-        });
-        const result = await res.json();
-        job.result.output.resume = result.markdown;
-        job._editorData = parseMarkdown(result.markdown);
-        state.scoresStale = true;
-      } catch (error) {
-        console.error('Regeneration failed:', error);
-      } finally {
-        state.regeneratingSection = null;
-        renderEditor();
-        renderPreviewPanel();
-        renderMissingKeywords();
+      const data = getEditorData();
+      if (!job?.result || !data) return;
+
+      const sectionIndex = data.sections.findIndex((section) => section.id === sectionId);
+      if (sectionIndex < 0) return;
+
+      const section = data.sections[sectionIndex];
+      const request = {
+        jobId: job.id,
+        sectionId,
+        sectionIndex,
+        sectionTitle: section.title || 'Section',
+        sectionKey: getSectionRegenerationKey(job.id, section, sectionIndex),
+        jobLabel: `${job.company || 'Job'} — ${job.title || ''}`.trim().replace(/\s*—\s*$/, ''),
+      };
+
+      if (
+        state.regenerationRunning?.sectionKey === request.sectionKey ||
+        state.regenerationQueue.some((entry) => entry.sectionKey === request.sectionKey)
+      ) {
+        return;
       }
+
+      state.tailorLastSummary = null;
+      state.regenerationLastSummary = null;
+      state.regenerationQueue.push(request);
+      syncTopBarStatus();
+      renderEditor();
+      ensureRegenerationLoop();
     }
 
     // ═══════════════════════════════════════════════════════
