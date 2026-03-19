@@ -3,8 +3,8 @@
  * Cross-platform asset copy for the build step.
  * Replaces POSIX `rm -rf ... && cp -r ...` so the build works on Windows too.
  */
-import { cpSync, rmSync } from 'fs';
-import { resolve } from 'path';
+import { cpSync, rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 
