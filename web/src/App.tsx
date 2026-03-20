@@ -16,15 +16,20 @@ export default function App() {
 
   useEffect(() => {
     api.getConfig().then((cfg) => {
-      dispatch({ type: 'SET_CONFIG_PROVIDERS', providers: cfg.providers });
+      const providers = cfg.options.providers.map((p) => ({
+        id: p.id,
+        name: p.label,
+        models: p.models,
+      }));
+      dispatch({ type: 'SET_CONFIG_PROVIDERS', providers });
     }).catch(console.error);
 
     api.getLocalWorkspace().then((ws) => {
-      dispatch({ type: 'SET_SOURCE', field: 'sourceResume', value: ws.resume || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceBio', value: ws.bio || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceCoverLetter', value: ws.baseCoverLetter || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceSupplemental', value: ws.resumeSupplemental || '' });
-      dispatch({ type: 'SET_SOURCE_PATHS', paths: ws.paths || {} });
+      const docs = ws.documents || {} as Record<string, string>;
+      dispatch({ type: 'SET_SOURCE', field: 'sourceResume', value: docs.resume || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceBio', value: docs.bio || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceCoverLetter', value: docs.baseCoverLetter || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceSupplemental', value: docs.resumeSupplemental || '' });
       dispatch({ type: 'SET_PROMPT_SOURCES', sources: ws.prompts || {} });
     }).catch(console.error);
 

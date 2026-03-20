@@ -26,26 +26,40 @@ function post<T>(url: string, body: unknown): Promise<T> {
 // ---------------------------------------------------------------------------
 
 export interface ConfigResponse {
-  providers: { id: string; name: string; models: string[] }[];
+  defaultModel: string;
+  provider: string;
+  defaults: {
+    tailoringProvider: string;
+    tailoringModel: string;
+    scoringProvider: string;
+    scoringModel: string;
+  };
+  options: {
+    providers: { id: string; kind: string; label: string; defaultModel: string; models: string[] }[];
+    tailoringModels: string[];
+    scoringModels: string[];
+  };
 }
 
 export interface LocalWorkspaceResponse {
-  resume: string;
-  bio: string;
-  baseCoverLetter: string;
-  resumeSupplemental: string;
-  paths: Record<string, string>;
+  cwd: string;
+  documents: {
+    resume: string;
+    bio: string;
+    baseCoverLetter: string;
+    resumeSupplemental: string;
+  };
+  error?: string;
   prompts: Record<string, string>;
-  promptSources: Record<string, string>;
+  theme?: Record<string, string>;
 }
 
 export interface HuntrJob {
   id: string;
   company: string;
   title: string;
-  jd: string;
-  stage: string;
-  date: string;
+  descriptionText: string;
+  listName: string;
   url: string;
   boardId: string;
 }
