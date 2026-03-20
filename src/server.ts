@@ -192,7 +192,7 @@ async function buildPdfBuffer(body: ExportPdfBody): Promise<{ filename: string; 
     throw new Error(`Unknown export kind: ${body.kind}`);
   }
 
-  const dir = mkdtempSync(join(tmpdir(), 'job-shit-export-'));
+  const dir = mkdtempSync(join(tmpdir(), 'well-tailored-export-'));
   try {
     const htmlPath = join(dir, `${body.kind}.html`);
     const pdfPath = join(dir, `${body.kind}.pdf`);
@@ -461,7 +461,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     }
 
     const cwd = process.cwd();
-    const home = join(homedir(), '.job-shit');
+    const home = join(homedir(), '.well-tailored');
 
     // Normalize allowed roots, skipping any that do not yet exist on disk.
     const allowedRoots: string[] = [];
@@ -521,7 +521,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     }
 
     const cwd = process.cwd();
-    const home = join(homedir(), '.job-shit');
+    const home = join(homedir(), '.well-tailored');
 
     const allowedRoots: string[] = [];
     try {
@@ -744,7 +744,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   startWorkbenchServer(undefined, defaultHost)
     .then(({ port, host }) => {
       const displayHost = host === '127.0.0.1' ? 'localhost' : host;
-      console.log(`job-shit workbench listening on http://${displayHost}:${port}`);
+      console.log(`Well-Tailored workbench listening on http://${displayHost}:${port}`);
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));

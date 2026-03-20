@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { loadConfig } from '../config.js';
 import { analyzeGap, analyzeGapWithAI } from '../services/gap.js';
-import { findFile, JOB_SHIT_DIR, readFile } from '../lib/files.js';
+import { findFile, TAILORED_DIR, readFile } from '../lib/files.js';
 import { EnrichedGapAnalysis, GapAnalysis } from '../types/index.js';
 
 const ANSI = {
@@ -78,11 +78,11 @@ export function registerGapCommand(program: Command): void {
     .requiredOption('-j, --job <file>', 'Path to job description file (plain text or markdown)')
     .option(
       '-r, --resume <file>',
-      `Path to base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Path to base resume file (markdown). Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Path to personal bio/background file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted when --ai is used.`,
+      `Path to personal bio/background file. Auto-detected from CWD or ${TAILORED_DIR} if omitted when --ai is used.`,
     )
     .option('-t, --title <title>', 'Job title (optional, included in the analysis)')
     .option('--ai', 'Use AI to add a narrative summary and tailoring hints')

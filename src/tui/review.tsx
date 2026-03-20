@@ -74,7 +74,7 @@ function visibleWindow<T>(items: T[], selectedIndex: number, radius = 5): T[] {
 }
 
 function openInEditor(initial: string, setRawMode: (isEnabled: boolean) => void): string {
-  const dir = mkdtempSync(join(tmpdir(), 'job-shit-review-'));
+  const dir = mkdtempSync(join(tmpdir(), 'well-tailored-review-'));
   const path = join(dir, 'section.md');
   const editor = process.env.EDITOR || 'vi';
 

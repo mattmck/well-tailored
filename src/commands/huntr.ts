@@ -8,7 +8,7 @@ import { tailorDocuments } from '../lib/tailor.js';
 import { logUsingEntries } from '../lib/logging.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
-import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { findFile, readFile, TAILORED_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
 import { analyzeGap, analyzeGapWithAI } from '../services/gap.js';
 import { launchReviewTui } from '../tui/review.js';
@@ -295,11 +295,11 @@ export function registerHuntrCommand(program: Command): void {
     .option('--board <boardId>', 'Huntr board ID (auto-detected if omitted)')
     .option(
       '-r, --resume <file>',
-      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Base resume file (markdown). Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted when --ai is used.`,
+      `Personal bio file. Auto-detected from CWD or ${TAILORED_DIR} if omitted when --ai is used.`,
     )
     .option('--ai', 'Use AI to add a narrative summary and tailoring hints')
     .option('-m, --model <model>', 'Model/deployment name for AI-enriched gap analysis')
@@ -336,11 +336,11 @@ export function registerHuntrCommand(program: Command): void {
     .option('--board <boardId>', 'Huntr board ID (auto-detected if omitted)')
     .option(
       '-r, --resume <file>',
-      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Base resume file (markdown). Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Personal bio file. Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')
@@ -406,11 +406,11 @@ export function registerHuntrCommand(program: Command): void {
     .option('--board <boardId>', 'Limit to a specific board ID')
     .option(
       '-r, --resume <file>',
-      `Base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Base resume file (markdown). Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Personal bio file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Personal bio file. Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-o, --output <dir>', 'Output directory', 'output')

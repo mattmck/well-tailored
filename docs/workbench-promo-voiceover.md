@@ -54,13 +54,13 @@ Use this as the narration bed for the promo. It is written to match the existing
 ### Scene 10
 - Time: `0:56-1:00`
 - Read:
-  `The job-shit workbench. A sharper application loop.`
+  `The Well-Tailored workbench. A sharper application loop.`
 
 ## Single-Pass Script
 
 Use this version if you want the whole thing in one block for recording:
 
-`Job applications usually fall apart in the last mile. So we built one workbench for the whole tailoring loop. Start from your own materials, a Huntr wishlist role, or a pasted brief, without bouncing between tools. Pull a real job in fast, keep the context visible, and stage the run from a single surface. Models, prompts, and review logic stay adjustable right where the work happens. You can tune the output itself too, not just the words behind it. When the pass finishes, it comes back with fit, ATS signal, findings, and live preview, not just text. Ingest, direct, evaluate, and export, all in one connected workflow. Then hand off clean markdown, HTML, or PDF when it is ready to send. The job-shit workbench. A sharper application loop.`
+`Job applications usually fall apart in the last mile. So we built one workbench for the whole tailoring loop. Start from your own materials, a Huntr wishlist role, or a pasted brief, without bouncing between tools. Pull a real job in fast, keep the context visible, and stage the run from a single surface. Models, prompts, and review logic stay adjustable right where the work happens. You can tune the output itself too, not just the words behind it. When the pass finishes, it comes back with fit, ATS signal, findings, and live preview, not just text. Ingest, direct, evaluate, and export, all in one connected workflow. Then hand off clean markdown, HTML, or PDF when it is ready to send. The Well-Tailored workbench. A sharper application loop.`
 
 ## Delivery Notes
 

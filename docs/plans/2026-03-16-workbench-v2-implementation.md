@@ -35,7 +35,7 @@ Create `src/workbench/index-v2.html` with the full layout structure but no JS lo
     <button class="btn-icon" id="exportWorkspaceBtn" disabled>Export</button>
   </div>
   <div class="top-bar__right">
-    <span class="storage-indicator">~/.job-shit</span>
+    <span class="storage-indicator">~/.well-tailored</span>
   </div>
 </div>
 

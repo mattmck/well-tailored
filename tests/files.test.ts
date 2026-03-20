@@ -5,7 +5,7 @@ import { tmpdir } from 'os';
 import { findFile } from '../src/lib/files.js';
 
 function tmpDir(): string {
-  const dir = join(tmpdir(), `job-shit-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = join(tmpdir(), `well-tailored-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(dir, { recursive: true });
   return dir;
 }

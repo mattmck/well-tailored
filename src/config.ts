@@ -139,7 +139,7 @@ async function resolveHuntrClerkToken(): Promise<string | undefined> {
  *   2. ~/.huntr/config.json (static token set via `huntr config set-token`)
  *   3. Keychain static api-token (set via `huntr config set-token --keychain`)
  *   4. Clerk session (set via `huntr login`) — refreshes automatically
- *   5. HUNTR_TOKEN env var (job-shit backward compat)
+ *   5. HUNTR_TOKEN env var (legacy backward compat)
  */
 export async function resolveHuntrToken(): Promise<string | undefined> {
   if (process.env.HUNTR_API_TOKEN) return process.env.HUNTR_API_TOKEN;
@@ -193,32 +193,32 @@ function modelsForProvider(
 
 export function loadConfig(): Config {
   const providers = listConfiguredProviders();
-  const preferredProvider = normalizeProviderChoice(process.env.JOB_SHIT_PROVIDER);
+  const preferredProvider = normalizeProviderChoice(process.env.TAILORED_PROVIDER);
   const tailoringProvider = defaultProvider(
     providers,
-    normalizeProviderChoice(process.env.JOB_SHIT_TAILORING_PROVIDER) ?? preferredProvider,
+    normalizeProviderChoice(process.env.TAILORED_TAILORING_PROVIDER) ?? preferredProvider,
   );
   const scoringProvider = defaultProvider(
     providers,
-    normalizeProviderChoice(process.env.JOB_SHIT_SCORING_PROVIDER) ?? preferredProvider ?? tailoringProvider,
+    normalizeProviderChoice(process.env.TAILORED_SCORING_PROVIDER) ?? preferredProvider ?? tailoringProvider,
   );
-  const sharedDefault = process.env.JOB_SHIT_MODEL
+  const sharedDefault = process.env.TAILORED_MODEL
     ?? (tailoringProvider === 'auto'
       ? providers[0]?.defaultModel
       : providers.find((provider) => provider.id === tailoringProvider)?.defaultModel)
     ?? 'auto';
-  const tailoringModel = process.env.JOB_SHIT_TAILORING_MODEL ?? sharedDefault;
-  const scoringModel = process.env.JOB_SHIT_SCORING_MODEL ?? process.env.JOB_SHIT_MODEL ?? tailoringModel;
+  const tailoringModel = process.env.TAILORED_TAILORING_MODEL ?? sharedDefault;
+  const scoringModel = process.env.TAILORED_SCORING_MODEL ?? process.env.TAILORED_MODEL ?? tailoringModel;
   const tailoringModels = modelsForProvider(
     providers,
     tailoringProvider,
-    parseModelList(process.env.JOB_SHIT_TAILORING_MODELS),
+    parseModelList(process.env.TAILORED_TAILORING_MODELS),
     tailoringModel,
   );
   const scoringModels = modelsForProvider(
     providers,
     scoringProvider,
-    parseModelList(process.env.JOB_SHIT_SCORING_MODELS),
+    parseModelList(process.env.TAILORED_SCORING_MODELS),
     scoringModel,
   );
 

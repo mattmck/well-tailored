@@ -3,8 +3,8 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { SavedWorkspace, SavedWorkspaceSummary, WorkspaceSnapshot } from '../types/index.js';
 
-const JOB_SHIT_HOME = join(homedir(), '.job-shit');
-const WORKSPACES_DIR = join(JOB_SHIT_HOME, 'workspaces');
+const TAILORED_HOME = join(homedir(), '.well-tailored');
+const WORKSPACES_DIR = join(TAILORED_HOME, 'workspaces');
 
 function ensureWorkspaceDir(): string {
   if (!existsSync(WORKSPACES_DIR)) {

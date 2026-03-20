@@ -13,10 +13,10 @@ Shows what the AI changed from the base resume to the tailored version. Supports
 ### CLI surface
 ```bash
 # After tailoring, automatically show a summary:
-job-shit tailor --company "Acme" --job jd.txt --diff
+tailored tailor --company "Acme" --job jd.txt --diff
 
 # Compare two saved versions:
-job-shit diff <jobId> --v1 0 --v2 1
+tailored diff <jobId> --v1 0 --v2 1
 ```
 
 Terminal output uses ANSI colors: green for additions, red for removals, gray for unchanged context. Line-level diff with word-level highlighting within changed lines.
@@ -83,13 +83,13 @@ Before tailoring, analyzes the JD against the base resume and surfaces:
 ### CLI surface
 ```bash
 # Standalone analysis:
-job-shit gap --job jd.txt
+tailored gap --job jd.txt
 
 # Automatically shown before tailoring (opt-out):
-job-shit tailor --company "Acme" --job jd.txt  # shows gap summary, then tailors
+tailored tailor --company "Acme" --job jd.txt  # shows gap summary, then tailors
 
 # Huntr integration:
-job-shit huntr gap <jobId>
+tailored huntr gap <jobId>
 ```
 
 ### Workbench surface
@@ -165,10 +165,10 @@ After generation, lets you review the tailored resume section-by-section, accept
 ### CLI surface
 ```bash
 # Enter interactive mode after tailoring:
-job-shit tailor --company "Acme" --job jd.txt --interactive
+tailored tailor --company "Acme" --job jd.txt --interactive
 
 # Review an existing result:
-job-shit review <jobId>
+tailored review <jobId>
 ```
 
 ### Terminal TUI (Ink)

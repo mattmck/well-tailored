@@ -8,7 +8,7 @@ Generated: 2026-03-13 11:30 EDT
 
 ## 1. Project Overview
 
-**Goal:** Modernize the existing `job-shit` CLI into an Azure-hosted workbench that can:
+**Goal:** Modernize the existing `well-tailored` CLI into an Azure-hosted workbench that can:
 
 - tailor resumes and cover letters from either Huntr jobs or pasted ad-hoc job descriptions
 - let the user edit prompts, source documents, and visual theme in one place
@@ -55,7 +55,7 @@ Generated: 2026-03-13 11:30 EDT
 
 | Component | Type | Technology | Path |
 |-----------|------|------------|------|
-| `job-shit` CLI | API/Worker precursor | Node.js, TypeScript, Commander | `src/cli.ts` |
+| `well-tailored` CLI | API/Worker precursor | Node.js, TypeScript, Commander | `src/cli.ts` |
 | Tailoring core | Shared library | TypeScript modules | `src/lib/` |
 | Huntr integration | Service candidate | TypeScript + fetch | `src/commands/huntr.ts` |
 | Rendering pipeline | Shared library | marked, sanitize-html, Chrome headless | `src/lib/render.ts` |

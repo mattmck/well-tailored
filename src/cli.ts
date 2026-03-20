@@ -25,9 +25,9 @@ function getVersion(): string {
 const program = new Command();
 
 program
-  .name('job-shit')
+  .name('tailored')
   .description(
-    'Stop suffering. Base resume + company + job description → tailored resume + cover letter, in parallel.',
+    'Job applications that actually fit. Resume + company + job description → tailored resume + cover letter, in parallel.',
   )
   .version(getVersion());
 

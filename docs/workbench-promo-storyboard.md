@@ -133,7 +133,7 @@ The cut should feel editorial and cinematic, not tutorial-like.
 - Framing: clean branded frame built from the best wide shot, slightly darkened.
 - Camera move: nearly static, tiny drift only.
 - On-screen copy:
-  - `job-shit workbench`
+  - `Well-Tailored workbench`
   - `A sharper application loop`
 - Purpose: clean landing and loop point.
 

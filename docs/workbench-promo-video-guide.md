@@ -17,26 +17,26 @@ For the video itself, the practical path is:
 ### 1. Generate the screenshot pack
 
 ```bash
-cd /Users/matt.mcknight/job-shit
+cd /Users/matt.mcknight/well-tailored
 npm run shots:workbench -- --headed
 ```
 
 Outputs land in:
 
-- `/Users/matt.mcknight/job-shit/output/playwright/workbench-shots`
+- `/Users/matt.mcknight/well-tailored/output/playwright/workbench-shots`
 
 ### 2. Build a rough animatic
 
 This creates a simple timing video from the screenshot pack:
 
 ```bash
-cd /Users/matt.mcknight/job-shit
+cd /Users/matt.mcknight/well-tailored
 npm run video:promo
 ```
 
 Output:
 
-- `/Users/matt.mcknight/job-shit/output/video/workbench-promo-animatic.mp4`
+- `/Users/matt.mcknight/well-tailored/output/video/workbench-promo-animatic.mp4`
 
 This is not the final cinematic cut. It is a timing/assembly pass so you can:
 - sanity-check pacing
@@ -46,9 +46,9 @@ This is not the final cinematic cut. It is a timing/assembly pass so you can:
 ### 3. Open the planning docs
 
 ```bash
-open /Users/matt.mcknight/job-shit/docs/workbench-promo-shot-map.md
-open /Users/matt.mcknight/job-shit/docs/workbench-promo-voiceover.md
-open /Users/matt.mcknight/job-shit/docs/workbench-promo-edit-handoff.md
+open /Users/matt.mcknight/well-tailored/docs/workbench-promo-shot-map.md
+open /Users/matt.mcknight/well-tailored/docs/workbench-promo-voiceover.md
+open /Users/matt.mcknight/well-tailored/docs/workbench-promo-edit-handoff.md
 ```
 
 ## Recommended Final-Cut Workflow: Descript
@@ -128,8 +128,8 @@ That would give you:
 If you want the shortest possible sequence:
 
 ```bash
-cd /Users/matt.mcknight/job-shit
+cd /Users/matt.mcknight/well-tailored
 npm run shots:workbench -- --headed
 npm run video:promo
-open /Users/matt.mcknight/job-shit/output/video/workbench-promo-animatic.mp4
+open /Users/matt.mcknight/well-tailored/output/video/workbench-promo-animatic.mp4
 ```

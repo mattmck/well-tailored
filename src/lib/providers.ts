@@ -64,22 +64,22 @@ export function normalizeProviderChoice(value?: string): ProviderChoice | undefi
 }
 
 function sharedModelChoices(): string[] {
-  return parseList(process.env.JOB_SHIT_MODELS);
+  return parseList(process.env.TAILORED_MODELS);
 }
 
 function legacyProviderModels(kind: ProviderKind): string[] {
   switch (kind) {
     case 'gemini':
-      return parseList(process.env.JOB_SHIT_GEMINI_MODELS);
+      return parseList(process.env.TAILORED_GEMINI_MODELS);
     case 'azure':
       return unique([
-        ...parseList(process.env.JOB_SHIT_AZURE_MODELS),
-        ...parseList(process.env.JOB_SHIT_AZURE_OPENAI_MODELS),
+        ...parseList(process.env.TAILORED_AZURE_MODELS),
+        ...parseList(process.env.TAILORED_AZURE_OPENAI_MODELS),
       ]);
     case 'openai':
-      return parseList(process.env.JOB_SHIT_OPENAI_MODELS);
+      return parseList(process.env.TAILORED_OPENAI_MODELS);
     case 'anthropic':
-      return parseList(process.env.JOB_SHIT_ANTHROPIC_MODELS);
+      return parseList(process.env.TAILORED_ANTHROPIC_MODELS);
   }
 }
 
@@ -144,7 +144,7 @@ function legacyProviders(): ResolvedProvider[] {
 
 function namedProvider(id: string): ResolvedProvider | undefined {
   const token = envToken(id);
-  const prefix = `JOB_SHIT_PROVIDER_${token}_`;
+  const prefix = `TAILORED_PROVIDER_${token}_`;
   const kind = normalizeKind(process.env[`${prefix}KIND`]);
   if (!kind) return undefined;
 
@@ -220,7 +220,7 @@ function namedProvider(id: string): ResolvedProvider | undefined {
 }
 
 function namedProviders(): ResolvedProvider[] {
-  return parseList(process.env.JOB_SHIT_PROVIDER_PROFILES)
+  return parseList(process.env.TAILORED_PROVIDER_PROFILES)
     .map((id) => namedProvider(id.toLowerCase()))
     .filter((provider): provider is ResolvedProvider => Boolean(provider));
 }

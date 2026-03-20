@@ -13,7 +13,7 @@ and missing keyword sidebar.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ WORKSPACE [autocomplete▾] [Save] [Delete]    [⚙]    💾 ~/.job-shit     │
+│ WORKSPACE [autocomplete▾] [Save] [Delete]    [⚙]    💾 ~/.well-tailored     │
 ├──┬──────────────────────────────────────────────────────────────────────┤
 │  │ ┌─ SCORE CARDS ──────────────┬─ ANALYSIS NOTES ───────────────────┐ │
 │J │ │ Resume: 8  Cover: 7  ...   │ Reviewer notes, accuracy, etc     │ │
@@ -141,7 +141,7 @@ Above each section's fields, colored pills show:
 - **Delete** — available after loading a workspace
 - **Copy** — type new name in autocomplete field, action button glows
 - **Export** — download workspace as `.zip` (JSON + outputs)
-- **Path label:** `💾 ~/.job-shit` always visible in corner
+- **Path label:** `💾 ~/.well-tailored` always visible in corner
 - Buttons activate/deactivate based on context (no dead buttons)
 
 ## Files

@@ -18,7 +18,7 @@ Run a single test file: `npx vitest run tests/files.test.ts`
 
 Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level commands:
 
-- **`tailor`** — one-off tailoring from a local JD file: `job-shit tailor --company "Acme" --job jd.txt`
+- **`tailor`** — one-off tailoring from a local JD file: `tailored tailor --company "Acme" --job jd.txt`
 - **`huntr`** — Huntr.co integration subcommands (see below)
 
 ### Core lib (`src/lib/`)
@@ -26,7 +26,7 @@ Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level comman
 - `ai.ts` — thin Anthropic/Codex wrapper (`complete()`, takes an injected client)
 - `tailor.ts` — `tailorDocuments()` fans out resume + cover letter calls via `Promise.all`
 - `prompts.ts` — system/user prompts for resume and cover letter, kept separate
-- `files.ts` — `findFile()` auto-discovers `resume*.md` / `bio*.md` from CWD then `~/.job-shit/`
+- `files.ts` — `findFile()` auto-discovers `resume*.md` / `bio*.md` from CWD then `~/.well-tailored/`
 
 ### Commands (`src/commands/`)
 

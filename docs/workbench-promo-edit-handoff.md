@@ -143,7 +143,7 @@ This is what creates the Codex-like pull-through feeling.
   - Nearly static
   - Tiny ambient drift only
 - Overlay copy:
-  - `job-shit workbench`
+  - `Well-Tailored workbench`
   - `A sharper application loop`
 - End behavior:
   - fade to black or loop back to Scene 1 close-up

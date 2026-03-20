@@ -1,16 +1,15 @@
 {
-  "name": "job-shit",
+  "name": "well-tailored",
   "version": "1.0.0",
-  "description": "Resume and cover letter tailoring workflow. Base resume + company info + job description → tailored resume + cover letter, in parallel.",
+  "description": "Job applications that actually fit. Resume + company + job description → tailored resume + cover letter, in parallel.",
   "type": "module",
   "bin": {
-    "job-shit": "./dist/cli.js"
+    "tailored": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc && node scripts/copy-assets.mjs",
     "dev": "tsx src/cli.ts",
     "serve": "tsx src/cli.ts serve",
-    "shit": "tsx src/cli.ts serve",
     "shots:workbench": "node scripts/capture-workbench-shots.mjs",
     "video:promo": "node scripts/build-workbench-promo.mjs",
     "lint": "eslint src",
@@ -19,7 +18,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mattmck/job-shit.git"
+    "url": "git+https://github.com/mattmck/well-tailored.git"
   },
   "keywords": [
     "resume",
@@ -35,9 +34,9 @@
     "node": ">=20.19.0"
   },
   "bugs": {
-    "url": "https://github.com/mattmck/job-shit/issues"
+    "url": "https://github.com/mattmck/well-tailored/issues"
   },
-  "homepage": "https://github.com/mattmck/job-shit#readme",
+  "homepage": "https://github.com/mattmck/well-tailored#readme",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "commander": "^14.0.3",

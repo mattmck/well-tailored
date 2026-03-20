@@ -19,7 +19,7 @@ Redesign the workbench into a focused, single-screen workflow: select jobs, tail
 
 ```
 +--------+------------------------------------------------------------+
-| WORKSPACE [autocomplete/dropdown] [Save] [Delete]  [gear] ~/.job-shit|
+| WORKSPACE [autocomplete/dropdown] [Save] [Delete]  [gear] ~/.well-tailored|
 +--+-----+---------------------------+-------------------+-----------+
 |  |  SCORE CARDS                    | ANALYSIS NOTES                |
 |J |  Resume: 8  Cover: 7  Acc: 6   | Reviewer notes, fit, risk     |
@@ -58,11 +58,11 @@ Clicking an icon slides a ~300px panel in/out. Main review area compresses but s
 - **Delete** — available after loading a workspace. Confirms before deleting.
 - **Copy** — type a new name in the autocomplete field, copy button glows/animates to confirm.
 - **Gear icon** — opens config slide-out.
-- **Storage indicator** — subtle `~/.job-shit` label in the corner. All data (workspaces, config) lives there.
+- **Storage indicator** — subtle `~/.well-tailored` label in the corner. All data (workspaces, config) lives there.
 
 ### Workspace Management
 
-- Workspaces save to `~/.job-shit/workspaces/`.
+- Workspaces save to `~/.well-tailored/workspaces/`.
 - Create, load, save, copy (with animated confirmation), delete.
 - **Export** — download workspace as `.zip` (JSON state + generated outputs) for backup/sharing.
 - Path shown subtly so power users know where to find files on disk.
@@ -207,12 +207,12 @@ Tailor -> Review scores -> Edit sections -> Scores show "-> ?"
 
 ## Data & Storage
 
-- All data in `~/.job-shit/`:
+- All data in `~/.well-tailored/`:
   - `workspaces/` — workspace JSON files with state.
   - `config.json` — API keys, model preferences, prompt overrides.
   - Generated outputs per workspace.
 - Workspace export as `.zip` for backup.
-- Subtle `~/.job-shit` storage indicator always visible.
+- Subtle `~/.well-tailored` storage indicator always visible.
 
 ## Button Activation Pattern
 

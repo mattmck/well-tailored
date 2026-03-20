@@ -8,7 +8,7 @@ import { tailorDocuments } from '../lib/tailor.js';
 import { logUsingEntries } from '../lib/logging.js';
 import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
-import { findFile, readFile, JOB_SHIT_DIR } from '../lib/files.js';
+import { findFile, readFile, TAILORED_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
 import { analyzeGapWithAI } from '../services/gap.js';
 import { launchReviewTui } from '../tui/review.js';
@@ -28,11 +28,11 @@ export function registerTailorCommand(program: Command): void {
     .requiredOption('-j, --job <file>', 'Path to job description file (plain text or markdown)')
     .option(
       '-r, --resume <file>',
-      `Path to base resume file (markdown). Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Path to base resume file (markdown). Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option(
       '-b, --bio <file>',
-      `Path to personal bio/background file. Auto-detected from CWD or ${JOB_SHIT_DIR} if omitted.`,
+      `Path to personal bio/background file. Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option('-s, --supplemental <file>', 'Supplemental resume file (markdown). Auto-detected if omitted.')
     .option('-t, --title <title>', 'Job title (inferred from JD if omitted)')

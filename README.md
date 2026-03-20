@@ -1,6 +1,6 @@
-# job-shit
+# Well-Tailored
 
-Stop suffering. Pipe your base resume + company info + job description through AI and get a tailored resume **and** cover letter back — in parallel — without touching them yourself.
+Job applications that actually fit. Turn your experience and a job description into sharper, more tailored application materials without losing your voice.
 
 ## How it works
 
@@ -48,11 +48,11 @@ npm run build
 ### Tailor resume + cover letter for a job
 
 ```bash
-# Minimal — resume and bio are auto-detected from CWD or ~/.job-shit/
-job-shit tailor --company "Acme Corp" --job jd.txt
+# Minimal — resume and bio are auto-detected from CWD or ~/.well-tailored/
+tailored tailor --company "Acme Corp" --job jd.txt
 
 # Full options
-job-shit tailor \
+tailored tailor \
   --company "Acme Corp" \
   --job jd.txt \
   --title "Senior Software Engineer" \
@@ -73,25 +73,25 @@ PDF generation requires Google Chrome installed.
 
 | File | Purpose | Auto-discovery |
 |------|---------|----------------|
-| `resume*.md` | Base resume (markdown) | CWD, then `~/.job-shit/` — most recently modified wins |
-| `bio*.md` | Personal background blurb | CWD, then `~/.job-shit/` |
-| `cover-letter*.md` | Voice/tone reference for cover letter | CWD, then `~/.job-shit/` — optional |
-| `resume-supplemental*.md` | Extra factual context for AI | CWD, then `~/.job-shit/` — optional |
+| `resume*.md` | Base resume (markdown) | CWD, then `~/.well-tailored/` — most recently modified wins |
+| `bio*.md` | Personal background blurb | CWD, then `~/.well-tailored/` |
+| `cover-letter*.md` | Voice/tone reference for cover letter | CWD, then `~/.well-tailored/` — optional |
+| `resume-supplemental*.md` | Extra factual context for AI | CWD, then `~/.well-tailored/` — optional |
 
 ### Huntr.co integration
 
 ```bash
 # List jobs in your Wishlist (not yet applied to)
-job-shit huntr wishlist
+tailored huntr wishlist
 
 # List all jobs across boards with their current stage
-job-shit huntr jobs
+tailored huntr jobs
 
 # Tailor a specific job (board auto-detected)
-job-shit huntr tailor <jobId>
+tailored huntr tailor <jobId>
 
 # Tailor every Wishlist job in one shot
-job-shit huntr tailor-all
+tailored huntr tailor-all
 ```
 
 **Credentials** are resolved automatically in this order:
@@ -124,10 +124,10 @@ Optional:
 | `AZURE_OPENAI_API_VERSION` | Azure API version (default: `2024-12-01-preview`) |
 | `OPENAI_BASE_URL` | Custom base URL for OpenAI-compatible endpoints |
 | `OPENAI_PROVIDER_NAME` | Friendly label for the OpenAI-compatible provider (for example `Grok`) |
-| `JOB_SHIT_PROVIDER` | Default provider for the workbench (`gemini`, `azure`, `openai`, `anthropic`) |
-| `JOB_SHIT_TAILORING_PROVIDER` / `JOB_SHIT_SCORING_PROVIDER` | Per-task provider defaults |
-| `JOB_SHIT_AZURE_MODELS` | Comma-separated Azure deployment names to show in the selector |
-| `JOB_SHIT_OPENAI_MODELS` / `JOB_SHIT_GEMINI_MODELS` / `JOB_SHIT_ANTHROPIC_MODELS` | Extra provider-specific model choices |
+| `TAILORED_PROVIDER` | Default provider for the workbench (`gemini`, `azure`, `openai`, `anthropic`) |
+| `TAILORED_TAILORING_PROVIDER` / `TAILORED_SCORING_PROVIDER` | Per-task provider defaults |
+| `TAILORED_AZURE_MODELS` | Comma-separated Azure deployment names to show in the selector |
+| `TAILORED_OPENAI_MODELS` / `TAILORED_GEMINI_MODELS` / `TAILORED_ANTHROPIC_MODELS` | Extra provider-specific model choices |
 | `HUNTR_API_TOKEN` | Huntr token (if not using huntr-cli credentials) |
 
 Notes:
@@ -141,29 +141,29 @@ If you want several providers side by side, especially multiple OpenAI-compatibl
 official OpenAI plus Groq, use named profiles:
 
 ```env
-JOB_SHIT_PROVIDER_PROFILES=openai,groq,azure,anthropic
+TAILORED_PROVIDER_PROFILES=openai,groq,azure,anthropic
 
-JOB_SHIT_PROVIDER_OPENAI_KIND=openai
-JOB_SHIT_PROVIDER_OPENAI_LABEL=OpenAI
-JOB_SHIT_PROVIDER_OPENAI_API_KEY=...
-JOB_SHIT_PROVIDER_OPENAI_DEFAULT_MODEL=gpt-5-mini
+TAILORED_PROVIDER_OPENAI_KIND=openai
+TAILORED_PROVIDER_OPENAI_LABEL=OpenAI
+TAILORED_PROVIDER_OPENAI_API_KEY=...
+TAILORED_PROVIDER_OPENAI_DEFAULT_MODEL=gpt-5-mini
 
-JOB_SHIT_PROVIDER_GROQ_KIND=openai
-JOB_SHIT_PROVIDER_GROQ_LABEL=Groq
-JOB_SHIT_PROVIDER_GROQ_API_KEY=...
-JOB_SHIT_PROVIDER_GROQ_BASE_URL=https://api.groq.com/openai/v1
-JOB_SHIT_PROVIDER_GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile
+TAILORED_PROVIDER_GROQ_KIND=openai
+TAILORED_PROVIDER_GROQ_LABEL=Groq
+TAILORED_PROVIDER_GROQ_API_KEY=...
+TAILORED_PROVIDER_GROQ_BASE_URL=https://api.groq.com/openai/v1
+TAILORED_PROVIDER_GROQ_DEFAULT_MODEL=llama-3.3-70b-versatile
 
-JOB_SHIT_PROVIDER_AZURE_KIND=azure
-JOB_SHIT_PROVIDER_AZURE_LABEL=Azure OpenAI
-JOB_SHIT_PROVIDER_AZURE_ENDPOINT=https://your-resource.openai.azure.com
-JOB_SHIT_PROVIDER_AZURE_API_KEY=...
-JOB_SHIT_PROVIDER_AZURE_DEFAULT_MODEL=gpt-5-mini
+TAILORED_PROVIDER_AZURE_KIND=azure
+TAILORED_PROVIDER_AZURE_LABEL=Azure OpenAI
+TAILORED_PROVIDER_AZURE_ENDPOINT=https://your-resource.openai.azure.com
+TAILORED_PROVIDER_AZURE_API_KEY=...
+TAILORED_PROVIDER_AZURE_DEFAULT_MODEL=gpt-5-mini
 
-JOB_SHIT_PROVIDER_ANTHROPIC_KIND=anthropic
-JOB_SHIT_PROVIDER_ANTHROPIC_LABEL=Anthropic
-JOB_SHIT_PROVIDER_ANTHROPIC_API_KEY=...
-JOB_SHIT_PROVIDER_ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-5
+TAILORED_PROVIDER_ANTHROPIC_KIND=anthropic
+TAILORED_PROVIDER_ANTHROPIC_LABEL=Anthropic
+TAILORED_PROVIDER_ANTHROPIC_API_KEY=...
+TAILORED_PROVIDER_ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-5
 ```
 
 Each profile gets its own label, credentials, default model, and model list. The workbench provider
