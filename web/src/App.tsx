@@ -8,6 +8,7 @@ import { PanelContainer } from './features/layout/PanelContainer';
 import { ScoreCards } from './features/scores/ScoreCards';
 import { EditorColumn } from './features/editor/EditorColumn';
 import { PreviewColumn } from './features/preview/PreviewColumn';
+import { MissingKeywords } from './features/editor/MissingKeywords';
 import * as api from './api/client';
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
                 <PreviewColumn />
               </Panel>
             </PanelGroup>
+            <MissingKeywords />
           </main>
         </div>
       </div>
