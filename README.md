@@ -78,6 +78,40 @@ PDF generation requires Google Chrome installed.
 | `cover-letter*.md` | Voice/tone reference for cover letter | CWD, then `~/.well-tailored/` — optional |
 | `resume-supplemental*.md` | Extra factual context for AI | CWD, then `~/.well-tailored/` — optional |
 
+### Interactive Review TUI
+
+Add `--interactive` to any tailor command to launch a split-panel terminal UI (React/Ink) for reviewing and refining the AI-generated resume before it's written to disk.
+
+```bash
+# One-off tailor with interactive review
+tailored tailor --company "Acme Corp" --job jd.txt --interactive
+
+# Huntr single job
+tailored huntr tailor <jobId> --interactive
+
+# Huntr batch — review each job in turn
+tailored huntr tailor-all --interactive
+
+# Re-review a previously saved result
+tailored review <jobId> --workspace <id> --v <index>
+```
+
+The TUI shows a scrollable section list on the left and a detail panel on the right with live JD keyword coverage, diff visualization, and section content.
+
+**Keyboard controls:**
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate between resume sections |
+| `Enter` | Expand / collapse section content |
+| `d` | Toggle diff view (changes vs. base resume) |
+| `a` | Accept / unaccept the current section |
+| `e` | Open section in `$EDITOR` for manual editing |
+| `r` | Regenerate the section via AI (uses full resume + JD context) |
+| `q` | Finish review and write final output |
+
+The detail panel shows matched JD keywords and partial matches per section so you can see coverage gaps at a glance. Gap analysis recomputes live after every edit or regeneration.
+
 ### Huntr.co integration
 
 ```bash

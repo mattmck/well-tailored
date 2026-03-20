@@ -37,6 +37,22 @@ Node.js/TypeScript CLI (`src/cli.ts`) built with Commander. Two top-level comman
   - `huntr tailor <jobId>` — tailor one job (board auto-detected)
   - `huntr tailor-all` — tailor every wishlist job in one shot
 
+### Interactive Review TUI (`src/tui/`)
+
+- `review.tsx` — React/Ink split-panel terminal UI for reviewing AI-generated resumes
+  - `SectionList` (left panel, 34 chars) — windowed scrollable section list with `>` selection and `✓` acceptance indicators
+  - `SectionDetail` (right panel, flex) — section content, diff view, live JD keyword coverage, keyboard shortcut help
+  - `ReviewApp` — top-level component: state management, `useInput` keyboard handling, gap analysis recomputation on every edit
+  - `launchReviewTui()` — async entry point, returns final markdown on `q` press (30-min timeout)
+- Keyboard: `↑/↓` navigate, `Enter` expand, `d` diff, `a` accept, `e` open `$EDITOR`, `r` regenerate section via AI, `q` finish
+- Launched via `--interactive` flag on `tailor`, `huntr tailor`, `huntr tailor-all`; or via `review <jobId>` command for saved workspaces
+
+### Services (`src/services/`)
+
+- `review.ts` — `regenerateResumeSection()` sends section + full resume context to AI for single-section rewrite
+- `gap.ts` — `analyzeGap()` keyword matching against JD (matched, missing, partial matches, overall fit rating)
+- `workspace-store.ts` — persists workspace snapshots with versioned results for later re-review
+
 ### Config
 
 `src/config.ts` — loads `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` (falls back to `OPENAI_API_KEY` / `OPENAI_MODEL`, defaults to `claude-sonnet-4-5`). `resolveHuntrToken()` checks env → `~/.huntr/config.json` → system keychain (keytar), matching huntr-cli's credential chain.
