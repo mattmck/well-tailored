@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { normalizeExportKind } from '../src/server.js';
+import { normalizeExportKind, resolveWorkbenchAssetPath } from '../src/server.js';
 
 describe('ExportPdfBody type', () => {
   it('accepts kind=resume variant', () => {
@@ -229,5 +229,18 @@ describe('Issue 3: normalizeExportKind - exported function tests', () => {
     const isResume = body.kind === 'resume';
     const isCoverLetter = body.kind === 'coverLetter';
     expect(isResume || isCoverLetter).toBe(true);
+  });
+});
+
+describe('Workbench asset resolver', () => {
+  it('resolves logo assets inside the workbench asset directory', () => {
+    const result = resolveWorkbenchAssetPath('logo-mark.svg');
+    expect(result).toBeTruthy();
+    expect(result).toMatch(/workbench\/assets\/logo-mark\.svg$/);
+  });
+
+  it('rejects path traversal outside the asset directory', () => {
+    const result = resolveWorkbenchAssetPath('../index.html');
+    expect(result).toBeNull();
   });
 });

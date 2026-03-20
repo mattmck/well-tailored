@@ -9,7 +9,7 @@ import {
   statSync,
   writeFileSync,
 } from 'fs';
-import { dirname, join, resolve, sep } from 'path';
+import { dirname, extname, join, resolve, sep } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir, tmpdir } from 'os';
 import { loadConfig } from './config.js';
@@ -141,6 +141,26 @@ function sendHtml(res: ServerResponse, html: string): void {
   res.end(html);
 }
 
+function sendFile(res: ServerResponse, filePath: string): void {
+  const ext = extname(filePath).toLowerCase();
+  const contentType =
+    ext === '.svg'
+      ? 'image/svg+xml; charset=utf-8'
+      : ext === '.png'
+        ? 'image/png'
+        : ext === '.ico'
+          ? 'image/x-icon'
+          : ext === '.html'
+            ? 'text/html; charset=utf-8'
+            : 'application/octet-stream';
+
+  res.writeHead(200, {
+    'Content-Type': contentType,
+    'Cache-Control': 'no-store',
+  });
+  res.end(readFileSync(filePath));
+}
+
 function sanitizeFilename(raw: string): string {
   // Strip path separators, CR/LF, quotes; fallback to safe default
   const safe = raw.replace(/[\r\n"/\\]/g, '').trim();
@@ -237,6 +257,18 @@ async function buildPdfBuffer(body: ExportPdfBody): Promise<{ filename: string; 
 
 function readWorkbenchHtml(): string {
   return readFileSync(join(__dirname, 'workbench', 'index.html'), 'utf8');
+}
+
+export function resolveWorkbenchAssetPath(relativePath: string): string | null {
+  const assetRoot = join(__dirname, 'workbench', 'assets');
+  const candidate = resolve(assetRoot, relativePath.replace(/^\/+/, ''));
+  if (candidate !== assetRoot && !candidate.startsWith(assetRoot + sep)) {
+    return null;
+  }
+  if (!existsSync(candidate) || !statSync(candidate).isFile()) {
+    return null;
+  }
+  return candidate;
 }
 
 function readWorkbenchV2Html(): string {
@@ -704,6 +736,15 @@ export async function startWorkbenchServer(
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://localhost');
+      if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+        const assetPath = resolveWorkbenchAssetPath(decodeURIComponent(url.pathname.slice('/assets/'.length)));
+        if (!assetPath) {
+          sendNotFound(res);
+          return;
+        }
+        sendFile(res, assetPath);
+        return;
+      }
       if (req.method === 'GET' && url.pathname === '/') {
         sendHtml(res, readWorkbenchHtml());
         return;

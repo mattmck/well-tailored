@@ -17,20 +17,19 @@ export function BrandedCard({
 }: BrandedCardProps) {
   return (
     <div 
-      className={`bg-white rounded-lg border border-[#E3DDD2] overflow-hidden ${
+      className={`bg-card rounded-lg border border-border overflow-hidden ${
         elevated ? 'shadow-sm' : ''
       } ${className}`}
     >
       {(title || description) && (
-        <div className="p-6 border-b border-[#E3DDD2]">
+        <div className="p-6 border-b border-border">
           {title && (
             <h3 
-              className="m-0"
+              className="m-0 text-card-foreground"
               style={{ 
                 fontFamily: 'Manrope, sans-serif', 
                 fontWeight: 600,
-                fontSize: '1.375rem',
-                color: '#2B2D33'
+                fontSize: '1.375rem'
               }}
             >
               {title}
@@ -38,11 +37,10 @@ export function BrandedCard({
           )}
           {description && (
             <p 
-              className="m-0 mt-2"
+              className="m-0 mt-2 text-muted-foreground"
               style={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '0.875rem',
-                color: '#747986',
                 lineHeight: 1.5
               }}
             >

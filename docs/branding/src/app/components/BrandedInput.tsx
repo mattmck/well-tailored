@@ -17,37 +17,34 @@ export function BrandedInput({
     <div className="space-y-2">
       {label && (
         <label 
-          className="block"
+          className="block text-card-foreground"
           style={{ 
             fontFamily: 'Inter, sans-serif', 
             fontWeight: 600,
-            fontSize: '0.875rem',
-            color: '#2B2D33'
+            fontSize: '0.875rem'
           }}
         >
           {label}
         </label>
       )}
       <input
-        className={`w-full px-4 py-3 bg-white border rounded-lg transition-all duration-200 ${
+        className={`w-full px-4 py-3 bg-input-background border rounded-lg transition-all duration-200 text-foreground ${
           error 
-            ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' 
-            : 'border-[#E3DDD2] focus:border-[#314A74] focus:ring-2 focus:ring-[#314A74]/10'
+            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+            : 'border-border focus:border-primary focus:ring-2 focus:ring-primary/10'
         } outline-none ${className}`}
         style={{ 
           fontFamily: 'Inter, sans-serif',
-          fontSize: '1rem',
-          color: '#2B2D33'
+          fontSize: '1rem'
         }}
         {...props}
       />
       {error && (
         <p 
-          className="m-0"
+          className="m-0 text-destructive"
           style={{ 
             fontFamily: 'Inter, sans-serif',
-            fontSize: '0.875rem',
-            color: '#d4183d'
+            fontSize: '0.875rem'
           }}
         >
           {error}
@@ -55,11 +52,10 @@ export function BrandedInput({
       )}
       {helperText && !error && (
         <p 
-          className="m-0"
+          className="m-0 text-muted-foreground"
           style={{ 
             fontFamily: 'Inter, sans-serif',
-            fontSize: '0.875rem',
-            color: '#747986'
+            fontSize: '0.875rem'
           }}
         >
           {helperText}
@@ -88,12 +84,11 @@ export function BrandedTextarea({
     <div className="space-y-2">
       {label && (
         <label 
-          className="block"
+          className="block text-card-foreground"
           style={{ 
             fontFamily: 'Inter, sans-serif', 
             fontWeight: 600,
-            fontSize: '0.875rem',
-            color: '#2B2D33'
+            fontSize: '0.875rem'
           }}
         >
           {label}
@@ -101,25 +96,23 @@ export function BrandedTextarea({
       )}
       <textarea
         rows={rows}
-        className={`w-full px-4 py-3 bg-white border rounded-lg transition-all duration-200 ${
+        className={`w-full px-4 py-3 bg-input-background border rounded-lg transition-all duration-200 text-foreground ${
           error 
-            ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200' 
-            : 'border-[#E3DDD2] focus:border-[#314A74] focus:ring-2 focus:ring-[#314A74]/10'
+            ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+            : 'border-border focus:border-primary focus:ring-2 focus:ring-primary/10'
         } outline-none resize-y ${className}`}
         style={{ 
           fontFamily: 'Inter, sans-serif',
-          fontSize: '1rem',
-          color: '#2B2D33'
+          fontSize: '1rem'
         }}
         {...props}
       />
       {error && (
         <p 
-          className="m-0"
+          className="m-0 text-destructive"
           style={{ 
             fontFamily: 'Inter, sans-serif',
-            fontSize: '0.875rem',
-            color: '#d4183d'
+            fontSize: '0.875rem'
           }}
         >
           {error}
@@ -127,11 +120,10 @@ export function BrandedTextarea({
       )}
       {helperText && !error && (
         <p 
-          className="m-0"
+          className="m-0 text-muted-foreground"
           style={{ 
             fontFamily: 'Inter, sans-serif',
-            fontSize: '0.875rem',
-            color: '#747986'
+            fontSize: '0.875rem'
           }}
         >
           {helperText}
@@ -144,7 +136,7 @@ export function BrandedTextarea({
 export function InputShowcase() {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg border border-[#E3DDD2] p-6 space-y-6">
+      <div className="bg-card rounded-lg border border-border p-6 space-y-6">
         <BrandedInput 
           label="Full Name" 
           placeholder="Enter your full name"

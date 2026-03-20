@@ -3,8 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tailored workbench</title>
-  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23BE503C"/%3E%3Cpath d="M18 24h28v18H18z" fill="none" stroke="%23fff" stroke-width="4" stroke-linejoin="round"/%3E%3Cpath d="M26 24v-4a6 6 0 0 1 12 0v4" fill="none" stroke="%23fff" stroke-width="4" stroke-linecap="round"/%3E%3C/svg%3E'>
+  <title>Well-Tailored Workbench</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo-mark.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --accent: #BE503C;
@@ -22,7 +25,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       color: var(--text);
       background: var(--surface-strong);
       height: 100vh;
@@ -50,6 +53,49 @@
       background: linear-gradient(180deg, rgba(30,30,30,0.97), rgba(22,22,22,0.95));
       border-bottom: 1px solid var(--line);
       flex-shrink: 0;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      padding: 6px 12px 6px 8px;
+      border: 1px solid rgba(227, 221, 210, 0.42);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(248, 245, 238, 0.98), rgba(255, 255, 255, 0.94));
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .brand-lockup__mark {
+      width: 28px;
+      height: 28px;
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .brand-lockup__text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .brand-lockup__name {
+      font-family: 'Manrope', 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      line-height: 1.05;
+      color: #2B2D33;
+    }
+
+    .brand-lockup__meta {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      line-height: 1.2;
+      text-transform: uppercase;
+      color: #747986;
     }
 
     .top-bar__workspace {
@@ -2004,6 +2050,14 @@
 
   <!-- ── TOP BAR ──────────────────────────────────────────── -->
   <header class="top-bar">
+    <div class="brand-lockup" aria-label="Well-Tailored">
+      <img class="brand-lockup__mark" src="/assets/logo-mark.svg" alt="">
+      <div class="brand-lockup__text">
+        <span class="brand-lockup__name">Well-Tailored</span>
+        <span class="brand-lockup__meta">Workbench</span>
+      </div>
+    </div>
+
     <div class="top-bar__workspace">
       <input
         type="text"

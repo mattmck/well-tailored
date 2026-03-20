@@ -42,7 +42,7 @@ export function Logo({ variant = 'full', size = 'md', className = '' }: LogoProp
   return (
     <div className={`${className}`}>
       <span 
-        className="text-[#2B2D33]" 
+        className="text-foreground" 
         style={{ 
           fontFamily: 'Manrope, sans-serif',
           fontSize: size === 'sm' ? '1.25rem' : size === 'md' ? '1.75rem' : size === 'lg' ? '2.5rem' : '3.5rem',
@@ -60,10 +60,10 @@ export function Logo({ variant = 'full', size = 'md', className = '' }: LogoProp
 export function Monogram({ size = 'md', className = '' }: Pick<LogoProps, 'size' | 'className'>) {
   return (
     <div 
-      className={`${sizeMap[size]} aspect-square flex items-center justify-center bg-[#314A74] rounded ${className}`}
+      className={`${sizeMap[size]} aspect-square flex items-center justify-center bg-primary rounded ${className}`}
     >
       <span 
-        className="text-white"
+        className="text-primary-foreground"
         style={{ 
           fontFamily: 'Manrope, sans-serif',
           fontSize: size === 'sm' ? '0.75rem' : size === 'md' ? '1.25rem' : size === 'lg' ? '2rem' : '3rem',

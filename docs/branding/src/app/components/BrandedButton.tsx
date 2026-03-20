@@ -23,10 +23,10 @@ export function BrandedButton({
   };
 
   const variantStyles = {
-    primary: 'bg-[#314A74] text-white hover:bg-[#253857] active:bg-[#1e2b44] disabled:opacity-50 disabled:cursor-not-allowed',
-    secondary: 'bg-[#F8F5EE] text-[#2B2D33] hover:bg-[#E3DDD2] active:bg-[#d4cec1] disabled:opacity-50 disabled:cursor-not-allowed',
-    outline: 'bg-transparent border-2 border-[#314A74] text-[#314A74] hover:bg-[#314A74] hover:text-white active:bg-[#253857] disabled:opacity-50 disabled:cursor-not-allowed',
-    ghost: 'bg-transparent text-[#314A74] hover:bg-[#F8F5EE] active:bg-[#E3DDD2] disabled:opacity-50 disabled:cursor-not-allowed',
+    primary: 'bg-primary text-primary-foreground hover:opacity-90 active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed',
+    secondary: 'bg-secondary text-secondary-foreground hover:opacity-90 active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed',
+    outline: 'bg-transparent border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed',
+    ghost: 'bg-transparent text-primary hover:bg-secondary active:bg-accent disabled:opacity-50 disabled:cursor-not-allowed',
   };
 
   return (
@@ -45,8 +45,8 @@ export function ButtonShowcase() {
   return (
     <div className="space-y-8">
       {/* Primary Buttons */}
-      <div className="bg-white rounded-lg border border-[#E3DDD2] p-6 space-y-4">
-        <h4 className="m-0 mb-4" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
+      <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+        <h4 className="m-0 mb-4 text-card-foreground" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
           Primary Buttons
         </h4>
         <div className="flex flex-wrap gap-4 items-center">
@@ -58,8 +58,8 @@ export function ButtonShowcase() {
       </div>
 
       {/* Secondary Buttons */}
-      <div className="bg-white rounded-lg border border-[#E3DDD2] p-6 space-y-4">
-        <h4 className="m-0 mb-4" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
+      <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+        <h4 className="m-0 mb-4 text-card-foreground" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
           Secondary Buttons
         </h4>
         <div className="flex flex-wrap gap-4 items-center">
@@ -71,8 +71,8 @@ export function ButtonShowcase() {
       </div>
 
       {/* Outline Buttons */}
-      <div className="bg-white rounded-lg border border-[#E3DDD2] p-6 space-y-4">
-        <h4 className="m-0 mb-4" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
+      <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+        <h4 className="m-0 mb-4 text-card-foreground" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
           Outline Buttons
         </h4>
         <div className="flex flex-wrap gap-4 items-center">
@@ -84,8 +84,8 @@ export function ButtonShowcase() {
       </div>
 
       {/* Ghost Buttons */}
-      <div className="bg-white rounded-lg border border-[#E3DDD2] p-6 space-y-4">
-        <h4 className="m-0 mb-4" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
+      <div className="bg-card rounded-lg border border-border p-6 space-y-4">
+        <h4 className="m-0 mb-4 text-card-foreground" style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 600 }}>
           Ghost Buttons
         </h4>
         <div className="flex flex-wrap gap-4 items-center">
