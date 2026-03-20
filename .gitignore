@@ -12,6 +12,7 @@ bio.md
 cover-letter.md
 resume-supplemental.md
 prompts/
+!web/src/**/prompts/
 .DS_Store
 .playwright-cli
 .worktrees/
