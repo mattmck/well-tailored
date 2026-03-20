@@ -1,6 +1,9 @@
 import { X } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import type { ActivePanel } from '../../types';
+import { SourcesPanel } from '../sources/SourcesPanel';
+import { PromptsPanel } from '../prompts/PromptsPanel';
+import { ConfigPanel } from '../config/ConfigPanel';
 
 const PANEL_CONFIG: Record<
   NonNullable<ActivePanel>,
@@ -43,8 +46,20 @@ export function PanelContainer() {
       </div>
 
       {/* Panel body */}
-      <div className="flex-1 overflow-y-auto p-3">
-        <p className="text-sm text-muted-foreground">{config.placeholder}</p>
+      <div className="flex-1 overflow-y-auto">
+        {state.activePanel === 'sources' ? (
+          <SourcesPanel />
+        ) : state.activePanel === 'config' ? (
+          <div className="p-3">
+            <ConfigPanel />
+          </div>
+        ) : state.activePanel === 'prompts' ? (
+          <PromptsPanel />
+        ) : (
+          <div className="p-3">
+            <p className="text-sm text-muted-foreground">{config.placeholder}</p>
+          </div>
+        )}
       </div>
     </div>
   );
