@@ -5,6 +5,7 @@ import { TopBar } from './features/workspace/TopBar';
 import { IconRail } from './features/layout/IconRail';
 import { PanelContainer } from './features/layout/PanelContainer';
 import { ScoreCards } from './features/scores/ScoreCards';
+import { EditorColumn } from './features/editor/EditorColumn';
 import * as api from './api/client';
 
 export default function App() {
@@ -38,9 +39,9 @@ export default function App() {
           <PanelContainer />
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <ScoreCards />
-            {/* Editor and preview will go here later */}
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              Workbench shell — features coming next
+            <div className="flex-1 flex overflow-hidden min-h-0">
+              <EditorColumn />
+              {/* PreviewColumn goes here in Task 12 */}
             </div>
           </main>
         </div>
