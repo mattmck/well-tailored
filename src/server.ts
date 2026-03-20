@@ -255,8 +255,20 @@ async function buildPdfBuffer(body: ExportPdfBody): Promise<{ filename: string; 
   }
 }
 
+function loadWorkbenchHtml(): string {
+  // Try React build first
+  const reactBuild = join(__dirname, '..', 'web', 'dist', 'index.html');
+  if (existsSync(reactBuild)) {
+    return readFileSync(reactBuild, 'utf8');
+  }
+  // Fall back to legacy
+  const packaged = join(__dirname, 'workbench', 'index-v2.html');
+  if (existsSync(packaged)) return readFileSync(packaged, 'utf8');
+  return readFileSync(join(process.cwd(), 'src', 'workbench', 'index-v2.html'), 'utf8');
+}
+
 function readWorkbenchHtml(): string {
-  return readFileSync(join(__dirname, 'workbench', 'index.html'), 'utf8');
+  return loadWorkbenchHtml();
 }
 
 export function resolveWorkbenchAssetPath(relativePath: string): string | null {
@@ -272,11 +284,7 @@ export function resolveWorkbenchAssetPath(relativePath: string): string | null {
 }
 
 function readWorkbenchV2Html(): string {
-  const packaged = join(__dirname, 'workbench', 'index-v2.html');
-  if (existsSync(packaged)) {
-    return readFileSync(packaged, 'utf8');
-  }
-  return readFileSync(join(process.cwd(), 'src', 'workbench', 'index-v2.html'), 'utf8');
+  return loadWorkbenchHtml();
 }
 
 function readResumeEditorHtml(): string {
@@ -755,6 +763,36 @@ export async function startWorkbenchServer(
       }
       if (req.method === 'GET' && url.pathname === '/resume-editor') {
         sendHtml(res, readResumeEditorHtml());
+        return;
+      }
+      // Serve static assets from React build (web/dist/assets/)
+      if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+        const assetsDir = join(__dirname, '..', 'web', 'dist', 'assets');
+        const assetFile = join(assetsDir, url.pathname.slice('/assets/'.length));
+        // Prevent path traversal: ensure the resolved path stays within assetsDir
+        const resolvedAsset = resolve(assetFile);
+        if (resolvedAsset.startsWith(assetsDir + sep) && existsSync(resolvedAsset)) {
+          const ext = resolvedAsset.split('.').pop()?.toLowerCase() ?? '';
+          const mimeTypes: Record<string, string> = {
+            js: 'application/javascript; charset=utf-8',
+            css: 'text/css; charset=utf-8',
+            svg: 'image/svg+xml',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            woff: 'font/woff',
+            woff2: 'font/woff2',
+          };
+          const contentType = mimeTypes[ext] ?? 'application/octet-stream';
+          const fileBuffer = readFileSync(resolvedAsset);
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          });
+          res.end(fileBuffer);
+          return;
+        }
+        sendNotFound(res);
         return;
       }
       await handleApi(req, res);

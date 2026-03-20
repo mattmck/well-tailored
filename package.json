@@ -7,7 +7,7 @@
     "tailored": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-assets.mjs",
+    "build": "tsc && node scripts/copy-assets.mjs && npm run web:build",
     "dev": "tsx src/cli.ts",
     "serve": "tsx src/cli.ts serve",
     "shots:workbench": "node scripts/capture-workbench-shots.mjs",
