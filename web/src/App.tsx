@@ -1,9 +1,47 @@
+import { useReducer, useEffect } from 'react';
+import { WorkspaceContext } from './context';
+import { initialState, reducer } from './state';
+import { TopBar } from './features/workspace/TopBar';
+import { IconRail } from './features/layout/IconRail';
+import { PanelContainer } from './features/layout/PanelContainer';
+import * as api from './api/client';
+
 export default function App() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(() => {
+    api.getConfig().then((cfg) => {
+      dispatch({ type: 'SET_CONFIG_PROVIDERS', providers: cfg.providers });
+    }).catch(console.error);
+
+    api.getLocalWorkspace().then((ws) => {
+      dispatch({ type: 'SET_SOURCE', field: 'sourceResume', value: ws.resume || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceBio', value: ws.bio || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceCoverLetter', value: ws.baseCoverLetter || '' });
+      dispatch({ type: 'SET_SOURCE', field: 'sourceSupplemental', value: ws.resumeSupplemental || '' });
+      dispatch({ type: 'SET_SOURCE_PATHS', paths: ws.paths || {} });
+      dispatch({ type: 'SET_PROMPT_SOURCES', sources: ws.prompts || {} });
+    }).catch(console.error);
+
+    api.listWorkspaces().then((res) => {
+      dispatch({ type: 'SET_SAVED_WORKSPACES', workspaces: res.workspaces });
+    }).catch(console.error);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-      <h1 className="text-2xl font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>
-        Well-Tailored Workbench
-      </h1>
-    </div>
+    <WorkspaceContext.Provider value={{ state, dispatch }}>
+      <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+        <TopBar />
+        <div className="flex flex-1 min-h-0">
+          <IconRail />
+          <PanelContainer />
+          <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              Workbench shell — features coming next
+            </div>
+          </main>
+        </div>
+      </div>
+    </WorkspaceContext.Provider>
   );
 }
