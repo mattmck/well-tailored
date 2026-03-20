@@ -14,7 +14,9 @@
     "video:promo": "node scripts/build-workbench-promo.mjs",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "web": "cd web && npm run dev",
+    "web:build": "cd web && npm run build"
   },
   "repository": {
     "type": "git",
