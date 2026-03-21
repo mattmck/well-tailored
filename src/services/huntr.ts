@@ -52,6 +52,12 @@ export interface HuntrWishlistJob {
   descriptionText: string;
 }
 
+export interface HuntrJobStageSummary {
+  boardId: string;
+  id: string;
+  listName?: string;
+}
+
 export interface HuntrApiClient {
   get<T>(endpoint: string): Promise<T>;
 }
@@ -444,6 +450,37 @@ export async function listAllJobs(
         company: extractCompanyName(job),
         listName: job._list ? listIdToName.get(job._list) : undefined,
         descriptionText: job.htmlDescription ? stripHtml(job.htmlDescription) : `Job title: ${job.title}`,
+      });
+    }
+  }
+
+  return jobs;
+}
+
+export async function listAllJobStages(
+  client: HuntrApiClient,
+  boardId?: string,
+): Promise<HuntrJobStageSummary[]> {
+  const boards = boardId
+    ? [{ id: boardId, isArchived: false }]
+    : await getBoards(client);
+
+  const jobs: HuntrJobStageSummary[] = [];
+  for (const board of boards) {
+    const [boardJobs, lists] = await Promise.all([
+      getJobsForBoard(client, board.id),
+      getListsForBoard(client, board.id),
+    ]);
+
+    const listIdToName = new Map(
+      Object.entries(lists).map(([id, list]) => [id, list.name]),
+    );
+
+    for (const job of boardJobs) {
+      jobs.push({
+        boardId: board.id,
+        id: job.id,
+        listName: job._list ? listIdToName.get(job._list) : undefined,
       });
     }
   }

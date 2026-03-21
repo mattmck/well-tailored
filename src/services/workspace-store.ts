@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { SavedWorkspace, SavedWorkspaceSummary, WorkspaceSnapshot } from '../types/index.js';
@@ -119,4 +119,12 @@ export function saveWorkspaceSnapshot(args: {
 
   writeFileSync(workspacePath(id), JSON.stringify(saved, null, 2), 'utf8');
   return saved;
+}
+
+export function deleteSavedWorkspace(id: string): void {
+  const path = workspacePath(id);
+  if (!existsSync(path)) {
+    throw new Error(`Workspace "${id}" was not found.`);
+  }
+  unlinkSync(path);
 }

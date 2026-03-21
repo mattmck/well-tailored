@@ -1,12 +1,38 @@
 import dotenv from 'dotenv';
 import { existsSync, readFileSync } from 'fs';
 import https from 'https';
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
 import { homedir } from 'os';
 import { Config, ProviderChoice, ProviderOption } from './types/index.js';
 import { listConfiguredProviders, normalizeProviderChoice } from './lib/providers.js';
 
 dotenv.config();
+
+function resolveSharedWorktreeEnvPath(): string | undefined {
+  const gitPath = join(process.cwd(), '.git');
+  if (!existsSync(gitPath)) return undefined;
+
+  try {
+    const gitPointer = readFileSync(gitPath, 'utf8').trim();
+    const prefix = 'gitdir: ';
+    if (!gitPointer.startsWith(prefix)) return undefined;
+
+    const gitDir = resolve(process.cwd(), gitPointer.slice(prefix.length).trim());
+    const repoRoot = dirname(dirname(dirname(gitDir)));
+    const sharedEnvPath = join(repoRoot, '.env');
+    if (!existsSync(sharedEnvPath)) return undefined;
+
+    const localEnvPath = resolve(process.cwd(), '.env');
+    return sharedEnvPath === localEnvPath ? undefined : sharedEnvPath;
+  } catch {
+    return undefined;
+  }
+}
+
+const sharedWorktreeEnvPath = resolveSharedWorktreeEnvPath();
+if (sharedWorktreeEnvPath) {
+  dotenv.config({ path: sharedWorktreeEnvPath });
+}
 
 /** Matches the format used by huntr-cli's ConfigManager. */
 interface HuntrCliConfig {

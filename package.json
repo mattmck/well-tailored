@@ -7,14 +7,16 @@
     "tailored": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-assets.mjs",
+    "build": "tsc && node scripts/copy-assets.mjs && npm run web:build",
     "dev": "tsx src/cli.ts",
     "serve": "tsx src/cli.ts serve",
     "shots:workbench": "node scripts/capture-workbench-shots.mjs",
     "video:promo": "node scripts/build-workbench-promo.mjs",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "web": "cd web && npm run dev",
+    "web:build": "cd web && npm run build"
   },
   "repository": {
     "type": "git",

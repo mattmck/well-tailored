@@ -25,6 +25,7 @@ import { DEFAULT_RESUME_THEME, renderCoverLetterHtml, renderPdf, renderResumeHtm
 import {
   buildTailorInputFromHuntrJob,
   getJob,
+  listAllJobStages,
   listAllJobs,
   listWishlistJobs,
   requireHuntrClient,
@@ -33,7 +34,7 @@ import { runTailorWorkflow } from './services/runs.js';
 import { analyzeGap, analyzeGapWithAI } from './services/gap.js';
 import { regenerateResumeSection } from './services/review.js';
 import { scoreTailoredOutput } from './services/scoring.js';
-import { listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
+import { deleteSavedWorkspace, listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
 import { resolveWorkspaceDocuments } from './services/workspace.js';
 import {
   AgentSelection,
@@ -255,8 +256,20 @@ async function buildPdfBuffer(body: ExportPdfBody): Promise<{ filename: string; 
   }
 }
 
+function loadWorkbenchHtml(): string {
+  // Try React build first
+  const reactBuild = join(__dirname, '..', 'web', 'dist', 'index.html');
+  if (existsSync(reactBuild)) {
+    return readFileSync(reactBuild, 'utf8');
+  }
+  // Fall back to legacy
+  const packaged = join(__dirname, 'workbench', 'index-v2.html');
+  if (existsSync(packaged)) return readFileSync(packaged, 'utf8');
+  return readFileSync(join(process.cwd(), 'src', 'workbench', 'index-v2.html'), 'utf8');
+}
+
 function readWorkbenchHtml(): string {
-  return readFileSync(join(__dirname, 'workbench', 'index.html'), 'utf8');
+  return loadWorkbenchHtml();
 }
 
 export function resolveWorkbenchAssetPath(relativePath: string): string | null {
@@ -272,11 +285,7 @@ export function resolveWorkbenchAssetPath(relativePath: string): string | null {
 }
 
 function readWorkbenchV2Html(): string {
-  const packaged = join(__dirname, 'workbench', 'index-v2.html');
-  if (existsSync(packaged)) {
-    return readFileSync(packaged, 'utf8');
-  }
-  return readFileSync(join(process.cwd(), 'src', 'workbench', 'index-v2.html'), 'utf8');
+  return loadWorkbenchHtml();
 }
 
 function readResumeEditorHtml(): string {
@@ -436,6 +445,19 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
+  if (method === 'DELETE' && url.pathname.startsWith('/api/workspaces/')) {
+    const id = decodeURIComponent(url.pathname.slice('/api/workspaces/'.length));
+    try {
+      deleteSavedWorkspace(id);
+      sendJson(res, 200, { ok: true, id });
+    } catch (error) {
+      const message = (error as Error).message || 'Workspace error';
+      const lowerMessage = message.toLowerCase();
+      sendJson(res, lowerMessage.includes('not found') ? 404 : 400, { error: message });
+    }
+    return;
+  }
+
   if (method === 'GET' && url.pathname === '/api/huntr/jobs') {
     const client = await requireHuntrClient();
     const stageParam = url.searchParams.get('stage');
@@ -455,6 +477,19 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
         url: entry.job.url ?? '',
         listName: entry.listName ?? '',
         descriptionText: entry.descriptionText,
+      })),
+    });
+    return;
+  }
+
+  if (method === 'GET' && url.pathname === '/api/huntr/job-stages') {
+    const client = await requireHuntrClient();
+    const jobs = await listAllJobStages(client, url.searchParams.get('board') ?? undefined);
+    sendJson(res, 200, {
+      jobs: jobs.map((entry) => ({
+        boardId: entry.boardId,
+        id: entry.id,
+        listName: entry.listName ?? '',
       })),
     });
     return;
@@ -755,6 +790,36 @@ export async function startWorkbenchServer(
       }
       if (req.method === 'GET' && url.pathname === '/resume-editor') {
         sendHtml(res, readResumeEditorHtml());
+        return;
+      }
+      // Serve static assets from React build (web/dist/assets/)
+      if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+        const assetsDir = join(__dirname, '..', 'web', 'dist', 'assets');
+        const assetFile = join(assetsDir, url.pathname.slice('/assets/'.length));
+        // Prevent path traversal: ensure the resolved path stays within assetsDir
+        const resolvedAsset = resolve(assetFile);
+        if (resolvedAsset.startsWith(assetsDir + sep) && existsSync(resolvedAsset)) {
+          const ext = resolvedAsset.split('.').pop()?.toLowerCase() ?? '';
+          const mimeTypes: Record<string, string> = {
+            js: 'application/javascript; charset=utf-8',
+            css: 'text/css; charset=utf-8',
+            svg: 'image/svg+xml',
+            png: 'image/png',
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            woff: 'font/woff',
+            woff2: 'font/woff2',
+          };
+          const contentType = mimeTypes[ext] ?? 'application/octet-stream';
+          const fileBuffer = readFileSync(resolvedAsset);
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          });
+          res.end(fileBuffer);
+          return;
+        }
+        sendNotFound(res);
         return;
       }
       await handleApi(req, res);
