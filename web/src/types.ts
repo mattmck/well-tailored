@@ -55,6 +55,22 @@ export interface GapAnalysis {
   fitRating: string;
 }
 
+export interface BulletItem {
+  id: string;
+  text: string;
+}
+
+export interface JobEntry {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  date: string;
+  bullets: BulletItem[];
+}
+
+export type SectionType = 'text' | 'bullets' | 'jobs';
+
 export interface EditorData {
   kind: 'resume' | 'generic';
   header?: ResumeHeaderFields;
@@ -63,8 +79,11 @@ export interface EditorData {
 
 export interface EditorSection {
   id: string;
-  heading: string;
-  content: string;
+  heading: string;      // section title text only (no ## prefix)
+  type: SectionType;
+  content: string;      // for type='text'
+  items: BulletItem[];  // for type='bullets'
+  jobs: JobEntry[];     // for type='jobs'
   accepted: boolean;
 }
 

@@ -437,11 +437,21 @@ export async function listAllJobs(
       Object.entries(lists).map(([id, list]) => [id, list.name]),
     );
 
+    // Build a position map from each list's ordered _jobs array
+    const jobOrder = new Map<string, number>();
+    for (const list of Object.values(lists)) {
+      for (const [i, jobId] of (list._jobs ?? []).entries()) {
+        if (!jobOrder.has(jobId)) jobOrder.set(jobId, i);
+      }
+    }
+
     const hydratedJobs = await mapWithConcurrency(
       boardJobs,
       4,
       async (job) => hydrateJobCompany(client, board.id, job),
     );
+
+    hydratedJobs.sort((a, b) => (jobOrder.get(a.id) ?? 9999) - (jobOrder.get(b.id) ?? 9999));
 
     for (const job of hydratedJobs) {
       jobs.push({

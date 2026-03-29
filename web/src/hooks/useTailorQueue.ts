@@ -53,17 +53,6 @@ export function useTailorQueue() {
 
         const tailorResult = await api.runManualTailor(body);
 
-        // Run gap analysis on the tailored resume
-        let gapAnalysis;
-        try {
-          gapAnalysis = await api.getGapAnalysis({
-            resume: tailorResult.output.resume,
-            jd: currentJob.jd,
-          });
-        } catch {
-          // Gap analysis is non-critical, continue without it
-        }
-
         dispatch({
           type: 'UPDATE_JOB',
           id: jobId,
@@ -72,14 +61,14 @@ export function useTailorQueue() {
             result: {
               output: tailorResult.output,
               scorecard: tailorResult.scorecard,
-              gapAnalysis,
+              gapAnalysis: tailorResult.gapAnalysis,
             },
           },
         });
         nextResult = {
           output: tailorResult.output,
           scorecard: tailorResult.scorecard,
-          gapAnalysis,
+          gapAnalysis: tailorResult.gapAnalysis,
         };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);

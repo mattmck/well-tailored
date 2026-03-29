@@ -7,12 +7,14 @@ import * as api from '@/api/client';
 
 export function ScoreCards() {
   const { state, dispatch } = useWorkspace();
-  const [regrading, setRegrading] = useState(false);
+  const [regradingIds, setRegradingIds] = useState<Set<string>>(new Set());
 
   const activeJob = state.jobs.find((j) => j.id === state.activeJobId);
   const scorecard = activeJob?.result?.scorecard;
 
   if (!activeJob || !scorecard) return null;
+
+  const regrading = regradingIds.has(activeJob.id);
 
   const documentCards = scorecard.documents.length > 0
     ? scorecard.documents
@@ -33,7 +35,8 @@ export function ScoreCards() {
 
   async function handleRegrade() {
     if (!activeJob?.result?.output?.resume || !activeJob?.jd) return;
-    setRegrading(true);
+    const jobId = activeJob.id;
+    setRegradingIds((prev) => new Set(prev).add(jobId));
     try {
       const [score, gap] = await Promise.all([
         api.getScore({
@@ -66,7 +69,11 @@ export function ScoreCards() {
     } catch (err) {
       console.error('Re-grade failed:', err);
     } finally {
-      setRegrading(false);
+      setRegradingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(jobId);
+        return next;
+      });
     }
   }
 

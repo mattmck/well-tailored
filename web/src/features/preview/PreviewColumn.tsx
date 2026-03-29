@@ -137,8 +137,8 @@ export function PreviewColumn() {
     const doc = previewFrameRef.current?.contentDocument;
     if (!doc) return;
 
-    doc.documentElement.style.overflow = 'hidden';
-    doc.body.style.overflow = 'hidden';
+    if (doc.documentElement) doc.documentElement.style.overflow = 'hidden';
+    if (doc.body) doc.body.style.overflow = 'hidden';
   }, []);
 
   const handlePreviewLoad = useCallback(() => {
@@ -164,7 +164,7 @@ export function PreviewColumn() {
       scheduleSync();
 
       const doc = iframe.contentDocument;
-      if (!doc) return;
+      if (!doc || !doc.body) return;
       const contentRoot = doc.body.firstElementChild as HTMLElement | null;
 
       if (previewScrollRef.current && 'ResizeObserver' in window) {

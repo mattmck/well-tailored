@@ -12,6 +12,10 @@ import {
 // ── Stop words & known-term dictionaries ─────────────────────────────────
 
 const STOP_WORDS = new Set([
+  // Common short words (articles, prepositions, conjunctions, pronouns)
+  'a', 'as', 'at', 'be', 'but', 'by', 'do', 'for', 'he', 'if', 'in', 'is', 'it', 'me',
+  'my', 'no', 'nor', 'not', 'of', 'on', 'or', 'our', 'own', 'per', 'so', 'the', 'to', 'up', 'us', 'we',
+  // Longer common words
   'about', 'after', 'again', 'against', 'also', 'among', 'an', 'and', 'any', 'are', 'because',
   'been', 'before', 'being', 'between', 'both', 'build', 'candidate', 'company', 'could', 'each',
   'from', 'have', 'having', 'into', 'just', 'like', 'more', 'must', 'need', 'needs', 'other',
@@ -23,6 +27,8 @@ const STOP_WORDS = new Set([
   'apply', 'what', 'when', 'where', 'which', 'while', 'would', 'should', 'such', 'than',
   'then', 'that', 'very', 'some', 'only', 'over', 'also', 'back', 'most', 'much', 'many',
   'even', 'still', 'here', 'know', 'come', 'want', 'look', 'think', 'keep', 'open', 'find',
+  // JD filler
+  'limited', 'including', 'required', 'preferred', 'plus', 'bonus', 'ideal', 'desired',
 ]);
 
 /** Short tokens that are legitimate tech terms. */
@@ -252,6 +258,7 @@ export function extractPhrases(text: string): string[] {
   // Filter: keep known-category terms, or phrases with 2+ occurrences
   return [...counts.entries()]
     .filter(([term, count]) => {
+      if (isJunkKeyword(term)) return false;
       const category = categorizeKeyword(term).category;
       // Always keep terms we can categorize as something specific
       if (category !== 'other' || IMPORTANT_OTHER_TERMS.has(term)) return true;
@@ -388,6 +395,34 @@ function validateCategory(cat: unknown): KeywordCategory {
   return valid.includes(cat as KeywordCategory) ? (cat as KeywordCategory) : 'other';
 }
 
+/**
+ * Returns true if a keyword term looks like JD filler rather than a real skill.
+ * Catches things like "for a", "but not", "limited to", "javascript or", etc.
+ */
+function isJunkKeyword(term: string): boolean {
+  const n = normalize(term);
+  if (n.length < 2) return true;
+
+  const tokens = n.split(/\s+/);
+
+  // Single-word: reject if it's a stop word and not a known short tech term
+  if (tokens.length === 1) {
+    return STOP_WORDS.has(n) && !SHORT_KEYWORD_TERMS.has(n);
+  }
+
+  // Multi-word: reject if it starts or ends with a conjunction/preposition/article
+  const FILLER_EDGES = new Set([
+    'a', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'if', 'in',
+    'is', 'it', 'no', 'not', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'we', 'with',
+  ]);
+  if (FILLER_EDGES.has(tokens[0]) || FILLER_EDGES.has(tokens[tokens.length - 1])) return true;
+
+  // Reject if every token is a stop word (e.g. "not limited to")
+  if (tokens.every((t) => STOP_WORDS.has(t) || FILLER_EDGES.has(t))) return true;
+
+  return false;
+}
+
 function parseKeywordArray(raw: unknown): CategorizedKeyword[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -396,7 +431,8 @@ function parseKeywordArray(raw: unknown): CategorizedKeyword[] {
     .map((item) => ({
       term: String(item.term),
       category: validateCategory(item.category),
-    }));
+    }))
+    .filter((kw) => !isJunkKeyword(kw.term));
 }
 
 function parsePartialMatches(raw: unknown): PartialMatch[] {
@@ -452,10 +488,11 @@ export async function analyzeGapWithAI(
   ) => Promise<string> = defaultComplete,
 ): Promise<EnrichedGapAnalysis> {
   try {
+    const cleanedJD = stripJobDescriptionNoise(jobDescription);
     const raw = await complete(
       model,
       gapAnalysisSystemPrompt(),
-      gapAnalysisUserPrompt({ resume, bio, jobDescription, jobTitle }),
+      gapAnalysisUserPrompt({ resume, bio, jobDescription: cleanedJD, jobTitle }),
     );
 
     const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;

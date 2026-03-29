@@ -125,6 +125,7 @@ export interface ManualTailorBody {
 export interface ManualTailorResponse {
   output: { resume: string; coverLetter: string };
   scorecard?: Scorecard;
+  gapAnalysis?: GapAnalysis;
 }
 
 interface ServerRunScorecard {
@@ -135,6 +136,7 @@ interface ServerRunScorecard {
 interface ServerManualTailorResponse {
   output: { resume: string; coverLetter: string };
   scorecard?: ServerRunScorecard;
+  gapAnalysis?: unknown;
 }
 
 interface ServerDiffResponse {
@@ -167,6 +169,7 @@ export interface DiffResponse {
 export interface GapBody {
   resume: string;
   jd: string;
+  useAI?: boolean;
 }
 
 export interface ScoreBody {
@@ -312,6 +315,7 @@ export async function runManualTailor(body: ManualTailorBody): Promise<ManualTai
   return {
     output: response.output,
     scorecard: normalizeScorecard(response.scorecard),
+    gapAnalysis: normalizeGapAnalysis(response.gapAnalysis),
   };
 }
 
@@ -332,6 +336,7 @@ export async function getGapAnalysis(body: GapBody): Promise<GapAnalysis> {
   const response = await post<unknown>('/api/gap', {
     resume: body.resume,
     jobDescription: body.jd,
+    useAI: body.useAI ?? true,
   });
 
   return normalizeGapAnalysis(response) ?? {

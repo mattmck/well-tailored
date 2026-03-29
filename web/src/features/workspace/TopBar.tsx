@@ -1,7 +1,9 @@
+import { toast } from 'sonner';
 import { useWorkspace } from '../../context';
 import { Button } from '../../components/ui/button';
 import * as api from '../../api/client';
 import { TailoringStatus } from './TailoringStatus';
+import { WorkspaceCombobox } from './WorkspaceCombobox';
 import {
   buildWorkspaceSnapshot,
   getWorkspaceHuntrIdsMissingStage,
@@ -71,6 +73,7 @@ export function TopBar() {
       const data = await api.loadWorkspace(matchedWorkspace.id);
       const nextState = workspaceRecordToState(data);
       dispatch({ type: 'LOAD_WORKSPACE', state: nextState });
+      toast.success(`Loaded "${matchedWorkspace.name}"`);
 
       const huntrIdsMissingStage = getWorkspaceHuntrIdsMissingStage(data);
       if (huntrIdsMissingStage.length > 0 && nextState.jobs) {
@@ -97,6 +100,7 @@ export function TopBar() {
       }
     } catch (err) {
       console.error('Failed to load workspace:', err);
+      toast.error('Failed to load workspace');
     }
   }
 
@@ -113,8 +117,10 @@ export function TopBar() {
       dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: saved.id });
       dispatch({ type: 'SET_WORKSPACE_NAME', name: saved.name });
       await refreshWorkspaceList();
+      toast.success(`Saved "${saved.name}"`);
     } catch (err) {
       console.error('Failed to save workspace:', err);
+      toast.error('Failed to save workspace');
     }
   }
 
@@ -125,8 +131,10 @@ export function TopBar() {
       await api.deleteWorkspace(state.activeWorkspaceId);
       dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: null });
       await refreshWorkspaceList();
+      toast.success('Workspace deleted');
     } catch (err) {
       console.error('Failed to delete workspace:', err);
+      toast.error('Failed to delete workspace');
     }
   }
 
@@ -144,20 +152,14 @@ export function TopBar() {
           WT
         </span>
 
-        {/* Workspace name input */}
-        <input
-          type="text"
+        {/* Workspace name combobox */}
+        <WorkspaceCombobox
           value={state.workspaceName}
-          onChange={(e) => dispatch({ type: 'SET_WORKSPACE_NAME', name: e.target.value })}
+          onChange={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
+          onSelect={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
+          options={state.savedWorkspaces}
           placeholder="Workspace name..."
-          list="saved-workspaces"
-          className="bg-background border border-border rounded-md px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-ring/50"
         />
-        <datalist id="saved-workspaces">
-          {state.savedWorkspaces.map((workspace) => (
-            <option key={workspace.id} value={workspace.name} />
-          ))}
-        </datalist>
 
         <Button variant="outline" size="sm" onClick={() => void handleSave()} disabled={!state.workspaceName.trim()}>
           Save
