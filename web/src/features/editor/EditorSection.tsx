@@ -196,11 +196,11 @@ function JobEntryEditor({
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
 }) {
-  function field(f: string) {
+  function field(f: 'title' | 'company' | 'location' | 'date') {
     return (
       <input
         type="text"
-        value={(job as unknown as Record<string, string>)[f] ?? ''}
+        value={job[f] ?? ''}
         onChange={e => onUpdate({ ...job, [f]: e.target.value })}
         className="flex-1 rounded border border-border bg-card px-2 py-1 text-sm outline-none focus:border-ring transition-colors min-w-0"
       />

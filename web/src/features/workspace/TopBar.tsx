@@ -116,8 +116,8 @@ export function TopBar() {
       });
       dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: saved.id });
       dispatch({ type: 'SET_WORKSPACE_NAME', name: saved.name });
-      await refreshWorkspaceList();
       toast.success(`Saved "${saved.name}"`);
+      refreshWorkspaceList().catch((err) => console.error('Failed to refresh workspace list:', err));
     } catch (err) {
       console.error('Failed to save workspace:', err);
       toast.error('Failed to save workspace');
@@ -130,8 +130,8 @@ export function TopBar() {
     try {
       await api.deleteWorkspace(state.activeWorkspaceId);
       dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: null });
-      await refreshWorkspaceList();
       toast.success('Workspace deleted');
+      refreshWorkspaceList().catch((err) => console.error('Failed to refresh workspace list:', err));
     } catch (err) {
       console.error('Failed to delete workspace:', err);
       toast.error('Failed to delete workspace');

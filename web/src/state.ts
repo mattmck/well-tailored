@@ -105,13 +105,19 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       const merged = action.jobs.map((incoming) => {
         const existing = existingById.get(incoming.id);
         if (!existing) return incoming;
-        // Preserve tailoring results, editor data, status, checked — refresh metadata
+        // Preserve tailoring results, editor data, status, checked — refresh metadata.
+        // If key metadata changed, clear derived fields so stale results aren't shown.
+        const metaChanged =
+          existing.company !== incoming.company ||
+          existing.title !== incoming.title ||
+          existing.jd !== incoming.jd;
         return {
           ...existing,
           company: incoming.company,
           title: incoming.title,
           jd: incoming.jd,
           stage: incoming.stage,
+          ...(metaChanged && { result: undefined, _editorData: null, status: 'loaded' as const, error: undefined }),
         };
       });
       return { ...state, jobs: merged };

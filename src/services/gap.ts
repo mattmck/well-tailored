@@ -2,82 +2,14 @@ import { complete as defaultComplete } from '../lib/ai.js';
 import { gapAnalysisSystemPrompt, gapAnalysisUserPrompt } from '../lib/prompts.js';
 import {
   CategorizedKeyword,
-  EnrichedGapAnalysis,
-  ExperienceRequirement,
   GapAnalysis,
+  ImpliedSkill,
   KeywordCategory,
   PartialMatch,
+  ExperienceRequirement,
 } from '../types/index.js';
 
-// ── Stop words & known-term dictionaries ─────────────────────────────────
-
-const STOP_WORDS = new Set([
-  // Common short words (articles, prepositions, conjunctions, pronouns)
-  'a', 'as', 'at', 'be', 'but', 'by', 'do', 'for', 'he', 'if', 'in', 'is', 'it', 'me',
-  'my', 'no', 'nor', 'not', 'of', 'on', 'or', 'our', 'own', 'per', 'so', 'the', 'to', 'up', 'us', 'we',
-  // Longer common words
-  'about', 'after', 'again', 'against', 'also', 'among', 'an', 'and', 'any', 'are', 'because',
-  'been', 'before', 'being', 'between', 'both', 'build', 'candidate', 'company', 'could', 'each',
-  'from', 'have', 'having', 'into', 'just', 'like', 'more', 'must', 'need', 'needs', 'other',
-  'role', 'their', 'there', 'these', 'they', 'this', 'those', 'through', 'using', 'with', 'your',
-  'you', 'will', 'years', 'work', 'working', 'team', 'strong', 'ability', 'able', 'looking',
-  'experience', 'position', 'responsibilities', 'requirements', 'qualifications', 'environment',
-  'opportunity', 'including', 'across', 'within', 'ensure', 'provide', 'support', 'help',
-  'make', 'take', 'well', 'good', 'best', 'high', 'new', 'first', 'part', 'great', 'join',
-  'apply', 'what', 'when', 'where', 'which', 'while', 'would', 'should', 'such', 'than',
-  'then', 'that', 'very', 'some', 'only', 'over', 'also', 'back', 'most', 'much', 'many',
-  'even', 'still', 'here', 'know', 'come', 'want', 'look', 'think', 'keep', 'open', 'find',
-  // JD filler
-  'limited', 'including', 'required', 'preferred', 'plus', 'bonus', 'ideal', 'desired',
-]);
-
-/** Short tokens that are legitimate tech terms. */
-const SHORT_KEYWORD_TERMS = new Set([
-  'ai', 'api', 'aws', 'c#', 'c++', 'ci/cd', 'css', 'etl', 'gcp', 'git', 'go', 'ios', 'k8s',
-  'ml', 'qa', 'sre', 'sql', 'tdd', 'ux', 'ui',
-]);
-
-const LANGUAGE_TERMS = new Set([
-  'bash', 'c#', 'c++', 'css', 'go', 'golang', 'graphql', 'groovy', 'html', 'java', 'javascript',
-  'kotlin', 'objective-c', 'perl', 'php', 'powershell', 'python', 'ruby', 'rust', 'scala', 'sql',
-  'swift', 'typescript',
-]);
-
-const FRAMEWORK_TERMS = new Set([
-  '.net', 'angular', 'django', 'ember', 'express', 'fastapi', 'flask', 'gatsby', 'laravel',
-  'nestjs', 'next.js', 'nextjs', 'node.js', 'nodejs', 'rails', 'react', 'react.js', 'reactjs',
-  'spring', 'spring boot', 'svelte', 'vue', 'vue.js',
-]);
-
-const TOOL_TERMS = new Set([
-  'ansible', 'cypress', 'datadog', 'docker', 'elasticsearch', 'figma', 'git', 'github',
-  'github actions', 'gitlab', 'grafana', 'helm', 'jenkins', 'jira', 'kafka', 'kubernetes',
-  'mongodb', 'playwright', 'postgres', 'postgresql', 'prometheus', 'rabbitmq', 'redis', 'selenium',
-  'snowflake', 'splunk', 'terraform', 'vite', 'webpack',
-]);
-
-const PLATFORM_TERMS = new Set([
-  'amazon web services', 'aws', 'azure', 'gcp', 'google cloud', 'google cloud platform', 'heroku',
-  'linux', 'netlify', 'unix', 'vercel',
-]);
-
-const METHODOLOGY_TERMS = new Set([
-  'agile', 'ci/cd', 'continuous integration', 'continuous delivery', 'devops', 'kanban', 'lean',
-  'scrum', 'tdd', 'test driven development',
-]);
-
-const SOFT_SKILL_TERMS = new Set([
-  'coaching', 'collaboration', 'communication', 'cross-functional', 'leadership', 'mentoring',
-  'ownership', 'presentation', 'problem solving', 'stakeholder management', 'teamwork',
-]);
-
-const IMPORTANT_OTHER_TERMS = new Set([
-  'accessibility', 'api design', 'cloud infrastructure', 'container orchestration', 'data pipelines',
-  'design systems', 'distributed systems', 'event driven architecture', 'frontend architecture',
-  'infrastructure as code', 'machine learning', 'microservices', 'observability', 'performance optimization',
-  'relational databases', 'security best practices', 'site reliability engineering', 'system design',
-  'technical leadership', 'test automation',
-]);
+// ── JD noise stripping ────────────────────────────────────────────────────
 
 const JD_NOISE_SECTION_HEADINGS = [
   /^equal opportunity\b/i,
@@ -118,39 +50,12 @@ const JD_NOISE_PATTERNS = [
   /\brace,?\s+color,?\s+religion\b/i,
 ];
 
-const SYNONYMS: Record<string, string[]> = {
-  aws: ['amazon web services'],
-  'amazon web services': ['aws'],
-  gcp: ['google cloud', 'google cloud platform'],
-  'google cloud': ['gcp', 'google cloud platform'],
-  javascript: ['js', 'ecmascript'],
-  k8s: ['kubernetes'],
-  kubernetes: ['k8s'],
-  mongo: ['mongodb'],
-  mongodb: ['mongo'],
-  node: ['node.js', 'nodejs'],
-  'node.js': ['node', 'nodejs'],
-  postgres: ['postgresql', 'psql'],
-  postgresql: ['postgres', 'psql'],
-  react: ['react.js', 'reactjs'],
-  'react.js': ['react', 'reactjs'],
-  typescript: ['ts'],
-};
-
-// ── Helpers ──────────────────────────────────────────────────────────────
-
 function normalize(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim().toLowerCase();
 }
 
-function tokenize(text: string): string[] {
-  return (normalize(text).match(/[a-z0-9][a-z0-9+.#/&-]*/g) ?? [])
-    .map((t) => t.replace(/[.]+$/, '')); // strip trailing dots (but keep internal ones like "node.js")
-}
-
 function isNoiseText(text: string): boolean {
-  const normalized = normalize(text);
-  return JD_NOISE_PATTERNS.some((pattern) => pattern.test(normalized));
+  return JD_NOISE_PATTERNS.some((pattern) => pattern.test(normalize(text)));
 }
 
 function stripJobDescriptionNoise(text: string): string {
@@ -179,19 +84,7 @@ function stripJobDescriptionNoise(text: string): string {
   return kept.join('\n\n');
 }
 
-function isRelevantToken(token: string): boolean {
-  return !STOP_WORDS.has(token) && (token.length >= 4 || SHORT_KEYWORD_TERMS.has(token));
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function containsTerm(text: string, term: string): boolean {
-  if (!text || !term) return false;
-  const escaped = escapeRegExp(normalize(term)).replace(/\\ /g, '\\s+');
-  return new RegExp(`(^|[^a-z0-9])${escaped}(?=[^a-z0-9]|$)`, 'i').test(normalize(text));
-}
+// ── JSON extraction ───────────────────────────────────────────────────────
 
 function extractJsonObject(raw: string): string {
   const match = raw.match(/\{[\s\S]*\}/);
@@ -199,228 +92,15 @@ function extractJsonObject(raw: string): string {
   return match[0];
 }
 
-// ── Categorization ───────────────────────────────────────────────────────
-
-/**
- * Categorize a keyword/phrase. Only returns a specific category for terms
- * that are actually in the known dictionaries — everything else is 'other'.
- */
-export function categorizeKeyword(term: string): CategorizedKeyword {
-  const n = normalize(term);
-
-  if (LANGUAGE_TERMS.has(n)) return { term, category: 'language' };
-  if (FRAMEWORK_TERMS.has(n)) return { term, category: 'framework' };
-  if (TOOL_TERMS.has(n)) return { term, category: 'tool' };
-  if (PLATFORM_TERMS.has(n)) return { term, category: 'platform' };
-  if (METHODOLOGY_TERMS.has(n)) return { term, category: 'methodology' };
-  if (SOFT_SKILL_TERMS.has(n)) return { term, category: 'soft-skill' };
-  if (/certif|license|certified/.test(n)) return { term, category: 'certification' };
-  if (IMPORTANT_OTHER_TERMS.has(n)) return { term, category: 'other' };
-
-  return { term, category: 'other' };
-}
-
-// ── Heuristic extraction (fallback for --no-ai) ─────────────────────────
-
-/**
- * Extract meaningful keywords from text. Returns only terms that match a
- * known tech category OR appear 2+ times as a multi-word phrase.
- * Capped at 30 terms max.
- */
-export function extractPhrases(text: string): string[] {
-  const cleanedText = stripJobDescriptionNoise(text);
-  const tokens = tokenize(cleanedText);
-  const counts = new Map<string, number>();
-
-  // Single tokens
-  for (const token of tokens) {
-    if (!isRelevantToken(token)) continue;
-    counts.set(token, (counts.get(token) ?? 0) + 1);
-  }
-
-  // Bigrams and trigrams
-  for (let i = 0; i < tokens.length; i++) {
-    for (let width = 2; width <= 3; width++) {
-      const slice = tokens.slice(i, i + width);
-      if (slice.length !== width || slice.some((t) => STOP_WORDS.has(t) && !SHORT_KEYWORD_TERMS.has(t))) continue;
-      const phrase = slice.join(' ');
-      counts.set(phrase, (counts.get(phrase) ?? 0) + 1);
-    }
-  }
-
-  // Deduplicate: drop single words that are part of a kept phrase
-  const wordsInPhrases = new Set<string>();
-  for (const term of counts.keys()) {
-    if (!term.includes(' ')) continue;
-    for (const part of term.split(' ')) wordsInPhrases.add(part);
-  }
-
-  // Filter: keep known-category terms, or phrases with 2+ occurrences
-  return [...counts.entries()]
-    .filter(([term, count]) => {
-      if (isJunkKeyword(term)) return false;
-      const category = categorizeKeyword(term).category;
-      // Always keep terms we can categorize as something specific
-      if (category !== 'other' || IMPORTANT_OTHER_TERMS.has(term)) return true;
-      // Keep multi-word phrases that appear 2+ times (likely real requirements)
-      if (term.includes(' ') && count >= 2) return true;
-      // Drop single-word terms that are components of kept phrases
-      if (!term.includes(' ') && wordsInPhrases.has(term)) return false;
-      // Drop low-frequency 'other' single words — this is where the 993 noise lived
-      return false;
-    })
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 30)
-    .map(([term]) => term);
-}
-
-/**
- * Extract years-of-experience requirements from a job description.
- */
-export function extractExperienceRequirements(jobDescription: string): ExperienceRequirement[] {
-  const requirements: ExperienceRequirement[] = [];
-  const pattern = /(\d+)(?:\s*-\s*\d+)?\+?\s*years?\s+(?:of\s+)?(?:experience\s+)?(?:(?:with|in)\s+)?([A-Za-z0-9+#./&,\- ]{2,60})/gi;
-  const preferredPattern = /\b(preferred|nice to have|ideally|bonus)\b/i;
-  const requiredPattern = /\b(required|must have|minimum|at least)\b/i;
-  const seen = new Set<string>();
-
-  for (const line of jobDescription.split(/\n/)) {
-    let match: RegExpExecArray | null;
-    pattern.lastIndex = 0;
-    while ((match = pattern.exec(line)) !== null) {
-      const years = parseInt(match[1], 10);
-      if (!Number.isFinite(years)) continue;
-
-      const skill = match[2].replace(/\b(experience|skills?|required|preferred)\b/gi, '').trim();
-      if (!skill) continue;
-
-      const key = `${normalize(skill)}:${years}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-
-      requirements.push({
-        skill,
-        years,
-        isRequired: preferredPattern.test(line) ? false : requiredPattern.test(line) || true,
-      });
-    }
-  }
-
-  return requirements;
-}
-
-/**
- * Heuristic gap analysis — fallback when AI is unavailable.
- * Only surfaces known-category terms, capped at 30.
- */
-export function analyzeGap(
-  resume: string,
-  jobDescription: string,
-  jobTitle?: string,
-): GapAnalysis {
-  const jdTerms = extractPhrases(`${jobTitle ?? ''}\n${jobDescription}`);
-  const resumeTerms = extractPhrases(resume);
-  const resumeText = normalize(resume);
-  const matchedKeywords: CategorizedKeyword[] = [];
-  const missingKeywords: CategorizedKeyword[] = [];
-  const partialMatches: PartialMatch[] = [];
-  const partialSeen = new Set<string>();
-
-  for (const term of jdTerms) {
-    const keyword = categorizeKeyword(term);
-
-    if (containsTerm(resumeText, term)) {
-      matchedKeywords.push(keyword);
-      continue;
-    }
-
-    // Check synonyms
-    const normalizedTerm = normalize(term);
-    const synonyms = SYNONYMS[normalizedTerm] ?? [];
-    let foundPartial = false;
-
-    for (const syn of synonyms) {
-      if (containsTerm(resumeText, syn)) {
-        const key = `${normalizedTerm}::${normalize(syn)}`;
-        if (!partialSeen.has(key)) {
-          partialSeen.add(key);
-          partialMatches.push({ jdTerm: term, resumeTerm: syn, relationship: 'synonym' });
-        }
-        foundPartial = true;
-        break;
-      }
-    }
-
-    // Check substring matches against resume terms
-    if (!foundPartial) {
-      for (const rTerm of resumeTerms) {
-        const nr = normalize(rTerm);
-        if (nr.includes(normalizedTerm) || normalizedTerm.includes(nr)) {
-          const key = `${normalizedTerm}::${nr}`;
-          if (!partialSeen.has(key)) {
-            partialSeen.add(key);
-            partialMatches.push({ jdTerm: term, resumeTerm: rTerm, relationship: 'subset match' });
-          }
-          foundPartial = true;
-          break;
-        }
-      }
-    }
-
-    if (!foundPartial) {
-      missingKeywords.push(keyword);
-    }
-  }
-
-  const total = jdTerms.length;
-  const matchRatio = total === 0 ? 0 : matchedKeywords.length / total;
-  const overallFit = matchRatio >= 0.7 ? 'strong' : matchRatio >= 0.4 ? 'moderate' : 'weak';
-
-  return {
-    matchedKeywords,
-    missingKeywords,
-    partialMatches,
-    experienceRequirements: extractExperienceRequirements(jobDescription),
-    overallFit,
-  };
-}
-
-// ── AI-driven gap analysis (primary path) ────────────────────────────────
+// ── Response parsing ──────────────────────────────────────────────────────
 
 function validateCategory(cat: unknown): KeywordCategory {
   const valid: KeywordCategory[] = [
-    'language', 'framework', 'tool', 'platform',
-    'soft-skill', 'certification', 'methodology', 'other',
+    'language', 'framework', 'tool', 'infrastructure', 'architecture',
+    'data', 'ai-ml', 'leadership', 'operational', 'security',
+    'soft-skill', 'certification', 'other',
   ];
   return valid.includes(cat as KeywordCategory) ? (cat as KeywordCategory) : 'other';
-}
-
-/**
- * Returns true if a keyword term looks like JD filler rather than a real skill.
- * Catches things like "for a", "but not", "limited to", "javascript or", etc.
- */
-function isJunkKeyword(term: string): boolean {
-  const n = normalize(term);
-  if (n.length < 2) return true;
-
-  const tokens = n.split(/\s+/);
-
-  // Single-word: reject if it's a stop word and not a known short tech term
-  if (tokens.length === 1) {
-    return STOP_WORDS.has(n) && !SHORT_KEYWORD_TERMS.has(n);
-  }
-
-  // Multi-word: reject if it starts or ends with a conjunction/preposition/article
-  const FILLER_EDGES = new Set([
-    'a', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'if', 'in',
-    'is', 'it', 'no', 'not', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'we', 'with',
-  ]);
-  if (FILLER_EDGES.has(tokens[0]) || FILLER_EDGES.has(tokens[tokens.length - 1])) return true;
-
-  // Reject if every token is a stop word (e.g. "not limited to")
-  if (tokens.every((t) => STOP_WORDS.has(t) || FILLER_EDGES.has(t))) return true;
-
-  return false;
 }
 
 function parseKeywordArray(raw: unknown): CategorizedKeyword[] {
@@ -431,8 +111,19 @@ function parseKeywordArray(raw: unknown): CategorizedKeyword[] {
     .map((item) => ({
       term: String(item.term),
       category: validateCategory(item.category),
-    }))
-    .filter((kw) => !isJunkKeyword(kw.term));
+    }));
+}
+
+function parseImpliedSkills(raw: unknown): ImpliedSkill[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> =>
+      typeof item === 'object' && item !== null && typeof (item as Record<string, unknown>).term === 'string')
+    .map((item) => ({
+      term: String(item.term),
+      category: validateCategory(item.category),
+      rationale: typeof item.rationale === 'string' ? item.rationale : '',
+    }));
 }
 
 function parsePartialMatches(raw: unknown): PartialMatch[] {
@@ -468,11 +159,11 @@ function parseOverallFit(raw: unknown): GapAnalysis['overallFit'] {
   return 'moderate';
 }
 
+// ── AI gap analysis ───────────────────────────────────────────────────────
+
 /**
  * AI-driven gap analysis. The model extracts, classifies, and evaluates
- * keywords in a single pass — no heuristic extraction needed.
- *
- * Falls back to heuristic analysis if the AI call fails.
+ * keywords in a single pass, including implied skills and exact ATS phrases.
  */
 export async function analyzeGapWithAI(
   resume: string,
@@ -486,33 +177,27 @@ export async function analyzeGapWithAI(
     userPrompt: string,
     verbose?: boolean,
   ) => Promise<string> = defaultComplete,
-): Promise<EnrichedGapAnalysis> {
-  try {
-    const cleanedJD = stripJobDescriptionNoise(jobDescription);
-    const raw = await complete(
-      model,
-      gapAnalysisSystemPrompt(),
-      gapAnalysisUserPrompt({ resume, bio, jobDescription: cleanedJD, jobTitle }),
-    );
+): Promise<GapAnalysis> {
+  const cleanedJD = stripJobDescriptionNoise(jobDescription);
+  // Fall back to raw JD if stripping removed >30% of content (prevents dropping real requirements)
+  const jdForPrompt = cleanedJD.length < jobDescription.length * 0.7 ? jobDescription : cleanedJD;
+  const raw = await complete(
+    model,
+    gapAnalysisSystemPrompt(),
+    gapAnalysisUserPrompt({ resume, bio, jobDescription: jdForPrompt, jobTitle }),
+  );
 
-    const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;
+  const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;
 
-    return {
-      matchedKeywords: parseKeywordArray(parsed.matchedKeywords),
-      missingKeywords: parseKeywordArray(parsed.missingKeywords),
-      partialMatches: parsePartialMatches(parsed.partialMatches),
-      experienceRequirements: parseExperienceRequirements(parsed.experienceRequirements),
-      overallFit: parseOverallFit(parsed.overallFit),
-      narrative: typeof parsed.narrative === 'string' ? parsed.narrative.trim() : '',
-      tailoringHints: Array.isArray(parsed.tailoringHints) ? parsed.tailoringHints.map(String) : [],
-    };
-  } catch (error) {
-    // Fall back to heuristic if AI fails
-    const heuristic = analyzeGap(resume, jobDescription, jobTitle);
-    return {
-      ...heuristic,
-      narrative: `AI analysis unavailable: ${(error as Error).message}. Showing heuristic results.`,
-      tailoringHints: [],
-    };
-  }
+  return {
+    matchedKeywords: parseKeywordArray(parsed.matchedKeywords),
+    missingKeywords: parseKeywordArray(parsed.missingKeywords),
+    partialMatches: parsePartialMatches(parsed.partialMatches),
+    impliedSkills: parseImpliedSkills(parsed.impliedSkills),
+    experienceRequirements: parseExperienceRequirements(parsed.experienceRequirements),
+    overallFit: parseOverallFit(parsed.overallFit),
+    narrative: typeof parsed.narrative === 'string' ? parsed.narrative.trim() : '',
+    exactPhrases: Array.isArray(parsed.exactPhrases) ? parsed.exactPhrases.map(String) : [],
+    tailoringHints: Array.isArray(parsed.tailoringHints) ? parsed.tailoringHints.map(String) : [],
+  };
 }

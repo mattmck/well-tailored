@@ -14,7 +14,8 @@ const STATUS_ORDER: Record<Job['status'], number> = {
   tailoring: 0, tailored: 1, reviewed: 2, error: 3, loaded: 4,
 };
 
-function sortJobs(jobs: Job[], field: SortField, dir: SortDir): Job[] {
+function sortJobs(jobs: Job[], field: SortField | null, dir: SortDir): Job[] {
+  if (!field) return jobs; // preserve incoming order (e.g. Huntr board order)
   return [...jobs].sort((a, b) => {
     let cmp: number;
     if (field === 'status') {
@@ -123,7 +124,7 @@ const SORT_FIELDS: { field: SortField; label: string }[] = [
 
 export function JobList() {
   const { state } = useWorkspace();
-  const [sortField, setSortField] = useState<SortField>('company');
+  const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   function handleSort(field: SortField) {

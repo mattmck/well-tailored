@@ -336,7 +336,7 @@ export async function getGapAnalysis(body: GapBody): Promise<GapAnalysis> {
   const response = await post<unknown>('/api/gap', {
     resume: body.resume,
     jobDescription: body.jd,
-    useAI: body.useAI ?? true,
+    ...(body.useAI !== undefined && { useAI: body.useAI }),
   });
 
   return normalizeGapAnalysis(response) ?? {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useWorkspace } from '../../context';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { EditorSection } from './EditorSection';
@@ -21,16 +21,21 @@ export function EditorColumn() {
         : job.result.output.coverLetter
       : null;
 
-  const editorData: EditorData | null = (() => {
-    if (!job || !activeMarkdown) return null;
-    if (job._editorData) return job._editorData;
+  const editorData: EditorData | null =
+    job && activeMarkdown
+      ? job._editorData ?? parseEditorData(activeMarkdown, state.activeDoc, null)
+      : null;
 
-    const newData = parseEditorData(activeMarkdown, state.activeDoc, job._editorData);
-    setTimeout(() => {
-      dispatch({ type: 'UPDATE_JOB', id: job.id, patch: { _editorData: newData } });
-    }, 0);
-    return newData;
-  })();
+  // Persist freshly-parsed editorData once after initial computation
+  useEffect(() => {
+    if (!job || job._editorData || !activeMarkdown) return;
+    dispatch({
+      type: 'UPDATE_JOB',
+      id: job.id,
+      patch: { _editorData: parseEditorData(activeMarkdown, state.activeDoc, null) },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id, activeMarkdown, state.activeDoc]);
 
   const fullMarkdown = editorData ? reconstructEditorData(editorData) : (activeMarkdown ?? '');
 

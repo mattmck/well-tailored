@@ -35,6 +35,7 @@ function getVerdictStyle(verdict: string): { className: string; label: string } 
   }
 }
 
+// confidence is a 0–100 integer (percentage points, not a 0–1 fraction)
 function getConfidenceStyle(confidence: number): string {
   if (confidence >= 80) return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
   if (confidence >= 60) return 'bg-amber-400/10 text-amber-700 border-amber-400/20';

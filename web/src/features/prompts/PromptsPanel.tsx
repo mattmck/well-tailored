@@ -55,6 +55,7 @@ export function PromptsPanel() {
             <button
               onClick={() => fileRefs.current[field.key]?.click()}
               className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-secondary/50"
+              aria-label={`Upload ${field.label}`}
               title={`Upload ${field.label.toLowerCase()} file`}
             >
               <Upload size={11} strokeWidth={2} />

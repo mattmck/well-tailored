@@ -300,9 +300,9 @@ function parseResumeEditorData(markdown: string, previous?: EditorData | null): 
     }
   }
 
-  // Preserve accepted state from previous parse
+  // Preserve accepted state from previous parse by matching on heading
   const mergedSections = sections.map((sec) => {
-    const prev = previousSections.find(p => p.id === sec.id);
+    const prev = previousSections.find(p => p.heading === sec.heading);
     return { ...sec, accepted: prev?.accepted ?? false };
   });
 
@@ -334,7 +334,7 @@ function parseGenericEditorData(markdown: string, previous?: EditorData | null):
       currentLines.pop();
     }
     const content = currentLines.join('\n');
-    const prev = previousSections.find(p => p.id); // can't match by id after re-parse
+    const prev = previousSections.find(p => p.heading === currentHeading.replace(/^#+\s*/, ''));
     sections.push({
       id: genId(),
       heading: currentHeading.replace(/^#+\s*/, ''),
