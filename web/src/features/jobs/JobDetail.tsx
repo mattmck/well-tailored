@@ -31,7 +31,7 @@ export function JobDetail() {
   }
 
   return (
-    <div className="shrink-0 max-h-[48%] min-h-[220px] overflow-hidden p-2 flex flex-col gap-2">
+    <div className="shrink-0 max-h-[48%] min-h-[220px] overflow-y-auto p-2 flex flex-col gap-2">
       {/* Company + Title row */}
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col gap-1">

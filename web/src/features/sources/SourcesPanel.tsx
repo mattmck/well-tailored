@@ -94,7 +94,7 @@ function SourceItemRow({
       <textarea
         value={value}
         onChange={handleTextareaChange}
-        className="bg-card border border-border rounded-md text-xs font-mono leading-relaxed p-2 w-full resize-none outline-none focus:border-ring transition-colors text-foreground placeholder:text-muted-foreground"
+        className="bg-background border border-border rounded text-xs font-mono leading-relaxed p-2 w-full resize-y outline-none focus:ring-1 focus:ring-ring transition-colors text-foreground placeholder:text-muted-foreground"
         style={{ minHeight: '140px' }}
         placeholder={`Paste ${item.label.toLowerCase()} content here…`}
         spellCheck={false}
@@ -107,7 +107,7 @@ export function SourcesPanel() {
   const { state, dispatch } = useWorkspace();
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col overflow-y-auto flex-1 min-h-0">
       {SOURCE_FIELDS.map((item) => (
         <SourceItemRow
           key={item.field}

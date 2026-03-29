@@ -52,6 +52,7 @@ export const initialState: WorkspaceState = {
 
 export type Action =
   | { type: 'SET_JOBS'; jobs: Job[] }
+  | { type: 'MERGE_JOBS'; jobs: Job[] }
   | { type: 'SET_ACTIVE_JOB'; id: string | null }
   | { type: 'UPDATE_JOB'; id: string; patch: Partial<Job> }
   | { type: 'MERGE_JOB_STAGES'; stages: Record<string, string> }
@@ -98,6 +99,29 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
   switch (action.type) {
     case 'SET_JOBS':
       return { ...state, jobs: action.jobs };
+
+    case 'MERGE_JOBS': {
+      const existingById = new Map(state.jobs.map((j) => [j.id, j]));
+      const merged = action.jobs.map((incoming) => {
+        const existing = existingById.get(incoming.id);
+        if (!existing) return incoming;
+        // Preserve tailoring results, editor data, status, checked — refresh metadata.
+        // If key metadata changed, clear derived fields so stale results aren't shown.
+        const metaChanged =
+          existing.company !== incoming.company ||
+          existing.title !== incoming.title ||
+          existing.jd !== incoming.jd;
+        return {
+          ...existing,
+          company: incoming.company,
+          title: incoming.title,
+          jd: incoming.jd,
+          stage: incoming.stage,
+          ...(metaChanged && { result: undefined, _editorData: null, status: 'loaded' as const, error: undefined }),
+        };
+      });
+      return { ...state, jobs: merged };
+    }
 
     case 'SET_ACTIVE_JOB':
       return { ...state, activeJobId: action.id };
@@ -243,6 +267,7 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           action.state.scoreModel && action.state.scoreModel !== 'auto'
             ? action.state.scoreModel
             : state.scoreModel,
+        scoresStale: false,
       };
 
     default: {

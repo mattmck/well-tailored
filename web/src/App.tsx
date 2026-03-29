@@ -1,4 +1,5 @@
 import { useReducer, useEffect } from 'react';
+import { Toaster } from 'sonner';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { WorkspaceContext } from './context';
 import { initialState, reducer } from './state';
@@ -21,24 +22,26 @@ function AppShell() {
       <div className="flex flex-1 min-h-0">
         <IconRail />
         <PanelContainer />
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <ScoreCards />
-          <div className="flex-1 min-h-0 flex overflow-hidden">
-            <PanelGroup direction="horizontal" className="flex-1 overflow-hidden min-h-0">
-              <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
-                <div className="h-full min-h-0 flex">
-                  <EditorColumn />
-                </div>
-              </Panel>
-              <PanelResizeHandle className="w-1 bg-border hover:bg-primary/30 transition-colors" />
-              <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
-                <div className="h-full min-h-0 flex">
-                  <PreviewColumn />
-                </div>
-              </Panel>
-            </PanelGroup>
-            <MissingKeywords />
+        <main className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+            <ScoreCards />
+            <div className="flex-1 min-h-0 flex overflow-hidden">
+              <PanelGroup direction="horizontal" className="flex-1 overflow-hidden min-h-0">
+                <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
+                  <div className="h-full min-h-0 flex w-full">
+                    <EditorColumn />
+                  </div>
+                </Panel>
+                <PanelResizeHandle className="w-1 bg-border hover:bg-primary/30 transition-colors" />
+                <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
+                  <div className="h-full min-h-0 flex w-full">
+                    <PreviewColumn />
+                  </div>
+                </Panel>
+              </PanelGroup>
+            </div>
           </div>
+          <MissingKeywords />
         </main>
       </div>
     </div>
@@ -80,6 +83,7 @@ export default function App() {
   return (
     <WorkspaceContext.Provider value={{ state, dispatch }}>
       <AppShell />
+      <Toaster richColors position="bottom-right" />
     </WorkspaceContext.Provider>
   );
 }

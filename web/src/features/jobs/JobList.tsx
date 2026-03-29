@@ -1,10 +1,31 @@
+import { useState } from 'react';
 import { useWorkspace } from '../../context';
 import type { Job } from '../../types';
-import { CheckCircle2, Circle, LoaderCircle, OctagonAlert, Sparkles } from 'lucide-react';
+import { CheckCircle2, Circle, LoaderCircle, OctagonAlert, Sparkles, ChevronUp, ChevronDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/components/ui/utils';
 import { formatStageLabel, getStageBadgeClass, matchesJobFilter } from './stages';
+
+type SortField = 'company' | 'title' | 'stage' | 'status';
+type SortDir = 'asc' | 'desc';
+
+const STATUS_ORDER: Record<Job['status'], number> = {
+  tailoring: 0, tailored: 1, reviewed: 2, error: 3, loaded: 4,
+};
+
+function sortJobs(jobs: Job[], field: SortField | null, dir: SortDir): Job[] {
+  if (!field) return jobs; // preserve incoming order (e.g. Huntr board order)
+  return [...jobs].sort((a, b) => {
+    let cmp: number;
+    if (field === 'status') {
+      cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+    } else {
+      cmp = (a[field] ?? '').localeCompare(b[field] ?? '');
+    }
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
 
 function getStatusIndicator(status: Job['status']) {
   switch (status) {
@@ -55,10 +76,12 @@ function JobItem({ job }: { job: Job }) {
 
       {/* Job info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-1">
-          <span className="text-[13px] font-semibold text-foreground truncate leading-tight">
-            {job.company}
-          </span>
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <span className="block text-[13px] font-semibold text-foreground leading-tight">
+              {job.company}
+            </span>
+          </div>
           <span
             className={cn(
               'shrink-0 inline-flex items-center rounded-full border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide',
@@ -68,10 +91,12 @@ function JobItem({ job }: { job: Job }) {
             {formatStageLabel(job.stage)}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-1 mt-0.5">
-          <span className="text-[11px] text-muted-foreground truncate leading-tight">
-            {job.title}
-          </span>
+        <div className="flex items-center gap-1 mt-0.5">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <span className="block text-[11px] text-muted-foreground leading-tight">
+              {job.title}
+            </span>
+          </div>
           <span
             className={cn(
               'shrink-0 inline-flex w-5 justify-center',
@@ -90,33 +115,78 @@ function JobItem({ job }: { job: Job }) {
   );
 }
 
+const SORT_FIELDS: { field: SortField; label: string }[] = [
+  { field: 'company', label: 'Co.' },
+  { field: 'title', label: 'Title' },
+  { field: 'stage', label: 'Stage' },
+  { field: 'status', label: 'Status' },
+];
+
 export function JobList() {
   const { state } = useWorkspace();
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  function handleSort(field: SortField) {
+    if (field === sortField) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }
 
   const filteredJobs =
     state.jobListFilter === 'all'
       ? state.jobs
       : state.jobs.filter((job) => matchesJobFilter(job, state.jobListFilter));
 
-  if (filteredJobs.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <p className="text-xs text-muted-foreground text-center">
-          {state.jobs.length === 0
-            ? 'No jobs loaded. Click "Load Huntr" to import jobs.'
-            : 'No jobs match the current filter.'}
-        </p>
-      </div>
-    );
-  }
+  const sortedJobs = sortJobs(filteredJobs, sortField, sortDir);
 
   return (
-    <ScrollArea className="flex-1 min-h-0">
-      <div>
-        {filteredJobs.map((job) => (
-          <JobItem key={job.id} job={job} />
-        ))}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      {/* Sort bar */}
+      <div className="flex items-center gap-0.5 px-2 py-1 border-b border-border shrink-0">
+        <span className="text-[10px] text-muted-foreground mr-1 uppercase tracking-wider">Sort</span>
+        {SORT_FIELDS.map(({ field, label }) => {
+          const active = sortField === field;
+          return (
+            <button
+              key={field}
+              onClick={() => handleSort(field)}
+              className={cn(
+                'flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded transition-colors',
+                active
+                  ? 'bg-secondary text-foreground font-semibold'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+              )}
+            >
+              {label}
+              {active && (sortDir === 'asc'
+                ? <ChevronUp size={9} strokeWidth={2.5} />
+                : <ChevronDown size={9} strokeWidth={2.5} />)}
+            </button>
+          );
+        })}
       </div>
-    </ScrollArea>
+
+      {sortedJobs.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center p-4">
+          <p className="text-xs text-muted-foreground text-center">
+            {state.jobs.length === 0
+              ? 'No jobs loaded. Click "Load Huntr" to import jobs.'
+              : 'No jobs match the current filter.'}
+          </p>
+        </div>
+      ) : (
+        <ScrollArea className="flex-1 min-h-0">
+          <div>
+            {sortedJobs.map((job) => (
+              <JobItem key={job.id} job={job} />
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
   );
 }

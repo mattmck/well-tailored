@@ -11,13 +11,12 @@ import { PasteJDModal } from './PasteJDModal';
 
 export function JobsPanel() {
   const { state, dispatch } = useWorkspace();
-  const [isLoadingHuntr, setIsLoadingHuntr] = useState(false);
   const [tailorModalOpen, setTailorModalOpen] = useState(false);
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const checkedCount = state.jobs.filter((job) => job.checked).length;
 
   async function handleLoadHuntr() {
-    setIsLoadingHuntr(true);
+    dispatch({ type: 'SET_LOADING_HUNTR', loading: true });
     try {
       const response = await api.getHuntrJobs();
       const jobs: Job[] = response.jobs.map((huntrJob) => ({
@@ -32,11 +31,11 @@ export function JobsPanel() {
         error: null,
         _editorData: null,
       }));
-      dispatch({ type: 'SET_JOBS', jobs });
+      dispatch({ type: 'MERGE_JOBS', jobs });
     } catch (err) {
       console.error('Failed to load Huntr jobs:', err);
     } finally {
-      setIsLoadingHuntr(false);
+      dispatch({ type: 'SET_LOADING_HUNTR', loading: false });
     }
   }
 
@@ -52,10 +51,10 @@ export function JobsPanel() {
           variant="outline"
           size="sm"
           onClick={handleLoadHuntr}
-          disabled={isLoadingHuntr}
+          disabled={state.isLoadingHuntr}
           className="text-[11px] h-7 px-2 whitespace-nowrap"
         >
-          {isLoadingHuntr ? 'Loading…' : 'Load Huntr'}
+          {state.isLoadingHuntr ? 'Loading…' : 'Load Huntr'}
         </Button>
         <Button
           variant="outline"
@@ -63,7 +62,7 @@ export function JobsPanel() {
           onClick={() => setPasteModalOpen(true)}
           className="text-[11px] h-7 px-2 whitespace-nowrap"
         >
-          Paste JD
+          Add JD
         </Button>
         <Button
           variant="outline"

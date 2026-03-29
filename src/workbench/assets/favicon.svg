@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>Well-Tailored favicon</title>
+  <rect width="32" height="32" rx="6" fill="#F5F0E8"/>
+  <g transform="translate(1, 8.2) scale(0.062)" fill="#1B2844">
+    <polygon points="-15,4 15,-4 73,237 44,244"/>
+    <polygon points="72,247 45,233 111,100 138,114"/>
+    <polygon points="118,107 158,32 197,107 158,182"/>
+    <polygon points="177,113 205,101 258,234 230,246"/>
+    <polygon points="259,244 230,236 288,8 317,16"/>
+    <rect x="280" y="-3" width="180" height="30"/>
+    <rect x="366" y="-3" width="30" height="250"/>
+  </g>
+</svg>

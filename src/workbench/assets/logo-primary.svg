@@ -1,13 +1,15 @@
-<svg width="392" height="72" viewBox="0 0 392 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 72" fill="none">
   <title>Well-Tailored primary logo</title>
-  <g transform="translate(0 4)">
-    <rect x="4" y="4" width="56" height="56" rx="16" fill="#F8F5EE"/>
-    <rect x="4.75" y="4.75" width="54.5" height="54.5" rx="15.25" stroke="#E3DDD2" stroke-width="1.5"/>
-    <path d="M16 18H48" stroke="#314A74" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M32 18V46" stroke="#314A74" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M16 18L22 46L32 28L42 46L48 18" stroke="#314A74" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M40 18L46 24" stroke="#314A74" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 5" opacity="0.6"/>
+  <!-- WT mark scaled to 72px height -->
+  <g transform="translate(4, 1) scale(0.28)" fill="#1B2844">
+    <polygon points="-15,4 15,-4 73,237 44,244"/>
+    <polygon points="72,247 45,233 111,100 138,114"/>
+    <polygon points="118,107 158,32 197,107 158,182"/>
+    <polygon points="177,113 205,101 258,234 230,246"/>
+    <polygon points="259,244 230,236 288,8 317,16"/>
+    <rect x="280" y="-3" width="180" height="30"/>
+    <rect x="366" y="-3" width="30" height="250"/>
   </g>
-  <text x="80" y="43" fill="#2B2D33" font-family="Manrope, Inter, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="0.02em">Well-Tailored</text>
-  <text x="80" y="59" fill="#747986" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.16em">JOB APPLICATIONS THAT FIT</text>
+  <text x="144" y="42" fill="#1B2844" font-family="Manrope, Inter, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="0.02em">Well-Tailored</text>
+  <text x="144" y="58" fill="#6B7280" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.16em">JOB APPLICATIONS THAT FIT</text>
 </svg>

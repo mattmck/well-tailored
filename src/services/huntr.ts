@@ -437,11 +437,23 @@ export async function listAllJobs(
       Object.entries(lists).map(([id, list]) => [id, list.name]),
     );
 
+    // Build a composite rank (listIndex * 10000 + jobIndex) so jobs from different
+    // lists don't collide on position index when sorting.
+    const jobOrder = new Map<string, number>();
+    const listValues = Object.values(lists);
+    for (const [listIdx, list] of listValues.entries()) {
+      for (const [jobIdx, jobId] of (list._jobs ?? []).entries()) {
+        if (!jobOrder.has(jobId)) jobOrder.set(jobId, listIdx * 10000 + jobIdx);
+      }
+    }
+
     const hydratedJobs = await mapWithConcurrency(
       boardJobs,
       4,
       async (job) => hydrateJobCompany(client, board.id, job),
     );
+
+    hydratedJobs.sort((a, b) => (jobOrder.get(a.id) ?? 999999) - (jobOrder.get(b.id) ?? 999999));
 
     for (const job of hydratedJobs) {
       jobs.push({
