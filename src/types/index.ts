@@ -290,16 +290,26 @@ export type KeywordCategory =
   | 'language'
   | 'framework'
   | 'tool'
-  | 'platform'
+  | 'infrastructure'
+  | 'architecture'
+  | 'data'
+  | 'ai-ml'
+  | 'leadership'
+  | 'operational'
+  | 'security'
   | 'soft-skill'
   | 'certification'
-  | 'methodology'
   | 'other';
 
 /** A categorized keyword or phrase extracted from a JD. */
 export interface CategorizedKeyword {
   term: string;
   category: KeywordCategory;
+}
+
+/** A skill implied by the JD but not stated explicitly. */
+export interface ImpliedSkill extends CategorizedKeyword {
+  rationale: string;
 }
 
 /** A partial match between a JD term and a resume term. */
@@ -316,18 +326,16 @@ export interface ExperienceRequirement {
   isRequired: boolean;
 }
 
-/** Heuristic gap analysis result (no AI needed). */
+/** AI gap analysis result. */
 export interface GapAnalysis {
   matchedKeywords: CategorizedKeyword[];
   missingKeywords: CategorizedKeyword[];
   partialMatches: PartialMatch[];
+  impliedSkills: ImpliedSkill[];
   experienceRequirements: ExperienceRequirement[];
   overallFit: 'strong' | 'moderate' | 'weak';
-}
-
-/** AI-enriched gap analysis (extends heuristic). */
-export interface EnrichedGapAnalysis extends GapAnalysis {
   narrative: string;
+  exactPhrases: string[];
   tailoringHints: string[];
 }
 

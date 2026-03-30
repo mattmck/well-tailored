@@ -1,8 +1,10 @@
+import { Bookmark, Files, FolderOpen, Save, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '../../context';
 import { Button } from '../../components/ui/button';
 import * as api from '../../api/client';
 import { TailoringStatus } from './TailoringStatus';
+import { RegradingStatus } from './RegradingStatus';
 import { WorkspaceCombobox } from './WorkspaceCombobox';
 import {
   buildWorkspaceSnapshot,
@@ -43,6 +45,11 @@ export function TopBar() {
   const { state, dispatch } = useWorkspace();
   const matchedWorkspace = findSavedWorkspace(state.savedWorkspaces, state.workspaceName, state.activeWorkspaceId);
   const sourceRoot = deriveSourceRoot(state.sourcePaths);
+  const totalJobs = state.jobs.length;
+  const draftedJobs = state.jobs.filter((job) => Boolean(job.result)).length;
+  const activeJob = state.activeJobId
+    ? state.jobs.find((job) => job.id === state.activeJobId) ?? null
+    : null;
 
   const statusText = state.runFeedback
     ? state.runFeedback.text
@@ -52,13 +59,19 @@ export function TopBar() {
 
   const statusColor = state.runFeedback
     ? state.runFeedback.type === 'error'
-      ? 'text-destructive'
+      ? 'border-destructive/20 bg-destructive/10 text-destructive'
       : state.runFeedback.type === 'done'
-      ? 'text-green-600'
-      : 'text-primary'
+      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700'
+      : 'border-primary/20 bg-primary/10 text-primary'
     : state.sourceResume
-    ? 'text-green-600'
-    : 'text-muted-foreground';
+    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700'
+    : 'border-border bg-white/70 text-muted-foreground';
+
+  const workspaceStateLabel = matchedWorkspace
+    ? 'Saved workspace'
+    : state.workspaceName.trim()
+    ? 'Unsaved workspace'
+    : 'Scratch workspace';
 
   async function refreshWorkspaceList() {
     const list = await api.listWorkspaces();
@@ -140,55 +153,95 @@ export function TopBar() {
 
   return (
     <>
-      <div
-        className="bg-card border-b border-border flex items-center gap-3 px-4 shrink-0"
-        style={{ height: '54px' }}
-      >
-        {/* Logo */}
-        <span
-          className="font-semibold text-primary select-none shrink-0"
-          style={{ fontFamily: 'Manrope, sans-serif', fontSize: '15px', letterSpacing: '-0.01em' }}
-        >
-          WT
-        </span>
+      <div className="shrink-0 border-b border-border/70 px-4 pb-3 pt-3">
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="flex min-w-[16rem] flex-1 items-start gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-[1.1rem] bg-primary text-primary-foreground shadow-[0_12px_26px_rgba(49,74,116,0.2)]">
+              <span
+                className="select-none text-sm font-semibold"
+                style={{ fontFamily: 'Manrope, sans-serif', letterSpacing: '-0.02em' }}
+              >
+                WT
+              </span>
+            </div>
 
-        {/* Workspace name combobox */}
-        <WorkspaceCombobox
-          value={state.workspaceName}
-          onChange={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
-          onSelect={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
-          options={state.savedWorkspaces}
-          placeholder="Workspace name..."
-        />
+            <div className="min-w-0">
+              <p className="editorial-label">Well-Tailored Workbench</p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="font-[Manrope] text-[1.25rem] font-semibold tracking-[-0.045em] text-foreground">
+                  Drafting Desk
+                </h1>
+                <span className="text-sm text-muted-foreground">
+                  Calm editing, scoring, and export for each application.
+                </span>
+              </div>
 
-        <Button variant="outline" size="sm" onClick={() => void handleSave()} disabled={!state.workspaceName.trim()}>
-          Save
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => void handleLoad()} disabled={!matchedWorkspace}>
-          Load
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void handleDelete()}
-          disabled={!matchedWorkspace}
-          className="text-destructive hover:text-destructive"
-        >
-          Delete
-        </Button>
+              {activeJob && (
+                <p className="mt-1 truncate text-sm text-muted-foreground">
+                  Active review: <span className="text-foreground">{activeJob.company}</span>
+                  {' '}· {activeJob.title}
+                </p>
+              )}
+            </div>
+          </div>
 
-        {/* Status */}
-        <span className={`text-sm shrink-0 ${statusColor}`}>{statusText}</span>
-        {sourceRoot && (
-          <span className="text-xs text-muted-foreground font-mono shrink-0">
-            {sourceRoot}
-          </span>
-        )}
+          <div className="flex min-w-[18rem] flex-[1.15] flex-col gap-2">
+            <WorkspaceCombobox
+              value={state.workspaceName}
+              onChange={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
+              onSelect={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
+              options={state.savedWorkspaces}
+              placeholder="Name or load a saved workspace"
+            />
 
-        {/* Spacer */}
-        <div className="flex-1" />
+            <div className="flex flex-wrap gap-2">
+              <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusColor}`}>
+                {statusText}
+              </span>
+              <span className="control-chip inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium text-foreground">
+                <Bookmark className="mr-1.5 size-3.5 text-primary" />
+                {workspaceStateLabel}
+              </span>
+              <span className="control-chip inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium text-foreground">
+                <Files className="mr-1.5 size-3.5 text-primary" />
+                {totalJobs} roles
+              </span>
+              <span className="control-chip inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium text-foreground">
+                <Sparkles className="mr-1.5 size-3.5 text-primary" />
+                {draftedJobs} drafted
+              </span>
+              {sourceRoot && (
+                <span className="control-chip inline-flex items-center rounded-full px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
+                  {sourceRoot}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => void handleSave()} disabled={!state.workspaceName.trim()}>
+              <Save className="size-3.5" />
+              Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void handleLoad()} disabled={!matchedWorkspace}>
+              <FolderOpen className="size-3.5" />
+              Load
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleDelete()}
+              disabled={!matchedWorkspace}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </Button>
+          </div>
+        </div>
       </div>
       <TailoringStatus />
+      <RegradingStatus />
     </>
   );
 }

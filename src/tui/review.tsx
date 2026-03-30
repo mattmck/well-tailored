@@ -6,7 +6,6 @@ import { tmpdir } from 'os';
 import { spawnSync } from 'child_process';
 import { diffMarkdown } from '../lib/diff.js';
 import { assembleSections, parseResumeSections } from '../lib/resume-parser.js';
-import { analyzeGap } from '../services/gap.js';
 import { regenerateResumeSection } from '../services/review.js';
 import { GapAnalysis, ResumeSection } from '../types/index.js';
 
@@ -18,6 +17,7 @@ export interface ReviewSessionArgs {
   jobTitle?: string;
   jobDescription: string;
   model: string;
+  gapAnalysis?: GapAnalysis;
 }
 
 function normalizeSectionBody(section: ResumeSection, raw: string): string {
@@ -52,7 +52,9 @@ function rebuildSection(section: ResumeSection, content: string): ResumeSection 
   };
 }
 
-function sectionCoverage(section: ResumeSection, gapAnalysis: GapAnalysis) {
+function sectionCoverage(section: ResumeSection, gapAnalysis: GapAnalysis | undefined) {
+  if (!gapAnalysis) return { matched: [], partial: [] };
+
   const haystack = `${section.heading}\n${section.content}`.toLowerCase();
 
   const matched = gapAnalysis.matchedKeywords
@@ -125,7 +127,7 @@ function SectionList(props: {
 function SectionDetail(props: {
   section: ResumeSection;
   baseSection?: ResumeSection;
-  gapAnalysis: GapAnalysis;
+  gapAnalysis: GapAnalysis | undefined;
   showDiff: boolean;
   expanded: boolean;
   status: string;
@@ -198,13 +200,7 @@ function ReviewApp(props: {
   const [busy, setBusy] = useState(false);
   const [shouldExit, setShouldExit] = useState(false);
 
-  // Compute gap analysis from live sections state, not from props.args.baseResume
-  // This ensures badges reflect live edits and regenerations
-  const gapAnalysis = analyzeGap(
-    assembleSections(sections),
-    props.args.jobDescription,
-    props.args.jobTitle,
-  );
+  const gapAnalysis = props.args.gapAnalysis;
   const selectedSection = sections[selectedIndex] ?? sections[0];
   const baseSection = baseSections.find((section) => section.id === selectedSection?.id);
 

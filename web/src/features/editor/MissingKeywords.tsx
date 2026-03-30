@@ -3,9 +3,9 @@ import { Badge } from '../../components/ui/badge';
 
 function fitRatingColor(rating: string): string {
   const lower = rating.toLowerCase();
-  if (lower.includes('strong') || lower.includes('excellent')) return 'text-green-700';
-  if (lower.includes('good') || lower.includes('moderate')) return 'text-yellow-700';
-  return 'text-red-700';
+  if (lower.includes('strong') || lower.includes('excellent')) return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700';
+  if (lower.includes('good') || lower.includes('moderate')) return 'border-amber-500/20 bg-amber-500/10 text-amber-700';
+  return 'border-rose-500/20 bg-rose-500/10 text-rose-700';
 }
 
 export function MissingKeywords() {
@@ -15,51 +15,82 @@ export function MissingKeywords() {
   if (!activeJob || !activeJob.result?.gapAnalysis) return null;
 
   const { matched, missing, partial, fitRating } = activeJob.result.gapAnalysis;
-  const total = matched.length + missing.length;
+  const total = matched.length + partial.length + missing.length;
+  const coverage = total > 0
+    ? Math.round(((matched.length + (partial.length * 0.5)) / total) * 100)
+    : 0;
+
+  const groups = [
+    {
+      label: 'Matched',
+      items: matched,
+      className: 'bg-emerald-500/10 text-emerald-800 border-emerald-500/16',
+    },
+    {
+      label: 'Partial',
+      items: partial,
+      className: 'bg-amber-500/10 text-amber-800 border-amber-500/16',
+    },
+    {
+      label: 'Missing',
+      items: missing,
+      className: 'bg-rose-500/10 text-rose-800 border-rose-500/16',
+    },
+  ];
 
   return (
-    <aside className="w-40 shrink-0 border-l border-border bg-card/70 px-3 py-3 flex flex-col min-h-0">
-      <div className="shrink-0 space-y-1 pb-3 border-b border-border">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+    <aside className="panel-surface flex min-h-0 w-full shrink-0 flex-col rounded-[1.65rem] px-4 py-4 lg:w-[220px]">
+      <div className="shrink-0 border-b border-border/70 pb-4">
+        <p className="editorial-label">
           Keyword Fit
         </p>
-        <p className={`text-sm font-semibold ${fitRatingColor(fitRating)}`}>
-          {fitRating}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {matched.length}/{total} matched
-        </p>
+        <div className="mt-2 flex items-start justify-between gap-2">
+          <div>
+            <p className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
+              Coverage
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {matched.length} matched · {missing.length} missing
+            </p>
+          </div>
+          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${fitRatingColor(fitRating)}`}>
+            {fitRating}
+          </span>
+        </div>
+
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[rgba(116,121,134,0.12)]">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300"
+            style={{ width: `${coverage}%` }}
+          />
+        </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pt-3 space-y-1.5">
-        {matched.map((kw) => (
-          <Badge
-            key={`matched-${kw}`}
-            variant="outline"
-            className="w-full justify-start bg-green-100 text-green-800 border-green-200 rounded-full text-xs"
-          >
-            {kw}
-          </Badge>
-        ))}
-        {partial.map((kw) => (
-          <Badge
-            key={`partial-${kw}`}
-            variant="outline"
-            className="w-full justify-start bg-yellow-100 text-yellow-800 border-yellow-200 rounded-full text-xs"
-          >
-            {kw}
-          </Badge>
-        ))}
-        {missing.map((kw) => (
-          <Badge
-            key={`missing-${kw}`}
-            variant="outline"
-            className="w-full justify-start bg-red-100 text-red-800 border-red-200 rounded-full text-xs"
-          >
-            {kw}
-          </Badge>
-        ))}
-        {matched.length === 0 && partial.length === 0 && missing.length === 0 && (
+      <div className="flex-1 min-h-0 overflow-y-auto pt-4">
+        {groups.some((group) => group.items.length > 0) ? (
+          <div className="space-y-4">
+            {groups.map((group) => (
+              group.items.length > 0 && (
+                <section key={group.label} className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {group.label}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.items.map((keyword) => (
+                      <Badge
+                        key={`${group.label}-${keyword}`}
+                        variant="outline"
+                        className={`justify-start rounded-full border px-2.5 py-1 text-xs font-medium ${group.className}`}
+                      >
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </section>
+              )
+            ))}
+          </div>
+        ) : (
           <p className="text-xs text-muted-foreground">No keyword analysis yet.</p>
         )}
       </div>

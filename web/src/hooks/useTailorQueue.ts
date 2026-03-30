@@ -5,6 +5,9 @@ import * as api from '../api/client';
 export function useTailorQueue() {
   const { state, dispatch } = useWorkspace();
   const processingRef = useRef(false);
+  const stateRef = useRef(state);
+
+  stateRef.current = state;
 
   useEffect(() => {
     if (processingRef.current) return;
@@ -14,7 +17,6 @@ export function useTailorQueue() {
     const jobId = state.tailorQueue[0];
     const job = state.jobs.find((j) => j.id === jobId);
     if (!job) {
-      // Job not found, remove from queue
       dispatch({ type: 'SET_TAILOR_QUEUE', queue: state.tailorQueue.slice(1) });
       return;
     }
@@ -34,6 +36,7 @@ export function useTailorQueue() {
       let nextStatus: 'tailored' | 'error' = 'tailored';
       let nextError: string | null = null;
       let nextResult = currentJob.result;
+      let nextEditorData = null;
 
       try {
         const body: api.ManualTailorBody = {
@@ -52,24 +55,22 @@ export function useTailorQueue() {
         };
 
         const tailorResult = await api.runManualTailor(body);
+        nextResult = {
+          output: tailorResult.output,
+          scorecard: tailorResult.scorecard,
+          gapAnalysis: tailorResult.gapAnalysis,
+        };
 
         dispatch({
           type: 'UPDATE_JOB',
           id: jobId,
           patch: {
             status: 'tailored',
-            result: {
-              output: tailorResult.output,
-              scorecard: tailorResult.scorecard,
-              gapAnalysis: tailorResult.gapAnalysis,
-            },
+            result: nextResult,
+            scoresStale: false,
+            _editorData: nextEditorData,
           },
         });
-        nextResult = {
-          output: tailorResult.output,
-          scorecard: tailorResult.scorecard,
-          gapAnalysis: tailorResult.gapAnalysis,
-        };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         nextStatus = 'error';
@@ -82,19 +83,25 @@ export function useTailorQueue() {
         });
       }
 
-      // Remove processed job from queue
-      const nextQueue = state.tailorQueue.slice(1);
+      const latestState = stateRef.current;
+      const nextQueue =
+        latestState.tailorQueue[0] === jobId
+          ? latestState.tailorQueue.slice(1)
+          : latestState.tailorQueue.filter((id) => id !== jobId);
+
       dispatch({ type: 'SET_TAILOR_QUEUE', queue: nextQueue });
       dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
 
       if (nextQueue.length === 0) {
-        const jobs = state.jobs.map((candidate) =>
+        const jobs = latestState.jobs.map((candidate) =>
           candidate.id === jobId
             ? {
                 ...candidate,
                 status: nextStatus,
                 error: nextError,
                 result: nextResult,
+                scoresStale: false,
+                _editorData: nextEditorData,
               }
             : candidate,
         );
@@ -106,7 +113,7 @@ export function useTailorQueue() {
         });
         dispatch({
           type: 'SET_RUN_FEEDBACK',
-          feedback: { text: 'Tailoring complete', type: 'done' },
+          feedback: { text: 'Tailoring complete', type: failed > 0 ? 'error' : 'done' },
         });
       }
 
@@ -114,14 +121,19 @@ export function useTailorQueue() {
     }
 
     void processJob();
-  }, [state.tailorQueue, state.tailorRunning, state.jobs, state.sourceResume, state.sourceBio, state.sourceCoverLetter, state.sourceSupplemental, state.tailorProvider, state.tailorModel, state.scoreProvider, state.scoreModel, state.promptSources, dispatch]);
-
-  function enqueueJobs(jobIds: string[]) {
-    dispatch({ type: 'SET_TAILOR_QUEUE', queue: jobIds });
-  }
-
-  return {
-    enqueueJobs,
-    isProcessing: state.tailorRunning !== null,
-  };
+  }, [
+    state.tailorQueue,
+    state.tailorRunning,
+    state.jobs,
+    state.sourceResume,
+    state.sourceBio,
+    state.sourceCoverLetter,
+    state.sourceSupplemental,
+    state.tailorProvider,
+    state.tailorModel,
+    state.scoreProvider,
+    state.scoreModel,
+    state.promptSources,
+    dispatch,
+  ]);
 }

@@ -1,4 +1,4 @@
-import type { ActiveDoc, EditorData, EditorSection, BulletItem, JobEntry } from '@/types';
+import type { ActiveDoc, EditorData, EditorSection, BulletItem, JobEntry } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Markdown parsing utilities

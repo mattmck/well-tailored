@@ -285,6 +285,10 @@ function parseEvaluatorScorecard(raw: string): EvaluatorScorecard {
   };
 }
 
+function stripHtmlComments(text: string): string {
+  return text.replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function scoringUserPrompt(input: TailorInput, output: TailorOutput): string {
   return `## Company
 ${input.company}
@@ -299,7 +303,7 @@ ${input.jobDescription}
 ${input.bio}
 
 ## Base Resume
-${input.resume}
+${stripHtmlComments(input.resume)}
 
 ## Supplemental Facts
 ${input.resumeSupplemental ?? '(none)'}

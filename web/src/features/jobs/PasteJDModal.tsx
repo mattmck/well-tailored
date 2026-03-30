@@ -28,6 +28,7 @@ export function PasteJDModal({ open, onOpenChange }: PasteJDModalProps) {
       stage: 'manual',
       status: 'loaded' as const,
       checked: false,
+      scoresStale: false,
       result: null,
       error: null,
       _editorData: null,

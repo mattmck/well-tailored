@@ -7,6 +7,7 @@ import type {
   ActivePanel,
   SourcePaths,
   PromptSources,
+  EditorData,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,10 @@ export const initialState: WorkspaceState = {
   tailorRunning: null,
   tailorRunningStartedAt: 0,
   tailorLastSummary: null,
-  scoresStale: false,
+  regradeQueue: [],
+  regradeQueueTotal: 0,
+  regradeRunning: null,
+  regradeRunningStartedAt: 0,
   activeDoc: 'resume',
   viewMode: 'preview',
   regeneratingSection: null,
@@ -55,6 +59,7 @@ export type Action =
   | { type: 'MERGE_JOBS'; jobs: Job[] }
   | { type: 'SET_ACTIVE_JOB'; id: string | null }
   | { type: 'UPDATE_JOB'; id: string; patch: Partial<Job> }
+  | { type: 'SET_JOBS_CHECKED'; ids: string[]; checked: boolean }
   | { type: 'MERGE_JOB_STAGES'; stages: Record<string, string> }
   | { type: 'SET_JOB_FILTER'; filter: JobListFilter }
   | { type: 'SET_LOADING_HUNTR'; loading: boolean }
@@ -79,10 +84,13 @@ export type Action =
   | { type: 'SET_SOURCE'; field: 'sourceResume' | 'sourceBio' | 'sourceCoverLetter' | 'sourceSupplemental'; value: string }
   | { type: 'SET_SOURCE_PATHS'; paths: SourcePaths }
   | { type: 'SET_PROMPT_SOURCES'; sources: PromptSources }
+  | { type: 'SET_JOB_DOCUMENT_STATE'; id: string; doc: ActiveDoc; editorData: EditorData; markdown: string }
   | { type: 'SET_TAILOR_QUEUE'; queue: string[]; total?: number }
   | { type: 'SET_TAILOR_RUNNING'; id: string | null; startedAt?: number }
   | { type: 'SET_TAILOR_SUMMARY'; summary: { tailored: number; failed: number } | null }
-  | { type: 'SET_SCORES_STALE'; stale: boolean }
+  | { type: 'SET_JOB_SCORES_STALE'; id: string; stale: boolean }
+  | { type: 'SET_REGRADE_QUEUE'; queue: string[]; total?: number }
+  | { type: 'SET_REGRADE_RUNNING'; id: string | null; startedAt?: number }
   | { type: 'SET_ACTIVE_DOC'; doc: ActiveDoc }
   | { type: 'SET_VIEW_MODE'; mode: ViewMode }
   | { type: 'SET_REGENERATING_SECTION'; section: string | null }
@@ -117,7 +125,13 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           title: incoming.title,
           jd: incoming.jd,
           stage: incoming.stage,
-          ...(metaChanged && { result: undefined, _editorData: null, status: 'loaded' as const, error: undefined }),
+          ...(metaChanged && {
+            result: undefined,
+            _editorData: null,
+            status: 'loaded' as const,
+            error: undefined,
+            scoresStale: false,
+          }),
         };
       });
       return { ...state, jobs: merged };
@@ -133,6 +147,16 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           job.id === action.id ? { ...job, ...action.patch } : job
         ),
       };
+
+    case 'SET_JOBS_CHECKED': {
+      const targetIds = new Set(action.ids);
+      return {
+        ...state,
+        jobs: state.jobs.map((job) =>
+          targetIds.has(job.id) ? { ...job, checked: action.checked } : job
+        ),
+      };
+    }
 
     case 'MERGE_JOB_STAGES':
       return {
@@ -205,6 +229,33 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case 'SET_PROMPT_SOURCES':
       return { ...state, promptSources: action.sources };
 
+    case 'SET_JOB_DOCUMENT_STATE':
+      return {
+        ...state,
+        jobs: state.jobs.map((job) => {
+          if (job.id !== action.id) return job;
+          if (!job.result) {
+            return {
+              ...job,
+              _editorData: action.editorData,
+              scoresStale: true,
+            };
+          }
+
+          return {
+            ...job,
+            _editorData: action.editorData,
+            scoresStale: true,
+            result: {
+              ...job.result,
+              output: action.doc === 'resume'
+                ? { ...job.result.output, resume: action.markdown }
+                : { ...job.result.output, coverLetter: action.markdown },
+            },
+          };
+        }),
+      };
+
     case 'SET_TAILOR_QUEUE':
       return {
         ...state,
@@ -226,8 +277,31 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case 'SET_TAILOR_SUMMARY':
       return { ...state, tailorLastSummary: action.summary };
 
-    case 'SET_SCORES_STALE':
-      return { ...state, scoresStale: action.stale };
+    case 'SET_JOB_SCORES_STALE':
+      return {
+        ...state,
+        jobs: state.jobs.map((job) =>
+          job.id === action.id ? { ...job, scoresStale: action.stale } : job
+        ),
+      };
+
+    case 'SET_REGRADE_QUEUE':
+      return {
+        ...state,
+        regradeQueue: action.queue,
+        regradeQueueTotal:
+          action.queue.length === 0
+            ? 0
+            : action.total ?? state.regradeQueueTotal,
+      };
+
+    case 'SET_REGRADE_RUNNING':
+      return {
+        ...state,
+        regradeRunning: action.id,
+        regradeRunningStartedAt:
+          action.id == null ? 0 : action.startedAt ?? Date.now(),
+      };
 
     case 'SET_ACTIVE_DOC':
       return { ...state, activeDoc: action.doc };
@@ -267,7 +341,6 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           action.state.scoreModel && action.state.scoreModel !== 'auto'
             ? action.state.scoreModel
             : state.scoreModel,
-        scoresStale: false,
       };
 
     default: {

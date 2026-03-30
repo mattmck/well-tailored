@@ -1,50 +1,118 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Download, Eye, FileSearch, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import { DiffView } from './DiffView';
-import { reconstructEditorData } from '../../lib/markdown';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { cn } from '@/components/ui/utils';
+import { WorkbenchEmptyState } from '../layout/WorkbenchEmptyState';
+import { getJobDocumentMarkdown } from '@/lib/job-documents';
 import * as api from '../../api/client';
+
+const PREVIEW_THEMES = {
+  drafting: {
+    label: 'Drafting Desk',
+    theme: {
+      background: '#F6F0E4',
+      body: '#2F2C28',
+      accent: '#314A74',
+      subheading: '#556070',
+      jobTitle: '#22252B',
+      date: '#6E7480',
+      contact: '#3E4148',
+      link: '#314A74',
+    },
+  },
+  classic: {
+    label: 'Classic Blue',
+    theme: {
+      background: '#E5F2FF',
+      body: '#323434',
+      accent: '#BE503C',
+      subheading: '#364D62',
+      jobTitle: '#182234',
+      date: '#3B72A8',
+      contact: '#323434',
+      link: '#255F91',
+    },
+  },
+  slate: {
+    label: 'Slate Serif',
+    theme: {
+      background: '#F3F4F6',
+      body: '#293241',
+      accent: '#3D5A80',
+      subheading: '#5C677D',
+      jobTitle: '#1B263B',
+      date: '#6B7280',
+      contact: '#334155',
+      link: '#2563EB',
+    },
+  },
+} as const;
+
+type PreviewThemeId = keyof typeof PREVIEW_THEMES;
+
+function getToolbarTabClass(isActive: boolean) {
+  return cn(
+    'rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200',
+    isActive
+      ? 'bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(49,74,116,0.22)]'
+      : 'text-muted-foreground hover:bg-white hover:text-foreground',
+  );
+}
 
 export function PreviewColumn() {
   const { state, dispatch } = useWorkspace();
-  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingHtml, setExportingHtml] = useState(false);
+  const [themeId, setThemeId] = useState<PreviewThemeId>('drafting');
   const [previewHeight, setPreviewHeight] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewFrameRef = useRef<HTMLIFrameElement | null>(null);
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
 
   const job = state.activeJobId
-    ? state.jobs.find((j) => j.id === state.activeJobId)
+    ? state.jobs.find((candidate) => candidate.id === state.activeJobId)
     : null;
 
-  // Derive the current markdown for the active document
-  const activeMarkdown = (() => {
-    if (!job?.result) return null;
+  const activeMarkdown = getJobDocumentMarkdown(job, state.activeDoc);
 
-    const rawMarkdown =
-      state.activeDoc === 'resume'
-        ? job.result.output.resume
-        : job.result.output.coverLetter;
+  const originalMarkdown = state.activeDoc === 'resume'
+    ? state.sourceResume
+    : state.sourceCoverLetter;
+  const previewTheme = PREVIEW_THEMES[themeId].theme;
 
-    // If there is editorData, reconstruct from the edited sections
-    if (job._editorData) {
-      return reconstructEditorData(job._editorData);
-    }
+  const getDocumentSlug = useCallback(() => {
+    return job
+      ? `${job.company}-${job.title}`.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      : 'document';
+  }, [job]);
 
-    return rawMarkdown;
-  })();
+  const getDocumentBaseName = useCallback(() => {
+    return `${state.activeDoc === 'resume' ? 'resume' : 'cover-letter'}-${getDocumentSlug()}`;
+  }, [getDocumentSlug, state.activeDoc]);
 
-  // Derive the original markdown for diffing
-  const originalMarkdown = (() => {
-    if (state.activeDoc === 'resume') {
-      return state.sourceResume;
-    }
-    // Cover letter: use the stored baseCoverLetter
-    return state.sourceCoverLetter;
-  })();
+  const downloadTextFile = useCallback((filename: string, content: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }, []);
 
-  // Render HTML preview when content or mode changes
   useEffect(() => {
     if (state.viewMode !== 'preview') return;
     if (!activeMarkdown) {
@@ -53,16 +121,15 @@ export function PreviewColumn() {
       return;
     }
 
-    // Debounce to avoid hammering the API on every keystroke
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPreviewLoading(true);
-      api
-        .renderHtml({
-          markdown: activeMarkdown,
-          kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
-          title: job?.title || 'Tailored document',
-        })
+      api.renderHtml({
+        markdown: activeMarkdown,
+        kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
+        title: job?.title || 'Tailored document',
+        theme: previewTheme,
+      })
         .then((res) => {
           setPreviewHtml(res.html);
         })
@@ -77,7 +144,7 @@ export function PreviewColumn() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [activeMarkdown, job?.title, state.activeDoc, state.viewMode]);
+  }, [activeMarkdown, job?.title, previewTheme, state.activeDoc, state.viewMode]);
 
   const handleExportPdf = useCallback(async () => {
     if (!activeMarkdown || exportingPdf) return;
@@ -87,43 +154,64 @@ export function PreviewColumn() {
         markdown: activeMarkdown,
         kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
         title: job?.title || 'Tailored document',
+        theme: previewTheme,
       });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const slug = job
-        ? `${job.company}-${job.title}`.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-        : 'document';
-      a.download = `${state.activeDoc === 'resume' ? 'resume' : 'cover-letter'}-${slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${getDocumentBaseName()}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PreviewColumn: exportPdf failed', err);
     } finally {
       setExportingPdf(false);
     }
-  }, [activeMarkdown, exportingPdf, job, state.activeDoc]);
+  }, [activeMarkdown, exportingPdf, getDocumentBaseName, job?.title, previewTheme, state.activeDoc]);
+
+  const handleExportMarkdown = useCallback(() => {
+    if (!activeMarkdown) return;
+    downloadTextFile(`${getDocumentBaseName()}.md`, activeMarkdown, 'text/markdown;charset=utf-8');
+  }, [activeMarkdown, downloadTextFile, getDocumentBaseName]);
+
+  const handleExportHtml = useCallback(async () => {
+    if (!activeMarkdown || exportingHtml) return;
+    setExportingHtml(true);
+    try {
+      const html = previewHtml || (await api.renderHtml({
+        markdown: activeMarkdown,
+        kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
+        title: job?.title || 'Tailored document',
+        theme: previewTheme,
+      })).html;
+      downloadTextFile(`${getDocumentBaseName()}.html`, html, 'text/html;charset=utf-8');
+    } catch (err) {
+      console.error('PreviewColumn: exportHtml failed', err);
+    } finally {
+      setExportingHtml(false);
+    }
+  }, [activeMarkdown, downloadTextFile, exportingHtml, getDocumentBaseName, job?.title, previewHtml, previewTheme, state.activeDoc]);
 
   const handleSetViewMode = useCallback(
     (mode: 'preview' | 'diff') => {
       dispatch({ type: 'SET_VIEW_MODE', mode });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const syncPreviewHeight = useCallback(() => {
     const iframe = previewFrameRef.current;
-    const doc = iframe?.contentDocument;
-    if (!iframe || !doc) return;
+    const documentRef = iframe?.contentDocument;
+    if (!iframe || !documentRef) return;
 
-    const contentRoot = doc.body.firstElementChild as HTMLElement | null;
+    const contentRoot = documentRef.body.firstElementChild as HTMLElement | null;
     const nextHeight = Math.ceil(Math.max(
       contentRoot?.scrollHeight ?? 0,
       contentRoot?.offsetHeight ?? 0,
       contentRoot?.getBoundingClientRect().height ?? 0,
-      doc.body?.firstElementChild ? 0 : doc.body?.scrollHeight ?? 0,
+      documentRef.body?.firstElementChild ? 0 : documentRef.body?.scrollHeight ?? 0,
     )) + 4;
 
     if (nextHeight > 0) {
@@ -134,11 +222,11 @@ export function PreviewColumn() {
   }, []);
 
   const configurePreviewDocument = useCallback(() => {
-    const doc = previewFrameRef.current?.contentDocument;
-    if (!doc) return;
+    const documentRef = previewFrameRef.current?.contentDocument;
+    if (!documentRef) return;
 
-    if (doc.documentElement) doc.documentElement.style.overflow = 'hidden';
-    if (doc.body) doc.body.style.overflow = 'hidden';
+    if (documentRef.documentElement) documentRef.documentElement.style.overflow = 'hidden';
+    if (documentRef.body) documentRef.body.style.overflow = 'hidden';
   }, []);
 
   const handlePreviewLoad = useCallback(() => {
@@ -163,9 +251,9 @@ export function PreviewColumn() {
       configurePreviewDocument();
       scheduleSync();
 
-      const doc = iframe.contentDocument;
-      if (!doc || !doc.body) return;
-      const contentRoot = doc.body.firstElementChild as HTMLElement | null;
+      const documentRef = iframe.contentDocument;
+      if (!documentRef || !documentRef.body) return;
+      const contentRoot = documentRef.body.firstElementChild as HTMLElement | null;
 
       if (previewScrollRef.current && 'ResizeObserver' in window) {
         const containerObserver = new ResizeObserver(scheduleSync);
@@ -185,8 +273,8 @@ export function PreviewColumn() {
         disposers.push(() => previewWindow.removeEventListener('resize', scheduleSync));
       }
 
-      if (doc.fonts?.ready) {
-        void doc.fonts.ready.then(scheduleSync).catch(() => undefined);
+      if (documentRef.fonts?.ready) {
+        void documentRef.fonts.ready.then(scheduleSync).catch(() => undefined);
       }
     };
 
@@ -201,118 +289,180 @@ export function PreviewColumn() {
     };
   }, [configurePreviewDocument, previewHtml, state.viewMode, syncPreviewHeight]);
 
-  // Empty / no-result states
   if (!job) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        Select a job to preview
+      <div className="flex flex-1 p-4">
+        <WorkbenchEmptyState
+          className="w-full"
+          eyebrow="Output Review"
+          title="Choose a role to inspect the draft."
+          description="The preview desk renders the polished resume or cover letter, and the diff view shows exactly what changed from your source material."
+          icon={Eye}
+          tips={[
+            'Switch between preview and diff depending on whether you are reviewing polish or substance.',
+            'PDF export uses the currently selected document and role title.',
+          ]}
+        />
       </div>
     );
   }
 
   if (!job.result) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        {job.status === 'tailoring' ? 'Tailoring in progress…' : 'Run tailoring to generate a preview'}
+      <div className="flex flex-1 p-4">
+        <WorkbenchEmptyState
+          className="w-full"
+          eyebrow="Output Review"
+          title={job.status === 'tailoring' ? 'Preview preparing now.' : 'Run tailoring to populate the review pane.'}
+          description={job.status === 'tailoring'
+            ? 'Once the draft finishes, this pane will render the finished document and a clean comparison against the source.'
+            : 'Generate a tailored draft first, then use preview for final polish and diff for change review.'}
+          icon={Sparkles}
+          tips={[
+            'The preview automatically refreshes after section edits.',
+            'Use diff when you want to validate that tailoring still sounds like you.',
+          ]}
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col min-w-0 overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-        {/* Preview / Diff toggle */}
-        <div className="flex rounded-md border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => handleSetViewMode('preview')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${
-              state.viewMode === 'preview'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-muted-foreground hover:bg-secondary/60'
-            }`}
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSetViewMode('diff')}
-            className={`px-3 py-1 text-xs font-medium transition-colors border-l border-border ${
-              state.viewMode === 'diff'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-muted-foreground hover:bg-secondary/60'
-            }`}
-          >
-            Diff
-          </button>
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border/70 px-4 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="editorial-label">Output Review</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
+                Review pane
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {job.company} · {job.title}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="toolbar-segment flex rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('preview')}
+                className={getToolbarTabClass(state.viewMode === 'preview')}
+              >
+                Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetViewMode('diff')}
+                className={getToolbarTabClass(state.viewMode === 'diff')}
+              >
+                Diff
+              </button>
+            </div>
+
+            <Select value={themeId} onValueChange={(value) => setThemeId(value as PreviewThemeId)}>
+              <SelectTrigger size="sm" className="w-[9.5rem] rounded-full border-border/80 bg-white/75 text-xs">
+                <SelectValue placeholder="Theme" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PREVIEW_THEMES).map(([id, preset]) => (
+                  <SelectItem key={id} value={id}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportMarkdown}
+              disabled={!activeMarkdown}
+              title="Download Markdown"
+            >
+              <Download className="size-3.5" />
+              Markdown
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportHtml}
+              disabled={exportingHtml || !activeMarkdown}
+              title="Download HTML"
+            >
+              <Download className="size-3.5" />
+              {exportingHtml ? 'HTML…' : 'HTML'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleExportPdf}
+              disabled={exportingPdf || !activeMarkdown}
+              title="Export as PDF"
+            >
+              <Download className="size-3.5" />
+              {exportingPdf ? 'Exporting…' : 'Export PDF'}
+            </Button>
+          </div>
         </div>
-
-        <div className="flex-1" />
-
-        {/* Export PDF button */}
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          disabled={exportingPdf || !activeMarkdown}
-          title="Export as PDF"
-          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border border-border bg-card text-muted-foreground hover:bg-secondary/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          {exportingPdf ? 'Exporting…' : 'Export PDF'}
-        </button>
       </div>
 
-      {/* Content area */}
-      <div className="flex-1 overflow-hidden min-h-0 min-w-0">
+      <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
         {state.viewMode === 'preview' ? (
           previewLoading ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              Rendering preview…
+            <div className="flex h-full p-4">
+              <WorkbenchEmptyState
+                className="w-full"
+                eyebrow="Output Review"
+                title="Rendering preview."
+                description="The paper view is refreshing so you can inspect the latest changes with the final document styling."
+                icon={FileSearch}
+              />
             </div>
           ) : previewHtml ? (
             <div
               ref={previewScrollRef}
-              className="h-full min-h-0 overflow-auto bg-muted/20 p-3 min-w-0"
+              className="h-full min-h-0 min-w-0 overflow-auto px-4 pb-4"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
-              <iframe
-                ref={previewFrameRef}
-                onLoad={handlePreviewLoad}
-                srcDoc={previewHtml}
-                scrolling="no"
-                className="block w-full rounded-lg border border-border bg-white shadow-sm"
-                style={{
-                  height: previewHeight ? `${previewHeight}px` : '100%',
-                  pointerEvents: 'none',
-                }}
-                title="Document preview"
-              />
+              <div className="paper-pane min-h-full rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.4),rgba(243,236,221,0.72))] p-4">
+                <div className="mx-auto w-full max-w-[54rem] rounded-[1.5rem] border border-border/80 bg-white p-3 shadow-[0_20px_46px_rgba(43,45,51,0.08)]">
+                  <iframe
+                    ref={previewFrameRef}
+                    onLoad={handlePreviewLoad}
+                    srcDoc={previewHtml}
+                    scrolling="no"
+                    className="block w-full rounded-[1rem] border border-border/70 bg-white"
+                    style={{
+                      height: previewHeight ? `${previewHeight}px` : '100%',
+                      pointerEvents: 'none',
+                    }}
+                    title="Document preview"
+                  />
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-              No content to preview
+            <div className="flex h-full p-4">
+              <WorkbenchEmptyState
+                className="w-full"
+                eyebrow="Output Review"
+                title="No preview content yet."
+                description="This document does not have any rendered content to display right now. Return to the editor and add or regenerate a section."
+                icon={Eye}
+              />
             </div>
           )
         ) : (
-          <DiffView
-            original={originalMarkdown}
-            modified={activeMarkdown ?? ''}
-          />
+          <div className="h-full px-4 pb-4">
+            <DiffView original={originalMarkdown} modified={activeMarkdown ?? ''} />
+          </div>
         )}
       </div>
     </div>

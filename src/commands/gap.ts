@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { loadConfig } from '../config.js';
-import { analyzeGap, analyzeGapWithAI } from '../services/gap.js';
+import { analyzeGapWithAI } from '../services/gap.js';
 import { findFile, TAILORED_DIR, readFile } from '../lib/files.js';
-import { EnrichedGapAnalysis, GapAnalysis } from '../types/index.js';
+import { GapAnalysis } from '../types/index.js';
 
 const ANSI = {
   cyan: '\x1b[36m',
@@ -43,31 +43,29 @@ function formatKeywordList(
   return lines;
 }
 
-export function formatGapAnalysisSummary(
-  analysis: GapAnalysis | EnrichedGapAnalysis,
-): string {
-  const matched = analysis.matchedKeywords.map((keyword) => `${keyword.term} [${keyword.category}]`);
-  const missing = analysis.missingKeywords.map((keyword) => `${keyword.term} [${keyword.category}]`);
-  const partial = analysis.partialMatches.map((match) =>
-    `${match.jdTerm} <- ${match.resumeTerm} (${match.relationship})`);
-  const experience = analysis.experienceRequirements.map((requirement) =>
-    `${requirement.skill}: ${requirement.years}+ years ${requirement.isRequired ? 'required' : 'preferred'}`);
-  const narrative = 'narrative' in analysis && analysis.narrative
-    ? [`${ANSI.cyan}Narrative${ANSI.reset}`, `  ${analysis.narrative}`]
-    : [];
-  const hints = 'tailoringHints' in analysis && analysis.tailoringHints.length > 0
-    ? formatKeywordList('Tailoring hints', ANSI.cyan, analysis.tailoringHints, 6)
-    : [];
+export function formatGapAnalysisSummary(analysis: GapAnalysis): string {
+  const matched = analysis.matchedKeywords.map((kw) => `${kw.term} [${kw.category}]`);
+  const missing = analysis.missingKeywords.map((kw) => `${kw.term} [${kw.category}]`);
+  const partial = analysis.partialMatches.map((m) => `${m.jdTerm} <- ${m.resumeTerm} (${m.relationship})`);
+  const implied = analysis.impliedSkills.map((s) => `${s.term} [${s.category}] — ${s.rationale}`);
+  const experience = analysis.experienceRequirements.map((r) =>
+    `${r.skill}: ${r.years}+ years ${r.isRequired ? 'required' : 'preferred'}`);
 
   return [
     `${ANSI.cyan}Match Gap Analysis${ANSI.reset}`,
     `${fitColor(analysis.overallFit)}Overall fit: ${analysis.overallFit}${ANSI.reset}`,
-    ...narrative,
+    ...(analysis.narrative ? [`${ANSI.cyan}Narrative${ANSI.reset}`, `  ${analysis.narrative}`] : []),
     ...formatKeywordList('Matched keywords', ANSI.green, matched),
     ...formatKeywordList('Missing keywords', ANSI.red, missing),
     ...formatKeywordList('Partial matches', ANSI.yellow, partial, 6),
+    ...formatKeywordList('Implied skills', ANSI.dim, implied, 6),
     ...formatKeywordList('Experience requirements', ANSI.cyan, experience, 6),
-    ...hints,
+    ...(analysis.exactPhrases.length > 0
+      ? formatKeywordList('Exact ATS phrases', ANSI.cyan, analysis.exactPhrases, 10)
+      : []),
+    ...(analysis.tailoringHints.length > 0
+      ? formatKeywordList('Tailoring hints', ANSI.cyan, analysis.tailoringHints, 6)
+      : []),
   ].join('\n');
 }
 
@@ -82,12 +80,11 @@ export function registerGapCommand(program: Command): void {
     )
     .option(
       '-b, --bio <file>',
-      `Path to personal bio/background file. Auto-detected from CWD or ${TAILORED_DIR} if omitted when --ai is used.`,
+      `Path to personal bio/background file. Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
     .option('-t, --title <title>', 'Job title (optional, included in the analysis)')
-    .option('--ai', 'Use AI to add a narrative summary and tailoring hints')
-    .option('-m, --model <model>', 'Model/deployment name for AI-enriched gap analysis')
-    .action(async (opts: { job: string; resume?: string; bio?: string; title?: string; ai?: boolean; model?: string }) => {
+    .option('-m, --model <model>', 'Model/deployment name')
+    .action(async (opts: { job: string; resume?: string; bio?: string; title?: string; model?: string }) => {
       let resumePath: string;
 
       try {
@@ -106,25 +103,21 @@ export function registerGapCommand(program: Command): void {
       }
 
       const resume = readFile(resumePath);
+
       let bio = '';
-      if (opts.ai) {
-        try {
-          bio = readFile(findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' }));
-        } catch (error) {
-          console.error(`Error: ${(error as Error).message}`);
-          process.exit(1);
-        }
+      try {
+        bio = readFile(findFile({ explicit: opts.bio, prefix: 'bio', label: 'Bio' }));
+      } catch {
+        // bio is optional
       }
 
-      const analysis = opts.ai
-        ? await analyzeGapWithAI(
-          resume,
-          bio,
-          jobDescription,
-          opts.title,
-          opts.model ?? loadConfig().tailoringModel,
-        )
-        : analyzeGap(resume, jobDescription, opts.title);
+      const analysis = await analyzeGapWithAI(
+        resume,
+        bio,
+        jobDescription,
+        opts.title,
+        opts.model ?? loadConfig().tailoringModel,
+      );
 
       console.log(`\nUsing resume: ${resumePath}`);
       console.log(formatGapAnalysisSummary(analysis));

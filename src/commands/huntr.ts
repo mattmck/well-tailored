@@ -10,7 +10,7 @@ import { describeProvider } from '../lib/ai.js';
 import { withSpinner } from '../lib/spinner.js';
 import { findFile, readFile, TAILORED_DIR } from '../lib/files.js';
 import { renderResumeHtml, renderCoverLetterHtml, renderPdf, renderResumePdfFit } from '../lib/render.js';
-import { analyzeGap, analyzeGapWithAI } from '../services/gap.js';
+import { analyzeGapWithAI } from '../services/gap.js';
 import { launchReviewTui } from '../tui/review.js';
 import {
   createHuntrClient as createSharedHuntrClient,
@@ -299,11 +299,10 @@ export function registerHuntrCommand(program: Command): void {
     )
     .option(
       '-b, --bio <file>',
-      `Personal bio file. Auto-detected from CWD or ${TAILORED_DIR} if omitted when --ai is used.`,
+      `Personal bio file. Auto-detected from CWD or ${TAILORED_DIR} if omitted.`,
     )
-    .option('--ai', 'Use AI to add a narrative summary and tailoring hints')
-    .option('-m, --model <model>', 'Model/deployment name for AI-enriched gap analysis')
-    .action(async (jobId: string, opts: { board?: string; resume?: string; bio?: string; ai?: boolean; model?: string }) => {
+    .option('-m, --model <model>', 'Model/deployment name')
+    .action(async (jobId: string, opts: { board?: string; resume?: string; bio?: string; model?: string }) => {
       const token = await requireHuntrToken();
       const client = createSharedHuntrClient(token);
       const { resume, resumePath } = resolveResumeFile(opts.resume);
@@ -311,16 +310,14 @@ export function registerHuntrCommand(program: Command): void {
       const jobDescription = job.htmlDescription
         ? stripHtml(job.htmlDescription)
         : `Job title: ${job.title}`;
-      const bio = opts.ai ? resolveBioFile(opts.bio).bio : '';
-      const analysis = opts.ai
-        ? await analyzeGapWithAI(
-          resume,
-          bio,
-          jobDescription,
-          job.title,
-          opts.model ?? loadConfig().tailoringModel,
-        )
-        : analyzeGap(resume, jobDescription, job.title);
+      const { bio } = resolveBioFile(opts.bio);
+      const analysis = await analyzeGapWithAI(
+        resume,
+        bio,
+        jobDescription,
+        job.title,
+        opts.model ?? loadConfig().tailoringModel,
+      );
 
       logUsingEntries([{ label: 'resume:', value: resumePath }]);
       console.log(formatGapAnalysisSummary(analysis));

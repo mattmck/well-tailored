@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { toast } from 'sonner';
 import { X, RotateCcw } from 'lucide-react';
 import { useWorkspace } from '../../context';
@@ -11,12 +11,32 @@ import * as api from '../../api/client';
 
 const PANEL_CONFIG: Record<
   NonNullable<ActivePanel>,
-  { title: string; width: number; placeholder: string }
+  { title: string; subtitle: string; width: number; placeholder: string }
 > = {
-  jobs: { title: 'JOBS', width: 340, placeholder: 'Jobs panel' },
-  sources: { title: 'SOURCES', width: 480, placeholder: 'Sources panel' },
-  config: { title: 'CONFIG', width: 360, placeholder: 'Config panel' },
-  prompts: { title: 'PROMPTS', width: 360, placeholder: 'Prompts panel' },
+  jobs: {
+    title: 'Jobs',
+    subtitle: 'Opportunity list and application stages',
+    width: 340,
+    placeholder: 'Jobs panel',
+  },
+  sources: {
+    title: 'Sources',
+    subtitle: 'Resume, bio, and supporting source material',
+    width: 480,
+    placeholder: 'Sources panel',
+  },
+  config: {
+    title: 'Config',
+    subtitle: 'Providers, models, and run settings',
+    width: 360,
+    placeholder: 'Config panel',
+  },
+  prompts: {
+    title: 'Prompts',
+    subtitle: 'Prompt source files and prompt review',
+    width: 360,
+    placeholder: 'Prompts panel',
+  },
 };
 
 export function PanelContainer() {
@@ -27,6 +47,7 @@ export function PanelContainer() {
 
   const config = PANEL_CONFIG[state.activePanel];
   const canReload = state.activePanel === 'sources' || state.activePanel === 'prompts';
+  const showSubtitle = state.activePanel !== 'jobs';
 
   function handleClose() {
     dispatch({ type: 'SET_ACTIVE_PANEL', panel: null });
@@ -57,20 +78,28 @@ export function PanelContainer() {
 
   return (
     <div
-      className="flex flex-col border-r border-border bg-card shrink-0 min-h-0"
-      style={{ width: `${config.width}px` }}
+      className="panel-surface flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[1.65rem] lg:w-[var(--panel-width)]"
+      style={{ '--panel-width': `${config.width}px` } as CSSProperties}
     >
-      {/* Panel header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <span className="text-xs font-semibold tracking-widest text-muted-foreground">
-          {config.title}
-        </span>
-        <div className="flex items-center gap-1">
+      <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 shrink-0">
+        <div className="min-w-0">
+          <p className="editorial-label">Workbench Panel</p>
+          <h2 className="mt-1 font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
+            {config.title}
+          </h2>
+          {showSubtitle && (
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {config.subtitle}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
           {canReload && (
             <button
               onClick={handleReload}
               disabled={reloading}
-              className="text-muted-foreground hover:text-foreground transition-colors rounded p-0.5 hover:bg-secondary/50 disabled:opacity-40"
+              className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground disabled:opacity-40"
               title="Reload from disk"
             >
               <RotateCcw size={13} strokeWidth={2} className={reloading ? 'animate-spin' : ''} />
@@ -78,7 +107,7 @@ export function PanelContainer() {
           )}
           <button
             onClick={handleClose}
-            className="text-muted-foreground hover:text-foreground transition-colors rounded p-0.5 hover:bg-secondary/50"
+            className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
             title="Close panel"
           >
             <X size={14} strokeWidth={2} />
@@ -86,20 +115,19 @@ export function PanelContainer() {
         </div>
       </div>
 
-      {/* Panel body */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {state.activePanel === 'jobs' ? (
           <JobsPanel />
         ) : state.activePanel === 'sources' ? (
           <SourcesPanel />
         ) : state.activePanel === 'config' ? (
-          <div className="flex-1 min-h-0 overflow-y-auto p-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             <ConfigPanel />
           </div>
         ) : state.activePanel === 'prompts' ? (
           <PromptsPanel />
         ) : (
-          <div className="p-3">
+          <div className="p-4">
             <p className="text-sm text-muted-foreground">{config.placeholder}</p>
           </div>
         )}

@@ -205,6 +205,7 @@ export interface RenderBody {
   markdown: string;
   kind: 'resume' | 'coverLetter';
   title?: string;
+  theme?: Record<string, string>;
 }
 
 export interface RenderResponse {
@@ -215,6 +216,7 @@ export interface ExportPdfBody {
   markdown: string;
   kind: 'resume' | 'coverLetter';
   title?: string;
+  theme?: Record<string, string>;
 }
 
 export interface WorkspaceSummary {

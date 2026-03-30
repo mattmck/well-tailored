@@ -31,6 +31,8 @@ interface SavedWorkspaceSnapshot {
   result?: unknown;
   uiState?: {
     jobListFilter?: unknown;
+    activeDoc?: unknown;
+    viewMode?: unknown;
   };
 }
 
@@ -110,6 +112,7 @@ function toWorkspaceJob(job: StoredJobRecord, selectedJobIds: string[]): Job | n
       typeof job.checked === 'boolean'
         ? job.checked
         : selectedJobIds.includes(id),
+    scoresStale: false,
     result: normalizeTailorResult(job.result),
     error: typeof job.error === 'string' ? job.error : null,
     _editorData: null,
@@ -162,6 +165,8 @@ export function buildWorkspaceSnapshot(state: WorkspaceState): Record<string, un
     uiState: {
       openPanels: [],
       jobListFilter: state.jobListFilter,
+      activeDoc: state.activeDoc,
+      viewMode: state.viewMode,
     },
     selectedJobIds,
     activeJobId: state.activeJobId,
@@ -229,6 +234,8 @@ export function workspaceRecordToState(workspace: SavedWorkspaceRecord): Partial
 
   const activeJobId = asString(snapshot?.activeJobId) || jobs[0]?.id || null;
   const filter = asString(snapshot?.uiState?.jobListFilter, 'all');
+  const activeDoc = snapshot?.uiState?.activeDoc === 'cover' ? 'cover' : 'resume';
+  const viewMode = snapshot?.uiState?.viewMode === 'diff' ? 'diff' : 'preview';
   const activeResult = normalizeTailorResult(snapshot?.result);
   const hydratedJobs = jobs.map((job) =>
     activeResult && activeJobId && job.id === activeJobId && !job.result
@@ -256,15 +263,18 @@ export function workspaceRecordToState(workspace: SavedWorkspaceRecord): Partial
     jobs: hydratedJobs,
     activeJobId,
     jobListFilter: (filter || 'all') as JobListFilter,
+    activeDoc,
+    viewMode,
     tailorQueue: [],
     tailorQueueTotal: 0,
     tailorRunning: null,
     tailorRunningStartedAt: 0,
     tailorLastSummary: null,
+    regradeQueue: [],
+    regradeQueueTotal: 0,
+    regradeRunning: null,
+    regradeRunningStartedAt: 0,
     runFeedback: null,
-    scoresStale: false,
-    activeDoc: 'resume',
-    viewMode: 'preview',
     regeneratingSection: null,
     activeScoreDetailsId: null,
   };

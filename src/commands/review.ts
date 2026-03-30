@@ -2,7 +2,6 @@ import { Command } from 'commander';
 import { diffMarkdown } from '../lib/diff.js';
 import { parseVersionIndex, resolveWorkspaceForJob } from '../lib/workspace-utils.js';
 import { renderResumeHtml } from '../lib/render.js';
-import { analyzeGap } from '../services/gap.js';
 import { loadSavedWorkspace, saveWorkspaceSnapshot } from '../services/workspace-store.js';
 import { launchReviewTui } from '../tui/review.js';
 import { ResultVersion, SavedHuntrJob, SavedWorkspace, TailorRunResult } from '../types/index.js';
@@ -21,8 +20,6 @@ function buildReviewedResult(args: {
   reviewedResume: string;
   baseResume: string;
   company: string;
-  jobDescription: string;
-  jobTitle?: string;
 }): TailorRunResult {
   return {
     ...args.existing,
@@ -35,7 +32,7 @@ function buildReviewedResult(args: {
       resumeHtml: renderResumeHtml(args.reviewedResume, `Resume - ${args.company}`),
     },
     diff: diffMarkdown(args.baseResume, args.reviewedResume),
-    gapAnalysis: analyzeGap(args.baseResume, args.jobDescription, args.jobTitle),
+    gapAnalysis: args.existing.gapAnalysis,
   };
 }
 
@@ -84,8 +81,6 @@ export function registerReviewCommand(program: Command): void {
         reviewedResume,
         baseResume,
         company,
-        jobDescription,
-        jobTitle,
       });
 
       const nextVersions: ResultVersion[] = [

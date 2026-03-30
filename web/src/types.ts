@@ -6,6 +6,7 @@ export interface Job {
   stage: string;
   status: 'loaded' | 'tailoring' | 'tailored' | 'reviewed' | 'error';
   checked: boolean;
+  scoresStale: boolean;
   result: TailorResult | null;
   error: string | null;
   _editorData: EditorData | null;
@@ -145,7 +146,10 @@ export interface WorkspaceState {
   tailorRunning: string | null;
   tailorRunningStartedAt: number;
   tailorLastSummary: { tailored: number; failed: number } | null;
-  scoresStale: boolean;
+  regradeQueue: string[];
+  regradeQueueTotal: number;
+  regradeRunning: string | null;
+  regradeRunningStartedAt: number;
   activeDoc: ActiveDoc;
   viewMode: ViewMode;
   regeneratingSection: string | null;

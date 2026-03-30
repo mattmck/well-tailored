@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { cn } from '@/components/ui/utils';
 import { genId } from '../../lib/markdown';
 import type { EditorSection as SectionData, BulletItem, JobEntry, SectionType } from '../../types';
 
@@ -16,53 +17,50 @@ interface EditorSectionProps {
   onRegenerate: () => void;
 }
 
-// ---------------------------------------------------------------------------
-// Auto-resizing textarea
-// ---------------------------------------------------------------------------
 function AutoTextarea({
   value,
   onChange,
   placeholder,
 }: {
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${Math.max(60, el.scrollHeight)}px`;
+    const element = ref.current;
+    if (!element) return;
+    element.style.height = 'auto';
+    element.style.height = `${Math.max(84, element.scrollHeight)}px`;
   }, [value]);
 
   return (
     <textarea
       ref={ref}
       value={value}
-      onChange={e => onChange(e.target.value)}
+      onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="w-full resize-none rounded-md border border-border bg-card text-sm leading-relaxed px-2 py-1.5 outline-none focus:border-ring transition-colors text-foreground placeholder:text-muted-foreground"
-      style={{ minHeight: '60px' }}
+      className="paper-pane w-full resize-none rounded-[1.1rem] px-3 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+      style={{ minHeight: '84px' }}
       spellCheck={false}
     />
   );
 }
 
-// ---------------------------------------------------------------------------
-// Small icon buttons shared across the section editor
-// ---------------------------------------------------------------------------
 function IconBtn({
   title,
   onClick,
   disabled,
   danger,
+  active,
   children,
 }: {
   title: string;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  active?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -71,11 +69,13 @@ function IconBtn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`p-1 rounded transition-colors disabled:opacity-25 disabled:cursor-not-allowed ${
+      className={cn(
+        'control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-25',
+        active && 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700',
         danger
-          ? 'text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-          : 'text-muted-foreground hover:bg-secondary/60'
-      }`}
+          ? 'hover:bg-destructive/10 hover:text-destructive'
+          : 'hover:bg-white hover:text-foreground',
+      )}
     >
       {children}
     </button>
@@ -87,26 +87,33 @@ const ChevronUp = () => (
     <polyline points="18 15 12 9 6 15" />
   </svg>
 );
+
 const ChevronDown = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
+
 const XIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
+
 const PlusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
+
 const SpinnerIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
   </svg>
 );
+
 const RefreshIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
@@ -115,15 +122,13 @@ const RefreshIcon = () => (
     <path d="M8 16H3v5" />
   </svg>
 );
+
 const CheckIcon = ({ active }: { active: boolean }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={active ? 'text-emerald-600' : ''}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={active ? 'text-emerald-700' : ''}>
     <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
-// ---------------------------------------------------------------------------
-// Bullet list editor (shared between flat sections and job entries)
-// ---------------------------------------------------------------------------
 function BulletList({
   items,
   onChange,
@@ -132,55 +137,58 @@ function BulletList({
   onChange: (items: BulletItem[]) => void;
 }) {
   function update(id: string, text: string) {
-    onChange(items.map(b => b.id === id ? { ...b, text } : b));
+    onChange(items.map((item) => (item.id === id ? { ...item, text } : item)));
   }
+
   function move(id: string, dir: -1 | 1) {
-    const idx = items.findIndex(b => b.id === id);
+    const idx = items.findIndex((item) => item.id === id);
     if (idx < 0) return;
     const next = idx + dir;
     if (next < 0 || next >= items.length) return;
-    const arr = [...items];
-    [arr[idx], arr[next]] = [arr[next], arr[idx]];
-    onChange(arr);
+    const nextItems = [...items];
+    [nextItems[idx], nextItems[next]] = [nextItems[next], nextItems[idx]];
+    onChange(nextItems);
   }
+
   function remove(id: string) {
-    onChange(items.filter(b => b.id !== id));
+    onChange(items.filter((item) => item.id !== id));
   }
+
   function add() {
     onChange([...items, { id: genId(), text: '' }]);
   }
 
   return (
-    <div className="space-y-1">
-      {items.map((b, idx) => (
-        <div key={b.id} className="flex items-center gap-1">
-          <span className="text-muted-foreground text-xs shrink-0 w-3">–</span>
+    <div className="space-y-2">
+      {items.map((item, idx) => (
+        <div key={item.id} className="flex items-start gap-2">
+          <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/55" />
           <input
             type="text"
-            value={b.text}
-            onChange={e => update(b.id, e.target.value)}
-            className="flex-1 rounded border border-border bg-card px-2 py-1 text-sm outline-none focus:border-ring transition-colors"
+            value={item.text}
+            onChange={(event) => update(item.id, event.target.value)}
+            className="paper-pane flex-1 rounded-[1rem] px-3 py-2 text-sm outline-none transition-colors focus:border-ring min-w-0"
             placeholder="Bullet text…"
           />
-          <IconBtn title="Move up" onClick={() => move(b.id, -1)} disabled={idx === 0}><ChevronUp /></IconBtn>
-          <IconBtn title="Move down" onClick={() => move(b.id, 1)} disabled={idx === items.length - 1}><ChevronDown /></IconBtn>
-          <IconBtn title="Remove bullet" onClick={() => remove(b.id)} danger><XIcon /></IconBtn>
+          <div className="flex gap-1 pt-1">
+            <IconBtn title="Move up" onClick={() => move(item.id, -1)} disabled={idx === 0}><ChevronUp /></IconBtn>
+            <IconBtn title="Move down" onClick={() => move(item.id, 1)} disabled={idx === items.length - 1}><ChevronDown /></IconBtn>
+            <IconBtn title="Remove bullet" onClick={() => remove(item.id)} danger><XIcon /></IconBtn>
+          </div>
         </div>
       ))}
+
       <button
         type="button"
         onClick={add}
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
-        <PlusIcon /> bullet
+        <PlusIcon /> Add bullet
       </button>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Single job entry editor
-// ---------------------------------------------------------------------------
 function JobEntryEditor({
   job,
   index,
@@ -196,64 +204,56 @@ function JobEntryEditor({
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
 }) {
-  function field(f: 'title' | 'company' | 'location' | 'date') {
+  function field(fieldName: 'title' | 'company' | 'location' | 'date') {
     return (
       <input
         type="text"
-        value={job[f] ?? ''}
-        onChange={e => onUpdate({ ...job, [f]: e.target.value })}
-        className="flex-1 rounded border border-border bg-card px-2 py-1 text-sm outline-none focus:border-ring transition-colors min-w-0"
+        value={job[fieldName] ?? ''}
+        onChange={(event) => onUpdate({ ...job, [fieldName]: event.target.value })}
+        className="paper-pane flex-1 rounded-[0.95rem] px-3 py-2 text-sm outline-none transition-colors focus:border-ring min-w-0"
       />
     );
   }
 
   return (
-    <div className="rounded-md border border-border bg-background/50 p-2.5 space-y-2">
-      {/* Job entry header */}
-      <div className="flex items-center gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-1">
-          Job {index + 1}
-        </span>
+    <div className="paper-pane rounded-[1.2rem] p-3.5">
+      <div className="flex items-center gap-2">
+        <span className="editorial-label flex-1">Job {index + 1}</span>
         <IconBtn title="Move job up" onClick={() => onMove(-1)} disabled={index === 0}><ChevronUp /></IconBtn>
         <IconBtn title="Move job down" onClick={() => onMove(1)} disabled={index === total - 1}><ChevronDown /></IconBtn>
         <IconBtn title="Remove job" onClick={onRemove} danger><XIcon /></IconBtn>
       </div>
 
-      {/* Fields */}
-      <div className="space-y-1.5">
+      <div className="mt-3 space-y-2">
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-medium text-muted-foreground w-16 shrink-0">Title</label>
+          <label className="w-16 shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Title</label>
           {field('title')}
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-medium text-muted-foreground w-16 shrink-0">Company</label>
+          <label className="w-16 shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Company</label>
           {field('company')}
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-medium text-muted-foreground w-16 shrink-0">Location</label>
+          <label className="w-16 shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Location</label>
           {field('location')}
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-medium text-muted-foreground w-16 shrink-0">Dates</label>
+          <label className="w-16 shrink-0 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Dates</label>
           {field('date')}
         </div>
       </div>
 
-      {/* Bullets */}
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Bullets</p>
+      <div className="mt-3">
+        <p className="editorial-label mb-2">Bullets</p>
         <BulletList
           items={job.bullets}
-          onChange={bullets => onUpdate({ ...job, bullets })}
+          onChange={(bullets) => onUpdate({ ...job, bullets })}
         />
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main EditorSection component
-// ---------------------------------------------------------------------------
 export function EditorSection({
   section,
   accepted,
@@ -275,7 +275,11 @@ export function EditorSection({
     }
     if (newType === 'jobs' && section.jobs.length === 0) {
       updates.jobs = [{
-        id: genId(), title: '', company: '', location: '', date: '',
+        id: genId(),
+        title: '',
+        company: '',
+        location: '',
+        date: '',
         bullets: [{ id: genId(), text: '' }],
       }];
     }
@@ -283,10 +287,14 @@ export function EditorSection({
   }
 
   function updateJob(jobId: string, updated: JobEntry) {
-    onUpdate({ ...section, jobs: section.jobs.map(j => j.id === jobId ? updated : j) });
+    onUpdate({
+      ...section,
+      jobs: section.jobs.map((job) => (job.id === jobId ? updated : job)),
+    });
   }
+
   function moveJob(jobId: string, dir: -1 | 1) {
-    const idx = section.jobs.findIndex(j => j.id === jobId);
+    const idx = section.jobs.findIndex((job) => job.id === jobId);
     if (idx < 0) return;
     const next = idx + dir;
     if (next < 0 || next >= section.jobs.length) return;
@@ -294,97 +302,98 @@ export function EditorSection({
     [jobs[idx], jobs[next]] = [jobs[next], jobs[idx]];
     onUpdate({ ...section, jobs });
   }
+
   function removeJob(jobId: string) {
-    onUpdate({ ...section, jobs: section.jobs.filter(j => j.id !== jobId) });
+    onUpdate({
+      ...section,
+      jobs: section.jobs.filter((job) => job.id !== jobId),
+    });
   }
+
   function addJob() {
     const newJob: JobEntry = {
-      id: genId(), title: '', company: '', location: '', date: '',
+      id: genId(),
+      title: '',
+      company: '',
+      location: '',
+      date: '',
       bullets: [{ id: genId(), text: '' }],
     };
     onUpdate({ ...section, jobs: [...section.jobs, newJob] });
   }
 
   return (
-    <div className="border-b border-border py-3 px-3 space-y-2.5">
-      {/* Section header row */}
-      <div className="flex items-center gap-1.5">
-        {/* Editable section title */}
+    <section className="paper-pane rounded-[1.35rem] px-4 py-4">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           value={section.heading}
-          onChange={e => onUpdate({ ...section, heading: e.target.value })}
-          className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground focus:bg-secondary/30 rounded px-1 -ml-1 transition-colors"
+          onChange={(event) => onUpdate({ ...section, heading: event.target.value })}
+          className="min-w-[12rem] flex-1 rounded-[0.9rem] border-none bg-transparent px-1 text-base font-semibold text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-white/45"
           placeholder="Section title…"
         />
 
-        {/* Type selector */}
         <select
           value={section.type}
-          onChange={e => handleTypeChange(e.target.value as SectionType)}
-          className="text-[10px] bg-card border border-border rounded px-1.5 py-0.5 text-muted-foreground cursor-pointer outline-none focus:border-ring transition-colors"
+          onChange={(event) => handleTypeChange(event.target.value as SectionType)}
+          className="control-chip rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground outline-none transition-colors focus:border-ring"
         >
           <option value="text">Text</option>
           <option value="bullets">Bullets</option>
           <option value="jobs">Jobs</option>
         </select>
 
-        {/* Move up/down */}
         <IconBtn title="Move section up" onClick={onMoveUp} disabled={!canMoveUp}><ChevronUp /></IconBtn>
         <IconBtn title="Move section down" onClick={onMoveDown} disabled={!canMoveDown}><ChevronDown /></IconBtn>
-
-        {/* Accept */}
-        <IconBtn title={accepted ? 'Accepted' : 'Mark as accepted'} onClick={onAccept}>
+        <IconBtn title={accepted ? 'Accepted' : 'Mark as accepted'} onClick={onAccept} active={accepted}>
           <CheckIcon active={accepted} />
         </IconBtn>
-
-        {/* Regenerate */}
         <IconBtn title="Regenerate section" onClick={onRegenerate} disabled={regenerating}>
           {regenerating ? <SpinnerIcon /> : <RefreshIcon />}
         </IconBtn>
-
-        {/* Remove section */}
         <IconBtn title="Remove section" onClick={onRemove} danger><XIcon /></IconBtn>
       </div>
 
-      {/* Type-specific content */}
-      {section.type === 'text' && (
-        <AutoTextarea
-          value={section.content}
-          onChange={content => onUpdate({ ...section, content })}
-          placeholder="Section content…"
-        />
-      )}
+      <div className="mt-3">
+        {section.type === 'text' && (
+          <AutoTextarea
+            value={section.content}
+            onChange={(content) => onUpdate({ ...section, content })}
+            placeholder="Section content…"
+          />
+        )}
 
-      {section.type === 'bullets' && (
-        <BulletList
-          items={section.items}
-          onChange={items => onUpdate({ ...section, items })}
-        />
-      )}
+        {section.type === 'bullets' && (
+          <BulletList
+            items={section.items}
+            onChange={(items) => onUpdate({ ...section, items })}
+          />
+        )}
 
-      {section.type === 'jobs' && (
-        <div className="space-y-2">
-          {section.jobs.map((job, idx) => (
-            <JobEntryEditor
-              key={job.id}
-              job={job}
-              index={idx}
-              total={section.jobs.length}
-              onUpdate={updated => updateJob(job.id, updated)}
-              onMove={dir => moveJob(job.id, dir)}
-              onRemove={() => removeJob(job.id)}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={addJob}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <PlusIcon /> Add job
-          </button>
-        </div>
-      )}
-    </div>
+        {section.type === 'jobs' && (
+          <div className="space-y-3">
+            {section.jobs.map((job, idx) => (
+              <JobEntryEditor
+                key={job.id}
+                job={job}
+                index={idx}
+                total={section.jobs.length}
+                onUpdate={(updated) => updateJob(job.id, updated)}
+                onMove={(dir) => moveJob(job.id, dir)}
+                onRemove={() => removeJob(job.id)}
+              />
+            ))}
+
+            <button
+              type="button"
+              onClick={addJob}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <PlusIcon /> Add job
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

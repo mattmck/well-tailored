@@ -31,7 +31,7 @@ import {
   requireHuntrClient,
 } from './services/huntr.js';
 import { runTailorWorkflow } from './services/runs.js';
-import { analyzeGap, analyzeGapWithAI } from './services/gap.js';
+import { analyzeGapWithAI } from './services/gap.js';
 import { regenerateResumeSection } from './services/review.js';
 import { scoreTailoredOutput } from './services/scoring.js';
 import { deleteSavedWorkspace, listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
@@ -98,7 +98,6 @@ interface GapBody {
   bio?: string;
   jobDescription: string;
   jobTitle?: string;
-  useAI?: boolean;
   model?: string;
   provider?: string;
 }
@@ -674,23 +673,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 
   if (method === 'POST' && url.pathname === '/api/gap') {
     const body = await readJsonBody<GapBody>(req);
-    if (body.useAI) {
-      const config = loadConfig();
-      const preferredProvider = normalizeProviderChoice(body.provider) ?? config.scoringProvider ?? config.tailoringProvider;
-      const result = await analyzeGapWithAI(
-        body.sourceResume ?? body.resume ?? '',
-        body.bio ?? '',
-        body.jobDescription ?? '',
-        body.jobTitle,
-        body.model ?? config.tailoringModel,
-        (model, systemPrompt, userPrompt, verbose) =>
-          defaultComplete(model, systemPrompt, userPrompt, verbose, { provider: preferredProvider }),
-      );
-      sendJson(res, 200, result);
-      return;
-    }
-
-    sendJson(res, 200, analyzeGap(body.sourceResume ?? body.resume ?? '', body.jobDescription ?? '', body.jobTitle));
+    const config = loadConfig();
+    const preferredProvider = normalizeProviderChoice(body.provider) ?? config.scoringProvider ?? config.tailoringProvider;
+    const result = await analyzeGapWithAI(
+      body.sourceResume ?? body.resume ?? '',
+      body.bio ?? '',
+      body.jobDescription ?? '',
+      body.jobTitle,
+      body.model ?? config.tailoringModel,
+      (model, systemPrompt, userPrompt, verbose) =>
+        defaultComplete(model, systemPrompt, userPrompt, verbose, { provider: preferredProvider }),
+    );
+    sendJson(res, 200, result);
     return;
   }
 

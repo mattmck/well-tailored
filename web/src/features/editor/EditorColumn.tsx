@@ -1,11 +1,25 @@
 import { useCallback, useEffect } from 'react';
+import { Copy, FilePenLine, Plus, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { EditorSection } from './EditorSection';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/components/ui/utils';
 import { parseEditorData, reconstructEditorData, genId } from '../../lib/markdown';
+import { editorDataMatchesDoc, getJobDocumentMarkdown } from '@/lib/job-documents';
 import type { EditorData, EditorSection as SectionData } from '../../types';
+import { WorkbenchEmptyState } from '../layout/WorkbenchEmptyState';
 import * as api from '../../api/client';
+
+function getToolbarTabClass(isActive: boolean) {
+  return cn(
+    'rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200',
+    isActive
+      ? 'bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(49,74,116,0.22)]'
+      : 'text-muted-foreground hover:bg-white hover:text-foreground',
+  );
+}
 
 export function EditorColumn() {
   const { state, dispatch } = useWorkspace();
@@ -14,21 +28,19 @@ export function EditorColumn() {
     ? state.jobs.find((j) => j.id === state.activeJobId)
     : null;
 
-  const activeMarkdown =
-    job?.result
-      ? state.activeDoc === 'resume'
-        ? job.result.output.resume
-        : job.result.output.coverLetter
-      : null;
+  const activeMarkdown = getJobDocumentMarkdown(job, state.activeDoc);
 
   const editorData: EditorData | null =
     job && activeMarkdown
-      ? job._editorData ?? parseEditorData(activeMarkdown, state.activeDoc, null)
+      ? (
+          editorDataMatchesDoc(job._editorData, state.activeDoc)
+            ? job._editorData
+            : parseEditorData(activeMarkdown, state.activeDoc, null)
+        )
       : null;
 
-  // Persist freshly-parsed editorData once after initial computation
   useEffect(() => {
-    if (!job || job._editorData || !activeMarkdown) return;
+    if (!job || !activeMarkdown || editorDataMatchesDoc(job._editorData, state.activeDoc)) return;
     dispatch({
       type: 'UPDATE_JOB',
       id: job.id,
@@ -39,26 +51,23 @@ export function EditorColumn() {
 
   const fullMarkdown = editorData ? reconstructEditorData(editorData) : (activeMarkdown ?? '');
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
   function patchEditorData(patch: Partial<EditorData>) {
     if (!job || !editorData) return;
+    const nextEditorData = { ...editorData, ...patch };
+    const nextMarkdown = reconstructEditorData(nextEditorData);
     dispatch({
-      type: 'UPDATE_JOB',
+      type: 'SET_JOB_DOCUMENT_STATE',
       id: job.id,
-      patch: { _editorData: { ...editorData, ...patch } },
+      doc: state.activeDoc,
+      editorData: nextEditorData,
+      markdown: nextMarkdown,
     });
-    dispatch({ type: 'SET_SCORES_STALE', stale: true });
   }
 
   function patchSections(sections: SectionData[]) {
     patchEditorData({ sections });
   }
 
-  // ---------------------------------------------------------------------------
-  // Callbacks
-  // ---------------------------------------------------------------------------
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(fullMarkdown).catch(console.error);
   }, [fullMarkdown]);
@@ -82,7 +91,9 @@ export function EditorColumn() {
   const handleSectionUpdate = useCallback(
     (updated: SectionData) => {
       if (!editorData) return;
-      patchSections(editorData.sections.map(s => s.id === updated.id ? updated : s));
+      patchSections(editorData.sections.map((section) => (
+        section.id === updated.id ? updated : section
+      )));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [editorData],
@@ -91,7 +102,7 @@ export function EditorColumn() {
   const handleSectionMove = useCallback(
     (sectionId: string, dir: 'up' | 'down') => {
       if (!editorData) return;
-      const idx = editorData.sections.findIndex(s => s.id === sectionId);
+      const idx = editorData.sections.findIndex((section) => section.id === sectionId);
       if (idx < 0) return;
       const next = dir === 'up' ? idx - 1 : idx + 1;
       if (next < 0 || next >= editorData.sections.length) return;
@@ -106,7 +117,7 @@ export function EditorColumn() {
   const handleSectionRemove = useCallback(
     (sectionId: string) => {
       if (!editorData) return;
-      patchSections(editorData.sections.filter(s => s.id !== sectionId));
+      patchSections(editorData.sections.filter((section) => section.id !== sectionId));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [editorData],
@@ -116,9 +127,11 @@ export function EditorColumn() {
     (sectionId: string) => {
       if (!editorData) return;
       patchSections(
-        editorData.sections.map(s =>
-          s.id === sectionId ? { ...s, accepted: !s.accepted } : s,
-        ),
+        editorData.sections.map((section) => (
+          section.id === sectionId
+            ? { ...section, accepted: !section.accepted }
+            : section
+        )),
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +156,7 @@ export function EditorColumn() {
   const handleRegenerate = useCallback(
     async (sectionId: string) => {
       if (!job || !editorData || !activeMarkdown) return;
-      const section = editorData.sections.find(s => s.id === sectionId);
+      const section = editorData.sections.find((candidate) => candidate.id === sectionId);
       if (!section) return;
 
       dispatch({ type: 'SET_REGENERATING_SECTION', section: sectionId });
@@ -164,7 +177,6 @@ export function EditorColumn() {
           : section.heading;
         const newContent = res.section.content;
 
-        // Re-parse the returned content to get structured data
         const reparsed = parseEditorData(
           `## ${newHeading}\n\n${newContent}`,
           state.activeDoc,
@@ -173,7 +185,9 @@ export function EditorColumn() {
           ? { ...reparsed.sections[0], id: sectionId, accepted: false, heading: newHeading }
           : { ...section, content: newContent, heading: newHeading, accepted: false };
 
-        patchSections(editorData.sections.map(s => s.id === sectionId ? newSection : s));
+        patchSections(editorData.sections.map((candidate) => (
+          candidate.id === sectionId ? newSection : candidate
+        )));
       } catch (err) {
         console.error('Regenerate section failed:', err);
       } finally {
@@ -187,164 +201,183 @@ export function EditorColumn() {
   const handleDocTab = useCallback(
     (doc: 'resume' | 'cover') => {
       dispatch({ type: 'SET_ACTIVE_DOC', doc });
-      if (job) {
-        dispatch({ type: 'UPDATE_JOB', id: job.id, patch: { _editorData: null } });
-      }
     },
-    [dispatch, job],
+    [dispatch],
   );
 
-  // ---------------------------------------------------------------------------
-  // Empty states
-  // ---------------------------------------------------------------------------
   if (!job) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        Select a job to start editing
+      <div className="flex flex-1 p-4">
+        <WorkbenchEmptyState
+          className="w-full"
+          eyebrow="Draft Editor"
+          title="Choose a role to start refining."
+          description="Select a job from the workbench to open the structured editor, tune resume sections, and shape the cover letter with the same source material."
+          icon={FilePenLine}
+          tips={[
+            'Use the Jobs panel to load roles from Huntr or paste a fresh job description.',
+            'The editor keeps resume and cover letter drafts separate so revisions stay clean.',
+            'Copy or export only after the score band and keyword fit feel aligned.',
+          ]}
+        />
       </div>
     );
   }
 
   if (!job.result) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        {job.status === 'tailoring' ? 'Tailoring in progress…' : 'Run tailoring to generate content'}
+      <div className="flex flex-1 p-4">
+        <WorkbenchEmptyState
+          className="w-full"
+          eyebrow="Draft Editor"
+          title={job.status === 'tailoring' ? 'Draft in progress.' : 'Generate the first tailored pass.'}
+          description={job.status === 'tailoring'
+            ? 'The drafting engine is assembling sections for this role now. Once it finishes, the structured editor will populate automatically.'
+            : 'Run tailoring for this job to populate editable sections, compare the output, and start making focused revisions.'}
+          icon={Sparkles}
+          tips={[
+            'Resume sections become individually editable once the draft returns.',
+            'Reordering and regenerating sections marks the score band as stale so review stays honest.',
+          ]}
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col min-w-0 border-r border-border">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
-        <div className="flex rounded-md border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => handleDocTab('resume')}
-            className={`px-3 py-1 text-xs font-medium transition-colors ${
-              state.activeDoc === 'resume'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-muted-foreground hover:bg-secondary/60'
-            }`}
-          >
-            Resume
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDocTab('cover')}
-            className={`px-3 py-1 text-xs font-medium transition-colors border-l border-border ${
-              state.activeDoc === 'cover'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-card text-muted-foreground hover:bg-secondary/60'
-            }`}
-          >
-            Cover Letter
-          </button>
-        </div>
-
-        <div className="flex-1" />
-
-        <button
-          type="button"
-          onClick={handleCopy}
-          title="Copy full document to clipboard"
-          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border border-border bg-card text-muted-foreground hover:bg-secondary/60 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-          </svg>
-          Copy
-        </button>
-      </div>
-
-      {/* Section list */}
-      <ScrollArea className="flex-1 min-h-0 min-w-0">
-        {/* Resume header fields */}
-        {editorData?.kind === 'resume' && (
-          <div className="border-b border-border px-3 py-3 space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Resume Header
-            </p>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">Name</label>
-                <Input
-                  value={editorData.header?.name ?? ''}
-                  onChange={e => handleHeaderChange('name', e.target.value)}
-                  className="h-9"
-                  placeholder="Your name"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">Role</label>
-                <Input
-                  value={editorData.header?.role ?? ''}
-                  onChange={e => handleHeaderChange('role', e.target.value)}
-                  className="h-9"
-                  placeholder="Role headline"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">Contact Line</label>
-                <Input
-                  value={editorData.header?.contact ?? ''}
-                  onChange={e => handleHeaderChange('contact', e.target.value)}
-                  className="h-9 font-mono text-xs"
-                  placeholder="email | phone | location"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">Links Line</label>
-                <Input
-                  value={editorData.header?.links ?? ''}
-                  onChange={e => handleHeaderChange('links', e.target.value)}
-                  className="h-9 font-mono text-xs"
-                  placeholder="github.com/example | linkedin.com/in/example"
-                />
-              </div>
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+      <div className="shrink-0 border-b border-border/70 px-4 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="editorial-label">Draft Editor</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h2 className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
+                Structured sections
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {job.company} · {job.title}
+              </span>
             </div>
           </div>
-        )}
 
-        {/* Sections */}
-        {editorData && editorData.sections.length > 0 ? (
-          <>
-            {editorData.sections.map((section, idx) => (
-              <EditorSection
-                key={section.id}
-                section={section}
-                accepted={section.accepted}
-                regenerating={state.regeneratingSection === section.id}
-                canMoveUp={idx > 0}
-                canMoveDown={idx < editorData.sections.length - 1}
-                onUpdate={handleSectionUpdate}
-                onMoveUp={() => handleSectionMove(section.id, 'up')}
-                onMoveDown={() => handleSectionMove(section.id, 'down')}
-                onRemove={() => handleSectionRemove(section.id)}
-                onAccept={() => handleSectionAccept(section.id)}
-                onRegenerate={() => handleRegenerate(section.id)}
-              />
-            ))}
-            {/* Add section */}
-            <div className="px-3 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="toolbar-segment flex rounded-full p-1">
               <button
                 type="button"
-                onClick={handleAddSection}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => handleDocTab('resume')}
+                className={getToolbarTabClass(state.activeDoc === 'resume')}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Section
+                Resume
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDocTab('cover')}
+                className={getToolbarTabClass(state.activeDoc === 'cover')}
+              >
+                Cover Letter
               </button>
             </div>
-          </>
-        ) : editorData ? (
-          <div className="flex items-center justify-center p-8 text-muted-foreground text-sm">
-            {editorData.kind === 'resume' ? 'No sections found.' : 'No sections found'}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              title="Copy full document to clipboard"
+            >
+              <Copy className="size-3.5" />
+              Copy
+            </Button>
           </div>
-        ) : null}
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 min-h-0 min-w-0">
+        <div className="min-h-full space-y-4 p-4">
+          {editorData?.kind === 'resume' && (
+            <section className="paper-pane rounded-[1.35rem] px-4 py-4">
+              <p className="editorial-label">Resume Header</p>
+              <div className="mt-3 grid gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground">Name</label>
+                  <Input
+                    value={editorData.header?.name ?? ''}
+                    onChange={(event) => handleHeaderChange('name', event.target.value)}
+                    className="h-10"
+                    placeholder="Your name"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground">Role</label>
+                  <Input
+                    value={editorData.header?.role ?? ''}
+                    onChange={(event) => handleHeaderChange('role', event.target.value)}
+                    className="h-10"
+                    placeholder="Role headline"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground">Contact Line</label>
+                  <Input
+                    value={editorData.header?.contact ?? ''}
+                    onChange={(event) => handleHeaderChange('contact', event.target.value)}
+                    className="h-10 font-mono text-xs"
+                    placeholder="email | phone | location"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground">Links Line</label>
+                  <Input
+                    value={editorData.header?.links ?? ''}
+                    onChange={(event) => handleHeaderChange('links', event.target.value)}
+                    className="h-10 font-mono text-xs"
+                    placeholder="github.com/example | linkedin.com/in/example"
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+
+          {editorData && editorData.sections.length > 0 ? (
+            <>
+              {editorData.sections.map((section, idx) => (
+                <EditorSection
+                  key={section.id}
+                  section={section}
+                  accepted={section.accepted}
+                  regenerating={state.regeneratingSection === section.id}
+                  canMoveUp={idx > 0}
+                  canMoveDown={idx < editorData.sections.length - 1}
+                  onUpdate={handleSectionUpdate}
+                  onMoveUp={() => handleSectionMove(section.id, 'up')}
+                  onMoveDown={() => handleSectionMove(section.id, 'down')}
+                  onRemove={() => handleSectionRemove(section.id)}
+                  onAccept={() => handleSectionAccept(section.id)}
+                  onRegenerate={() => handleRegenerate(section.id)}
+                />
+              ))}
+
+              <div className="pt-1">
+                <Button type="button" variant="outline" size="sm" onClick={handleAddSection}>
+                  <Plus className="size-3.5" />
+                  Add Section
+                </Button>
+              </div>
+            </>
+          ) : editorData ? (
+            <WorkbenchEmptyState
+              eyebrow="Draft Editor"
+              title="No editable sections yet."
+              description={editorData.kind === 'resume'
+                ? 'The draft rendered, but no structured resume sections were detected. You can add a section manually and keep shaping from there.'
+                : 'The document rendered, but no structured sections were detected yet. Add one manually to keep drafting.'}
+              icon={FilePenLine}
+              tips={[
+                'Use Add Section to create a fresh block and continue editing without rerunning the workflow.',
+              ]}
+            />
+          ) : null}
+        </div>
       </ScrollArea>
     </div>
   );
