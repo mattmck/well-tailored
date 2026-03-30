@@ -286,7 +286,12 @@ function parseEvaluatorScorecard(raw: string): EvaluatorScorecard {
 }
 
 function stripHtmlComments(text: string): string {
-  return text.replace(/<!--[\s\S]*?-->/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  let previous: string;
+  do {
+    previous = text;
+    text = text.replace(/<!--[\s\S]*?-->/g, '');
+  } while (text !== previous);
+  return text.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function scoringUserPrompt(input: TailorInput, output: TailorOutput): string {
