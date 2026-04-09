@@ -1,8 +1,13 @@
-import { Bookmark, Files, FolderOpen, Save, Sparkles, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Bookmark, Files, FolderOpen, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWorkspace } from '../../context';
 import { Button } from '../../components/ui/button';
 import * as api from '../../api/client';
+import type { Job } from '../../types';
+import { appendUniqueJobIdsToQueue } from '@/lib/queues';
+import { TailorConfirmModal } from '../jobs/TailorConfirmModal';
+import { PasteJDModal } from '../jobs/PasteJDModal';
 import { TailoringStatus } from './TailoringStatus';
 import { RegradingStatus } from './RegradingStatus';
 import { WorkspaceCombobox } from './WorkspaceCombobox';
@@ -43,10 +48,13 @@ function deriveSourceRoot(paths: {
 
 export function TopBar() {
   const { state, dispatch } = useWorkspace();
+  const [tailorModalOpen, setTailorModalOpen] = useState(false);
+  const [pasteModalOpen, setPasteModalOpen] = useState(false);
   const matchedWorkspace = findSavedWorkspace(state.savedWorkspaces, state.workspaceName, state.activeWorkspaceId);
   const sourceRoot = deriveSourceRoot(state.sourcePaths);
   const totalJobs = state.jobs.length;
   const draftedJobs = state.jobs.filter((job) => Boolean(job.result)).length;
+  const checkedCount = state.jobs.filter((job) => job.checked).length;
   const activeJob = state.activeJobId
     ? state.jobs.find((job) => job.id === state.activeJobId) ?? null
     : null;
@@ -72,21 +80,22 @@ export function TopBar() {
     : state.workspaceName.trim()
     ? 'Unsaved workspace'
     : 'Scratch workspace';
+  const tailorSummary = state.tailorRunning === null ? state.tailorLastSummary : null;
+  const hasTailorFailures = (tailorSummary?.failed ?? 0) > 0;
 
   async function refreshWorkspaceList() {
     const list = await api.listWorkspaces();
     dispatch({ type: 'SET_SAVED_WORKSPACES', workspaces: list.workspaces });
   }
 
-  async function handleLoad() {
-    if (!matchedWorkspace) return;
-    dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: matchedWorkspace.id });
+  async function handleLoadWorkspace(workspace: { id: string; name: string }) {
+    dispatch({ type: 'SET_WORKSPACE_NAME', name: workspace.name });
 
     try {
-      const data = await api.loadWorkspace(matchedWorkspace.id);
+      const data = await api.loadWorkspace(workspace.id);
       const nextState = workspaceRecordToState(data);
       dispatch({ type: 'LOAD_WORKSPACE', state: nextState });
-      toast.success(`Loaded "${matchedWorkspace.name}"`);
+      toast.success(`Loaded "${workspace.name}"`);
 
       const huntrIdsMissingStage = getWorkspaceHuntrIdsMissingStage(data);
       if (huntrIdsMissingStage.length > 0 && nextState.jobs) {
@@ -115,6 +124,11 @@ export function TopBar() {
       console.error('Failed to load workspace:', err);
       toast.error('Failed to load workspace');
     }
+  }
+
+  async function handleLoad() {
+    if (!matchedWorkspace) return;
+    await handleLoadWorkspace(matchedWorkspace);
   }
 
   async function handleSave() {
@@ -151,9 +165,45 @@ export function TopBar() {
     }
   }
 
+  async function handleLoadHuntr() {
+    dispatch({ type: 'SET_LOADING_HUNTR', loading: true });
+    try {
+      const response = await api.getHuntrJobs();
+      const jobs: Job[] = response.jobs.map((huntrJob) => ({
+        id: huntrJob.id,
+        company: huntrJob.company,
+        title: huntrJob.title,
+        jd: huntrJob.descriptionText,
+        stage: huntrJob.listName,
+        status: 'loaded',
+        checked: false,
+        scoresStale: false,
+        result: null,
+        error: null,
+        _editorData: null,
+      }));
+      dispatch({ type: 'MERGE_JOBS', jobs });
+    } catch (err) {
+      console.error('Failed to load Huntr jobs:', err);
+      toast.error('Failed to load Huntr jobs');
+    } finally {
+      dispatch({ type: 'SET_LOADING_HUNTR', loading: false });
+    }
+  }
+
+  function handleTailorConfirm(jobIds: string[]) {
+    const next = appendUniqueJobIdsToQueue({
+      queue: state.tailorQueue,
+      runningId: state.tailorRunning,
+      total: state.tailorQueueTotal,
+      incomingIds: jobIds,
+    });
+    dispatch({ type: 'SET_TAILOR_QUEUE', queue: next.queue, total: next.total });
+  }
+
   return (
     <>
-      <div className="shrink-0 border-b border-border/70 px-4 pb-3 pt-3">
+      <div className="shrink-0 px-4 pb-3 pt-3">
         <div className="flex flex-wrap items-start gap-3">
           <div className="flex min-w-[16rem] flex-1 items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-[1.1rem] bg-primary text-primary-foreground shadow-[0_12px_26px_rgba(49,74,116,0.2)]">
@@ -189,7 +239,9 @@ export function TopBar() {
             <WorkspaceCombobox
               value={state.workspaceName}
               onChange={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
-              onSelect={(name) => dispatch({ type: 'SET_WORKSPACE_NAME', name })}
+              onSelect={(workspace) => {
+                void handleLoadWorkspace(workspace);
+              }}
               options={state.savedWorkspaces}
               placeholder="Name or load a saved workspace"
             />
@@ -218,30 +270,109 @@ export function TopBar() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => void handleSave()} disabled={!state.workspaceName.trim()}>
-              <Save className="size-3.5" />
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => void handleLoad()} disabled={!matchedWorkspace}>
-              <FolderOpen className="size-3.5" />
-              Load
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void handleDelete()}
-              disabled={!matchedWorkspace}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="size-3.5" />
-              Delete
-            </Button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => void handleSave()} disabled={!state.workspaceName.trim()}>
+                <Save className="size-3.5" />
+                Save
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => void handleLoad()} disabled={!matchedWorkspace}>
+                <FolderOpen className="size-3.5" />
+                Load
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleDelete()}
+                disabled={!matchedWorkspace}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+                Delete
+              </Button>
+            </div>
+
+            {state.activePanel === 'jobs' && (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleLoadHuntr()}
+                  disabled={state.isLoadingHuntr}
+                >
+                  {state.isLoadingHuntr ? 'Loading…' : 'Load Huntr'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPasteModalOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  Add JD
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setTailorModalOpen(true)}
+                >
+                  Tailor Selected{checkedCount > 0 ? ` (${checkedCount})` : ''}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
       <TailoringStatus />
+      {tailorSummary && (
+        <div className="shrink-0 border-b border-border/70 bg-background px-4 py-2.5">
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border px-3 py-2 text-sm ${
+              hasTailorFailures
+                ? 'border-amber-500/25 bg-amber-500/10 text-amber-800'
+                : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800'
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-medium">
+                {hasTailorFailures
+                  ? `✓ ${tailorSummary.tailored} tailored · ⚠ ${tailorSummary.failed} failed`
+                  : `✓ ${tailorSummary.tailored} jobs tailored`}
+              </span>
+              {hasTailorFailures && (
+                <>
+                  <span className="text-amber-800/80">click failed jobs to retry</span>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_ACTIVE_PANEL', panel: 'jobs' })}
+                    className="inline-flex items-center rounded-full border border-amber-500/30 bg-white/70 px-2 py-0.5 text-xs font-medium text-amber-900 transition-colors hover:bg-white"
+                  >
+                    View failed jobs
+                  </button>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'SET_TAILOR_SUMMARY', summary: null })}
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-current/70 transition-colors hover:bg-white/60 hover:text-current"
+              aria-label="Dismiss tailoring summary"
+              title="Dismiss tailoring summary"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <RegradingStatus />
+      <TailorConfirmModal
+        open={tailorModalOpen}
+        onOpenChange={setTailorModalOpen}
+        onConfirm={handleTailorConfirm}
+      />
+      <PasteJDModal
+        open={pasteModalOpen}
+        onOpenChange={setPasteModalOpen}
+      />
     </>
   );
 }

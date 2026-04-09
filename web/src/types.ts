@@ -156,4 +156,5 @@ export interface WorkspaceState {
   activePanel: ActivePanel;
   activeScoreDetailsId: string | null;
   runFeedback: { text: string; type: 'working' | 'done' | 'error' } | null;
+  experienceOrder: 'relevance' | 'chronological';
 }

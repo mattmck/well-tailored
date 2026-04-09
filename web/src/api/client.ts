@@ -120,6 +120,7 @@ export interface ManualTailorBody {
   scoreProvider?: string;
   scoreModel?: string;
   prompts?: Record<string, string>;
+  experienceOrder?: 'relevance' | 'chronological';
 }
 
 export interface ManualTailorResponse {
@@ -206,6 +207,7 @@ export interface RenderBody {
   kind: 'resume' | 'coverLetter';
   title?: string;
   theme?: Record<string, string>;
+  experienceOrder?: 'relevance' | 'chronological';
 }
 
 export interface RenderResponse {
@@ -217,6 +219,7 @@ export interface ExportPdfBody {
   kind: 'resume' | 'coverLetter';
   title?: string;
   theme?: Record<string, string>;
+  experienceOrder?: 'relevance' | 'chronological';
 }
 
 export interface WorkspaceSummary {
@@ -239,6 +242,13 @@ export interface SaveWorkspaceBody {
   id?: string;
   name: string;
   snapshot: unknown;
+}
+
+export type SourceKey = 'resume' | 'bio' | 'baseCoverLetter' | 'resumeSupplemental';
+
+export interface BackupEntry {
+  timestamp: string;
+  path: string;
 }
 
 export interface DeleteWorkspaceResponse {
@@ -311,6 +321,7 @@ export async function runManualTailor(body: ManualTailorBody): Promise<ManualTai
       scoringModel: body.scoreModel,
     },
     promptOverrides: body.prompts,
+    experienceOrder: body.experienceOrder,
     includeScoring: true,
   });
 
@@ -423,4 +434,27 @@ export function saveWorkspace(body: SaveWorkspaceBody): Promise<WorkspaceRecord>
 /** DELETE /api/workspaces/:id — Delete a workspace */
 export function deleteWorkspace(id: string): Promise<DeleteWorkspaceResponse> {
   return request<DeleteWorkspaceResponse>(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/** POST /api/sources/backup — Save a timestamped backup of a source document */
+export async function backupSource(key: SourceKey, content: string): Promise<BackupEntry> {
+  const response = await post<{ ok: boolean; entry: BackupEntry }>('/api/sources/backup', {
+    key,
+    content,
+  });
+  return response.entry;
+}
+
+/** GET /api/sources/backups/:key — List backups for a source document */
+export function listSourceBackups(key: SourceKey): Promise<BackupEntry[]> {
+  return request<{ backups: BackupEntry[] }>(`/api/sources/backups/${encodeURIComponent(key)}`).then(
+    (response) => response.backups,
+  );
+}
+
+/** GET /api/sources/backups/:key/:timestamp — Read a specific backup */
+export function getSourceBackup(key: SourceKey, timestamp: string): Promise<string> {
+  return request<{ content: string }>(
+    `/api/sources/backups/${encodeURIComponent(key)}/${encodeURIComponent(timestamp)}`,
+  ).then((response) => response.content);
 }

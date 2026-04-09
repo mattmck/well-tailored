@@ -85,40 +85,48 @@ export function ScoreCards() {
         key={document.id}
         type="button"
         onClick={() => openDetails(document.id)}
-        className="group rounded-[1.05rem] border border-border/80 bg-white/80 px-4 py-3 text-left transition-all duration-200 hover:border-primary/20 hover:bg-white/90"
+        className="group w-full min-w-0 rounded-[0.95rem] border border-border/80 bg-white/80 px-3 py-2 text-left transition-all duration-200 hover:border-primary/20 hover:bg-white/90"
       >
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="min-w-0 space-y-2">
-            <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {document.label}
               </p>
-              <span className={cn('font-[Manrope] text-lg font-semibold tracking-[-0.05em]', colors.text)}>
-                {document.overall}
-              </span>
+              <div className="mt-1 flex items-end gap-1.5">
+                <span className={cn('font-[Manrope] text-lg font-semibold leading-none tracking-[-0.05em]', colors.text)}>
+                  {document.overall}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  readiness
+                </span>
+              </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <span className="shrink-0 text-sm font-medium text-foreground">
-                {document.label}
-              </span>
-              <Progress
-                value={document.overall}
-                className="h-2.5 flex-1 bg-[rgba(116,121,134,0.14)]"
-              />
-            </div>
+            <span className="text-[10px] font-medium text-muted-foreground">
+              {document.overall}/100
+            </span>
           </div>
 
-          <div className="flex flex-col items-start gap-1 lg:items-end">
-            {verdictStyle && (
-              <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium', verdictStyle.className)}>
-                {verdictStyle.label}
-              </span>
-            )}
-            {confidenceStyle && document.confidence !== undefined && (
-              <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium', confidenceStyle)}>
-                {document.confidence}% confidence
-              </span>
+          <div className="flex items-start gap-1.5">
+            <div className="min-w-[6rem] flex-1">
+              <Progress
+                value={document.overall}
+                className="h-2 bg-[rgba(116,121,134,0.14)]"
+              />
+            </div>
+            {(verdictStyle || confidenceStyle) && (
+              <div className="flex shrink-0 flex-col items-start gap-1">
+              {verdictStyle && (
+                <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium', verdictStyle.className)}>
+                  {verdictStyle.label}
+                </span>
+              )}
+              {confidenceStyle && document.confidence !== undefined && (
+                <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium', confidenceStyle)}>
+                  {document.confidence}% conf.
+                </span>
+              )}
+              </div>
             )}
           </div>
         </div>
@@ -130,45 +138,86 @@ export function ScoreCards() {
     <>
       <div className="border-b border-border/70 px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="editorial-label">Match Readiness</p>
-            <div className="mt-2 flex flex-wrap items-start gap-3">
-              <button
-                type="button"
-                aria-expanded={!isCollapsed}
-                onClick={() => setIsCollapsed((current) => !current)}
-                className={cn(
-                  'group relative inline-flex max-w-full items-center gap-3 rounded-t-[1.2rem] rounded-b-[0.9rem] border px-4 py-2.5 text-left shadow-[0_12px_28px_rgba(43,45,51,0.06)] transition-all duration-200',
-                  isCollapsed
-                    ? 'border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,245,238,0.92))] hover:border-primary/25 hover:bg-white'
-                    : 'border-primary/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,237,229,0.96))] hover:border-primary/30',
-                )}
-              >
-                <span className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-[rgba(255,255,255,0.72)]" />
-                <span className="min-w-0">
-                  <span className="block font-[Manrope] text-base font-semibold tracking-[-0.04em] text-foreground">
-                    Score band
-                  </span>
-                  <span className="mt-0.5 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    {isCollapsed ? 'Condensed' : 'Expanded'}
-                  </span>
-                </span>
-                {isCollapsed ? (
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-y-0.5" />
-                ) : (
-                  <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:-translate-y-0.5" />
-                )}
-              </button>
+          <div className="min-w-0 flex-1">
+            {isCollapsed ? (
+              <div className="grid gap-x-2.5 gap-y-1.5 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] md:items-start">
+                <div className="flex min-w-0 shrink flex-col items-start gap-1.5">
+                  <p className="editorial-label">Match Readiness</p>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      aria-expanded={!isCollapsed}
+                      onClick={() => setIsCollapsed((current) => !current)}
+                      className={cn(
+                        'group relative inline-flex max-w-full items-center gap-3 rounded-t-[1.2rem] rounded-b-[0.9rem] border px-4 py-2.5 text-left shadow-[0_12px_28px_rgba(43,45,51,0.06)] transition-all duration-200',
+                        isCollapsed
+                          ? 'border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,245,238,0.92))] hover:border-primary/25 hover:bg-white'
+                          : 'border-primary/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,237,229,0.96))] hover:border-primary/30',
+                      )}
+                    >
+                      <span className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-[rgba(255,255,255,0.72)]" />
+                      <span className="min-w-0">
+                        <span className="block font-[Manrope] text-base font-semibold tracking-[-0.04em] text-foreground">
+                          Score band
+                        </span>
+                        <span className="mt-0.5 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                          {isCollapsed ? 'Condensed' : 'Expanded'}
+                        </span>
+                      </span>
+                      {isCollapsed ? (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-y-0.5" />
+                      ) : (
+                        <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:-translate-y-0.5" />
+                      )}
+                    </button>
 
-              <span className="pt-2 text-sm text-muted-foreground">
-                {currentJob.company} · {currentJob.title}
-              </span>
-            </div>
+                    {currentJob.scoresStale && (
+                      <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                        Stale
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            {currentJob.scoresStale && (
-              <span className="mt-2 inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                Stale
-              </span>
+                {documentCards[0] ? <div className="min-w-0">{renderCompactDocument(documentCards[0])}</div> : null}
+                {documentCards[1] ? <div className="min-w-0">{renderCompactDocument(documentCards[1])}</div> : null}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="editorial-label">Match Readiness</p>
+                <button
+                  type="button"
+                  aria-expanded={!isCollapsed}
+                  onClick={() => setIsCollapsed((current) => !current)}
+                  className={cn(
+                    'group relative inline-flex max-w-full items-center gap-3 rounded-t-[1.2rem] rounded-b-[0.9rem] border px-4 py-2.5 text-left shadow-[0_12px_28px_rgba(43,45,51,0.06)] transition-all duration-200',
+                    isCollapsed
+                      ? 'border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,245,238,0.92))] hover:border-primary/25 hover:bg-white'
+                      : 'border-primary/20 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,237,229,0.96))] hover:border-primary/30',
+                  )}
+                >
+                  <span className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-[rgba(255,255,255,0.72)]" />
+                  <span className="min-w-0">
+                    <span className="block font-[Manrope] text-base font-semibold tracking-[-0.04em] text-foreground">
+                      Score band
+                    </span>
+                    <span className="mt-0.5 block text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      {isCollapsed ? 'Condensed' : 'Expanded'}
+                    </span>
+                  </span>
+                  {isCollapsed ? (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-y-0.5" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:-translate-y-0.5" />
+                  )}
+                </button>
+
+                {currentJob.scoresStale && (
+                  <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                    Stale
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -199,11 +248,7 @@ export function ScoreCards() {
           </div>
         </div>
 
-        {isCollapsed ? (
-          <div className="mt-4 space-y-2.5">
-            {documentCards.map((document) => renderCompactDocument(document))}
-          </div>
-        ) : (
+        {!isCollapsed && (
           <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
             {documentCards.map((document) => (
               <ScoreCard

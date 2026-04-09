@@ -52,6 +52,7 @@ export function useTailorQueue() {
           scoreProvider: state.scoreProvider !== 'auto' ? state.scoreProvider : undefined,
           scoreModel: state.scoreModel !== 'auto' ? state.scoreModel : undefined,
           prompts: state.promptSources as Record<string, string>,
+          experienceOrder: state.experienceOrder,
         };
 
         const tailorResult = await api.runManualTailor(body);
@@ -134,6 +135,7 @@ export function useTailorQueue() {
     state.scoreProvider,
     state.scoreModel,
     state.promptSources,
+    state.experienceOrder,
     dispatch,
   ]);
 }

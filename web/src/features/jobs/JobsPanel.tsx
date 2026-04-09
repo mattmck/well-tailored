@@ -1,58 +1,52 @@
 import { useState } from 'react';
-import { BriefcaseBusiness, Sparkles, Target } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useWorkspace } from '../../context';
-import type { Job } from '../../types';
-import * as api from '../../api/client';
-import { Button } from '@/components/ui/button';
-import { appendUniqueJobIdsToQueue } from '@/lib/queues';
 import { StageFilter } from './StageFilter';
 import { JobList } from './JobList';
 import { JobDetail } from './JobDetail';
-import { TailorConfirmModal } from './TailorConfirmModal';
-import { PasteJDModal } from './PasteJDModal';
+import { matchesJobFilter } from './stages';
+
+type JobPanelFilters = {
+  company: string;
+  title: string;
+  status: string;
+  notTailored: boolean;
+};
+
+const DEFAULT_FILTERS: JobPanelFilters = {
+  company: '',
+  title: '',
+  status: 'all',
+  notTailored: false,
+};
 
 export function JobsPanel() {
   const { state, dispatch } = useWorkspace();
-  const [tailorModalOpen, setTailorModalOpen] = useState(false);
-  const [pasteModalOpen, setPasteModalOpen] = useState(false);
-  const checkedCount = state.jobs.filter((job) => job.checked).length;
-  const draftedCount = state.jobs.filter((job) => Boolean(job.result)).length;
-  const reviewedCount = state.jobs.filter((job) => job.status === 'reviewed').length;
+  const [filters, setFilters] = useState<JobPanelFilters>(DEFAULT_FILTERS);
 
-  async function handleLoadHuntr() {
-    dispatch({ type: 'SET_LOADING_HUNTR', loading: true });
-    try {
-      const response = await api.getHuntrJobs();
-      const jobs: Job[] = response.jobs.map((huntrJob) => ({
-        id: huntrJob.id,
-        company: huntrJob.company,
-        title: huntrJob.title,
-        jd: huntrJob.descriptionText,
-        stage: huntrJob.listName,
-        status: 'loaded',
-        checked: false,
-        scoresStale: false,
-        result: null,
-        error: null,
-        _editorData: null,
-      }));
-      dispatch({ type: 'MERGE_JOBS', jobs });
-    } catch (err) {
-      console.error('Failed to load Huntr jobs:', err);
-    } finally {
-      dispatch({ type: 'SET_LOADING_HUNTR', loading: false });
-    }
-  }
+  const stageFilteredJobs =
+    state.jobListFilter === 'all'
+      ? state.jobs
+      : state.jobs.filter((job) => matchesJobFilter(job, state.jobListFilter));
 
-  function handleTailorConfirm(jobIds: string[]) {
-    const next = appendUniqueJobIdsToQueue({
-      queue: state.tailorQueue,
-      runningId: state.tailorRunning,
-      total: state.tailorQueueTotal,
-      incomingIds: jobIds,
-    });
-    dispatch({ type: 'SET_TAILOR_QUEUE', queue: next.queue, total: next.total });
-  }
+  const filteredJobs = stageFilteredJobs.filter((job) => {
+    const company = filters.company.trim().toLowerCase();
+    const title = filters.title.trim().toLowerCase();
+    const status = filters.status.trim().toLowerCase();
+
+    if (company && !job.company.toLowerCase().includes(company)) return false;
+    if (title && !job.title.toLowerCase().includes(title)) return false;
+    if (status !== 'all' && job.status !== status) return false;
+    if (filters.notTailored && job.status !== 'loaded') return false;
+    return true;
+  });
+
+  const anyFilterActive =
+    filters.company.trim() !== ''
+    || filters.title.trim() !== ''
+    || filters.status !== 'all'
+    || filters.notTailored
+    || state.jobListFilter !== 'all';
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -65,74 +59,72 @@ export function JobsPanel() {
                 Jobs
               </h3>
             </div>
-          </div>
-
-          <div className="-mx-1 mt-3 overflow-x-auto px-1">
-            <div className="flex min-w-max gap-2">
-              <span className="control-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium text-foreground">
-                <BriefcaseBusiness className="size-3.5 text-primary" />
-                {state.jobs.length} roles
-              </span>
-              <span className="control-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium text-foreground">
-                <Sparkles className="size-3.5 text-primary" />
-                {draftedCount} drafted
-              </span>
-              <span className="control-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium text-foreground">
-                <Target className="size-3.5 text-primary" />
-                {reviewedCount} reviewed
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLoadHuntr}
-              disabled={state.isLoadingHuntr}
-              className="justify-center"
+            <button
+              onClick={() => dispatch({ type: 'SET_ACTIVE_PANEL', panel: null })}
+              className="control-chip inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
+              title="Close panel"
             >
-              {state.isLoadingHuntr ? 'Loading…' : 'Load Huntr'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPasteModalOpen(true)}
-              className="justify-center"
-            >
-              Add JD
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setTailorModalOpen(true)}
-              className="col-span-2 justify-center"
-            >
-              Tailor Selected{checkedCount > 0 ? ` (${checkedCount})` : ''}
-            </Button>
+              <X size={14} strokeWidth={2} />
+            </button>
           </div>
         </div>
       </div>
 
       <StageFilter />
 
+      <div className="shrink-0 border-b border-border/70 px-3 pb-3">
+        <div className="grid gap-2 pt-3 md:grid-cols-4">
+          <input
+            type="text"
+            value={filters.company}
+            onChange={(event) => setFilters((current) => ({ ...current, company: event.target.value }))}
+            placeholder="Filter company…"
+            className="control-chip min-w-0 rounded-full border border-border/80 bg-white/72 px-3 py-1.5 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          />
+          <input
+            type="text"
+            value={filters.title}
+            onChange={(event) => setFilters((current) => ({ ...current, title: event.target.value }))}
+            placeholder="Filter role…"
+            className="control-chip min-w-0 rounded-full border border-border/80 bg-white/72 px-3 py-1.5 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          />
+          <select
+            value={filters.status}
+            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+            className="control-chip min-w-0 rounded-full border border-border/80 bg-white/72 px-3 py-1.5 text-xs text-foreground outline-none transition-colors focus:border-ring"
+          >
+            <option value="all">All</option>
+            <option value="loaded">Loaded</option>
+            <option value="tailoring">Tailoring</option>
+            <option value="tailored">Drafted</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="error">Error</option>
+          </select>
+          <label className="control-chip inline-flex items-center gap-2 rounded-full border border-border/80 bg-white/72 px-3 py-1.5 text-xs font-medium text-foreground">
+            <input
+              type="checkbox"
+              checked={filters.notTailored}
+              onChange={(event) => setFilters((current) => ({ ...current, notTailored: event.target.checked }))}
+              className="size-3.5 rounded border-border text-primary focus:ring-primary/30"
+            />
+            Untailored only
+          </label>
+        </div>
+
+        {anyFilterActive && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {filteredJobs.length} jobs matching
+          </p>
+        )}
+      </div>
+
       <div className="flex min-h-[12rem] flex-1 flex-col overflow-hidden">
-        <JobList />
+        <JobList jobs={filteredJobs} />
       </div>
 
       <div className="shrink-0 border-t border-border/70 bg-card/40">
         <JobDetail />
       </div>
-
-      <TailorConfirmModal
-        open={tailorModalOpen}
-        onOpenChange={setTailorModalOpen}
-        onConfirm={handleTailorConfirm}
-      />
-      <PasteJDModal
-        open={pasteModalOpen}
-        onOpenChange={setPasteModalOpen}
-      />
     </div>
   );
 }

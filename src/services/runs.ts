@@ -6,6 +6,7 @@ import { analyzeGapWithAI } from './gap.js';
 import { scoreTailoredOutput } from './scoring.js';
 import {
   AgentSelection,
+  ExperienceOrder,
   PromptOverrides,
   ResumeTheme,
   TailorInput,
@@ -17,6 +18,7 @@ export interface RunTailorWorkflowArgs {
   agents: AgentSelection;
   promptOverrides?: PromptOverrides;
   theme?: Partial<ResumeTheme>;
+  experienceOrder?: ExperienceOrder;
   includeScoring?: boolean;
   verbose?: boolean;
   complete?: typeof defaultComplete;
@@ -40,16 +42,26 @@ export async function runTailorWorkflow(args: RunTailorWorkflowArgs): Promise<Ta
   ) => complete(model, systemPrompt, userPrompt, verbose, {
     provider: args.agents.scoringProvider ?? args.agents.tailoringProvider,
   });
+  // Inject ordering instruction into the resume system prompt when chronological is requested.
+  const resolvedPromptOverrides: PromptOverrides | undefined =
+    args.experienceOrder === 'chronological'
+      ? {
+          ...args.promptOverrides,
+          resumeSystem: (args.promptOverrides?.resumeSystem ?? '') +
+            '\n\nEXPERIENCE ORDERING: Keep all employers in strict reverse-chronological order (most recent first) in both ## Experience and ## Additional Experience. Do NOT reorder employers by relevance.',
+        }
+      : args.promptOverrides;
+
   const output = await tailorDocuments(
     args.agents.tailoringModel,
     args.input,
     args.verbose ?? false,
     tailoringComplete,
-    args.promptOverrides,
+    resolvedPromptOverrides,
   );
 
   const artifacts = {
-    resumeHtml: renderResumeHtml(output.resume, `Resume - ${args.input.company}`, false, args.theme),
+    resumeHtml: renderResumeHtml(output.resume, `Resume - ${args.input.company}`, false, args.theme, args.experienceOrder),
     coverLetterHtml: renderCoverLetterHtml(output.coverLetter, `Cover Letter - ${args.input.company}`, args.theme),
   };
 

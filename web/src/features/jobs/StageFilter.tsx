@@ -1,6 +1,5 @@
 import { useWorkspace } from '../../context';
 import type { JobListFilter } from '../../types';
-import { cn } from '@/components/ui/utils';
 import { formatStageLabel, getStageFilterValues, matchesJobFilter, normalizeStage } from './stages';
 
 interface FilterPill {
@@ -36,40 +35,26 @@ export function StageFilter() {
         </span>
       </div>
 
-      <div className="-mx-1 mt-2 overflow-x-auto px-1">
-        <div className="flex min-w-max gap-2">
+      <div className="mt-2">
+        <select
+          value={state.jobListFilter}
+          onChange={(event) => handleClick(event.target.value as JobListFilter)}
+          className="control-chip w-full rounded-full border border-border/80 bg-white/72 px-3 py-1.5 text-xs text-foreground outline-none transition-colors focus:border-ring"
+        >
           {filterPills.map((pill) => {
             const count = getCount(pill.value);
-            const isActive =
+            const selected =
               pill.value === 'all'
                 ? state.jobListFilter === 'all'
                 : normalizeStage(state.jobListFilter) === normalizeStage(pill.value);
+
             return (
-              <button
-                type="button"
-                key={pill.value}
-                aria-pressed={isActive}
-                onClick={() => handleClick(pill.value)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors whitespace-nowrap',
-                  isActive
-                    ? 'bg-primary/10 text-primary border-primary/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
-                    : 'bg-white/70 text-muted-foreground border-border hover:bg-secondary/45 hover:text-foreground'
-                )}
-              >
-                <span>{pill.label}</span>
-                <span
-                  className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                    isActive ? 'bg-primary/15 text-primary' : 'bg-secondary/80 text-muted-foreground'
-                  )}
-                >
-                  {count}
-                </span>
-              </button>
+              <option key={pill.value} value={pill.value}>
+                {selected ? 'Current: ' : ''}{pill.label} ({count})
+              </option>
             );
           })}
-        </div>
+        </select>
       </div>
     </div>
   );

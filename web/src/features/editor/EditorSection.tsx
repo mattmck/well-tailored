@@ -32,7 +32,7 @@ function AutoTextarea({
     const element = ref.current;
     if (!element) return;
     element.style.height = 'auto';
-    element.style.height = `${Math.max(84, element.scrollHeight)}px`;
+    element.style.height = `${Math.max(120, element.scrollHeight)}px`;
   }, [value]);
 
   return (
@@ -42,7 +42,41 @@ function AutoTextarea({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       className="paper-pane w-full resize-none rounded-[1.1rem] px-3 py-3 text-sm leading-7 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
-      style={{ minHeight: '84px' }}
+      style={{ minHeight: '120px' }}
+      spellCheck={false}
+    />
+  );
+}
+
+function CompactTextarea({
+  value,
+  onChange,
+  placeholder,
+  minHeight = 40,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  minHeight?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    element.style.height = 'auto';
+    element.style.height = `${Math.max(minHeight, element.scrollHeight)}px`;
+  }, [value, minHeight]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      className="paper-pane w-full resize-none rounded-[0.75rem] px-3 py-2.5 text-sm leading-6 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+      rows={1}
+      style={{ minHeight: `${minHeight}px` }}
       spellCheck={false}
     />
   );
@@ -162,12 +196,10 @@ function BulletList({
     <div className="space-y-2">
       {items.map((item, idx) => (
         <div key={item.id} className="flex items-start gap-2">
-          <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/55" />
-          <input
-            type="text"
+          <span className="mt-3.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/55" />
+          <CompactTextarea
             value={item.text}
-            onChange={(event) => update(item.id, event.target.value)}
-            className="paper-pane flex-1 rounded-[1rem] px-3 py-2 text-sm outline-none transition-colors focus:border-ring min-w-0"
+            onChange={(text) => update(item.id, text)}
             placeholder="Bullet text…"
           />
           <div className="flex gap-1 pt-1">
@@ -210,7 +242,7 @@ function JobEntryEditor({
         type="text"
         value={job[fieldName] ?? ''}
         onChange={(event) => onUpdate({ ...job, [fieldName]: event.target.value })}
-        className="paper-pane flex-1 rounded-[0.95rem] px-3 py-2 text-sm outline-none transition-colors focus:border-ring min-w-0"
+        className="paper-pane flex-1 rounded-[0.7rem] px-3 py-2.5 text-sm outline-none transition-colors focus:border-ring min-w-0"
       />
     );
   }
@@ -270,19 +302,69 @@ export function EditorSection({
   function handleTypeChange(newType: SectionType) {
     if (newType === section.type) return;
     const updates: Partial<SectionData> = { type: newType };
-    if (newType === 'bullets' && section.items.length === 0) {
-      updates.items = [{ id: genId(), text: '' }];
+
+    if (newType === 'bullets' && section.type === 'text') {
+      const lines = (section.content ?? '')
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+      updates.items = lines.length > 0
+        ? lines.map((text) => ({ id: genId(), text }))
+        : [{ id: genId(), text: '' }];
     }
-    if (newType === 'jobs' && section.jobs.length === 0) {
+
+    if (newType === 'text' && section.type === 'bullets') {
+      updates.content = section.items.map((item) => item.text).filter(Boolean).join('\n');
+    }
+
+    if (newType === 'jobs' && section.type === 'bullets') {
       updates.jobs = [{
         id: genId(),
         title: '',
         company: '',
         location: '',
         date: '',
-        bullets: [{ id: genId(), text: '' }],
+        bullets: section.items.length > 0 ? section.items : [{ id: genId(), text: '' }],
       }];
     }
+
+    if (newType === 'bullets' && section.type === 'jobs') {
+      const allBullets = section.jobs.flatMap((job) => job.bullets);
+      updates.items = allBullets.length > 0 ? allBullets : [{ id: genId(), text: '' }];
+    }
+
+    if (newType === 'text' && section.type === 'jobs') {
+      updates.content = section.jobs.map((job) => (
+        [job.title, job.company, job.date, ...job.bullets.map((bullet) => bullet.text)]
+          .filter(Boolean)
+          .join(' · ')
+      )).join('\n');
+    }
+
+    if (newType === 'jobs' && section.type === 'text') {
+      if (section.content && !window.confirm('Convert text to job entries? Text content will be moved to the first entry\'s bullet.')) return;
+      updates.jobs = [{
+        id: genId(),
+        title: '',
+        company: '',
+        location: '',
+        date: '',
+        bullets: section.content
+          ? [{ id: genId(), text: section.content }]
+          : [{ id: genId(), text: '' }],
+      }];
+    }
+
+    if (newType === 'bullets' && !updates.items) updates.items = [{ id: genId(), text: '' }];
+    if (newType === 'jobs' && !updates.jobs) updates.jobs = [{
+      id: genId(),
+      title: '',
+      company: '',
+      location: '',
+      date: '',
+      bullets: [{ id: genId(), text: '' }],
+    }];
+
     onUpdate({ ...section, ...updates });
   }
 

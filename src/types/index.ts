@@ -29,6 +29,9 @@ export interface PromptOverrides {
   scoringSystem?: string;
 }
 
+/** How experience entries are ordered in the tailored resume. */
+export type ExperienceOrder = 'relevance' | 'chronological';
+
 /** Resume and workbench appearance values. */
 export interface ResumeTheme {
   background: string;

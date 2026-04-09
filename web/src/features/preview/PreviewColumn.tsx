@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Download, Eye, FileSearch, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import { DiffView } from './DiffView';
@@ -55,6 +55,19 @@ const PREVIEW_THEMES = {
       link: '#2563EB',
     },
   },
+  monochrome: {
+    label: 'Monochrome',
+    theme: {
+      background: '#FFFFFF',
+      body: '#374151',
+      accent: '#111827',
+      subheading: '#1F2937',
+      jobTitle: '#111827',
+      date: '#6B7280',
+      contact: '#4B5563',
+      link: '#374151',
+    },
+  },
 } as const;
 
 type PreviewThemeId = keyof typeof PREVIEW_THEMES;
@@ -68,7 +81,7 @@ function getToolbarTabClass(isActive: boolean) {
   );
 }
 
-export function PreviewColumn() {
+export function PreviewColumn({ layoutControls }: { layoutControls?: ReactNode }) {
   const { state, dispatch } = useWorkspace();
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -129,6 +142,7 @@ export function PreviewColumn() {
         kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
         title: job?.title || 'Tailored document',
         theme: previewTheme,
+        experienceOrder: state.activeDoc === 'resume' ? state.experienceOrder : undefined,
       })
         .then((res) => {
           setPreviewHtml(res.html);
@@ -144,7 +158,7 @@ export function PreviewColumn() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [activeMarkdown, job?.title, previewTheme, state.activeDoc, state.viewMode]);
+  }, [activeMarkdown, job?.title, previewTheme, state.activeDoc, state.viewMode, state.experienceOrder]);
 
   const handleExportPdf = useCallback(async () => {
     if (!activeMarkdown || exportingPdf) return;
@@ -155,6 +169,7 @@ export function PreviewColumn() {
         kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
         title: job?.title || 'Tailored document',
         theme: previewTheme,
+        experienceOrder: state.activeDoc === 'resume' ? state.experienceOrder : undefined,
       });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
@@ -185,6 +200,7 @@ export function PreviewColumn() {
         kind: state.activeDoc === 'resume' ? 'resume' : 'coverLetter',
         title: job?.title || 'Tailored document',
         theme: previewTheme,
+        experienceOrder: state.activeDoc === 'resume' ? state.experienceOrder : undefined,
       })).html;
       downloadTextFile(`${getDocumentBaseName()}.html`, html, 'text/html;charset=utf-8');
     } catch (err) {
@@ -343,72 +359,94 @@ export function PreviewColumn() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="toolbar-segment flex rounded-full p-1">
-              <button
+          <div className="flex min-w-0 flex-col items-end gap-2">
+            {layoutControls && (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {layoutControls}
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="toolbar-segment flex rounded-full p-1">
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('preview')}
+                  className={getToolbarTabClass(state.viewMode === 'preview')}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode('diff')}
+                  className={getToolbarTabClass(state.viewMode === 'diff')}
+                >
+                  Diff
+                </button>
+              </div>
+
+              {state.activeDoc === 'resume' && (
+                <button
+                  type="button"
+                  onClick={() => dispatch({
+                    type: 'SET_EXPERIENCE_ORDER',
+                    order: state.experienceOrder === 'relevance' ? 'chronological' : 'relevance',
+                  })}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-white/75 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
+                  title="Toggle experience ordering"
+                >
+                  {state.experienceOrder === 'relevance' ? 'relevance ↓' : 'chronological ↓'}
+                </button>
+              )}
+
+              <Select value={themeId} onValueChange={(value) => setThemeId(value as PreviewThemeId)}>
+                <SelectTrigger size="sm" className="w-[9.5rem] rounded-full border-border/80 bg-white/75 text-xs">
+                  <SelectValue placeholder="Theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PREVIEW_THEMES).map(([id, preset]) => (
+                    <SelectItem key={id} value={id}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button
                 type="button"
-                onClick={() => handleSetViewMode('preview')}
-                className={getToolbarTabClass(state.viewMode === 'preview')}
+                variant="outline"
+                size="sm"
+                onClick={handleExportMarkdown}
+                disabled={!activeMarkdown}
+                title="Download Markdown"
               >
-                Preview
-              </button>
-              <button
+                <Download className="size-3.5" />
+                Markdown
+              </Button>
+
+              <Button
                 type="button"
-                onClick={() => handleSetViewMode('diff')}
-                className={getToolbarTabClass(state.viewMode === 'diff')}
+                variant="outline"
+                size="sm"
+                onClick={handleExportHtml}
+                disabled={exportingHtml || !activeMarkdown}
+                title="Download HTML"
               >
-                Diff
-              </button>
+                <Download className="size-3.5" />
+                {exportingHtml ? 'HTML…' : 'HTML'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleExportPdf}
+                disabled={exportingPdf || !activeMarkdown}
+                title="Export as PDF"
+              >
+                <Download className="size-3.5" />
+                {exportingPdf ? 'Exporting…' : 'Export PDF'}
+              </Button>
             </div>
-
-            <Select value={themeId} onValueChange={(value) => setThemeId(value as PreviewThemeId)}>
-              <SelectTrigger size="sm" className="w-[9.5rem] rounded-full border-border/80 bg-white/75 text-xs">
-                <SelectValue placeholder="Theme" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(PREVIEW_THEMES).map(([id, preset]) => (
-                  <SelectItem key={id} value={id}>
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleExportMarkdown}
-              disabled={!activeMarkdown}
-              title="Download Markdown"
-            >
-              <Download className="size-3.5" />
-              Markdown
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleExportHtml}
-              disabled={exportingHtml || !activeMarkdown}
-              title="Download HTML"
-            >
-              <Download className="size-3.5" />
-              {exportingHtml ? 'HTML…' : 'HTML'}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleExportPdf}
-              disabled={exportingPdf || !activeMarkdown}
-              title="Export as PDF"
-            >
-              <Download className="size-3.5" />
-              {exportingPdf ? 'Exporting…' : 'Export PDF'}
-            </Button>
           </div>
         </div>
       </div>

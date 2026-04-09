@@ -48,6 +48,7 @@ export const initialState: WorkspaceState = {
   activePanel: null,
   activeScoreDetailsId: null,
   runFeedback: null,
+  experienceOrder: 'relevance',
 };
 
 // ---------------------------------------------------------------------------
@@ -97,6 +98,7 @@ export type Action =
   | { type: 'SET_ACTIVE_PANEL'; panel: ActivePanel }
   | { type: 'SET_SCORE_DETAILS'; id: string | null }
   | { type: 'SET_RUN_FEEDBACK'; feedback: { text: string; type: 'working' | 'done' | 'error' } | null }
+  | { type: 'SET_EXPERIENCE_ORDER'; order: 'relevance' | 'chronological' }
   | { type: 'LOAD_WORKSPACE'; state: Partial<WorkspaceState> };
 
 // ---------------------------------------------------------------------------
@@ -320,6 +322,9 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
 
     case 'SET_RUN_FEEDBACK':
       return { ...state, runFeedback: action.feedback };
+
+    case 'SET_EXPERIENCE_ORDER':
+      return { ...state, experienceOrder: action.order };
 
     case 'LOAD_WORKSPACE':
       return {

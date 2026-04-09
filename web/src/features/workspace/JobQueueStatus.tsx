@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { useWorkspace } from '@/context';
 import { formatElapsed } from '@/lib/markdown';
@@ -11,6 +12,7 @@ interface JobQueueStatusProps {
   verb: string;
   progressClassName: string;
   containerClassName: string;
+  summary?: { tailored: number; failed: number } | null;
 }
 
 export function JobQueueStatus({
@@ -21,8 +23,9 @@ export function JobQueueStatus({
   verb,
   progressClassName,
   containerClassName,
+  summary = null,
 }: JobQueueStatusProps) {
-  const { state } = useWorkspace();
+  const { state, dispatch } = useWorkspace();
   const [elapsed, setElapsed] = useState('0s');
 
   useEffect(() => {
@@ -38,7 +41,34 @@ export function JobQueueStatus({
     return () => window.clearInterval(intervalId);
   }, [runningId, startedAt]);
 
-  if (!runningId) return null;
+  if (!runningId) {
+    if (!summary) return null;
+
+    const hasFailures = summary.failed > 0;
+    return (
+      <div className={containerClassName}>
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground">
+              Run complete: {summary.tailored} tailored, {summary.failed} failed
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'SET_TAILOR_SUMMARY', summary: null })}
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/80 hover:text-foreground"
+            aria-label="Dismiss tailoring summary"
+            title="Dismiss tailoring summary"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className={hasFailures ? 'mt-1 text-[11px] text-amber-700' : 'mt-1 text-[11px] text-emerald-700'}>
+          {hasFailures ? 'Some jobs need attention before retrying.' : 'All queued jobs finished successfully.'}
+        </div>
+      </div>
+    );
+  }
 
   const currentJob = state.jobs.find((job) => job.id === runningId);
   const resolvedTotal = Math.max(total, queue.length, 1);

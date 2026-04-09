@@ -35,14 +35,17 @@ import { analyzeGapWithAI } from './services/gap.js';
 import { regenerateResumeSection } from './services/review.js';
 import { scoreTailoredOutput } from './services/scoring.js';
 import { deleteSavedWorkspace, listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
+import { backupSourceDocument, listSourceBackups, readSourceBackup } from './services/backup.js';
 import { resolveWorkspaceDocuments } from './services/workspace.js';
 import {
   AgentSelection,
+  ExperienceOrder,
   PromptOverrides,
   ResumeTheme,
   TailorInput,
   WorkspaceSnapshot,
 } from './types/index.js';
+import type { SourceKey } from './services/backup.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PORT = 4312;
@@ -52,6 +55,7 @@ interface ManualRunBody {
   agents?: AgentSelection;
   promptOverrides?: PromptOverrides;
   theme?: Partial<ResumeTheme>;
+  experienceOrder?: ExperienceOrder;
   includeScoring?: boolean;
   verbose?: boolean;
 }
@@ -62,6 +66,7 @@ interface HuntrRunBody {
   agents?: AgentSelection;
   promptOverrides?: PromptOverrides;
   theme?: Partial<ResumeTheme>;
+  experienceOrder?: ExperienceOrder;
   includeScoring?: boolean;
   verbose?: boolean;
   workspace?: {
@@ -78,6 +83,7 @@ interface ExportPdfBody {
   markdown?: string;
   html?: string;
   theme?: Partial<ResumeTheme>;
+  experienceOrder?: ExperienceOrder;
 }
 
 interface SaveWorkspaceBody {
@@ -196,6 +202,12 @@ function sendNotFound(res: ServerResponse): void {
   sendJson(res, 404, { error: 'Not found' });
 }
 
+const VALID_SOURCE_KEYS: SourceKey[] = ['resume', 'bio', 'baseCoverLetter', 'resumeSupplemental'];
+
+function isSourceKey(value: string): value is SourceKey {
+  return (VALID_SOURCE_KEYS as string[]).includes(value);
+}
+
 async function readJsonBody<T>(req: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -227,6 +239,7 @@ async function buildPdfBuffer(body: ExportPdfBody): Promise<{ filename: string; 
         htmlPath,
         pdfPath,
         body.theme,
+        body.experienceOrder,
       );
       return {
         filename: 'resume.pdf',
@@ -457,6 +470,47 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
+  if (method === 'POST' && url.pathname === '/api/sources/backup') {
+    const body = await readJsonBody<{ key?: string; content?: string }>(req);
+    if (!body || typeof body.key !== 'string' || !isSourceKey(body.key)) {
+      sendJson(res, 400, { error: 'Invalid source key.' });
+      return;
+    }
+    if (typeof body.content !== 'string') {
+      sendJson(res, 400, { error: 'Backup content is required.' });
+      return;
+    }
+    const entry = await backupSourceDocument(body.key, body.content);
+    sendJson(res, 200, { ok: true, entry });
+    return;
+  }
+
+  if (method === 'GET' && url.pathname.startsWith('/api/sources/backups/')) {
+    const remainder = url.pathname.slice('/api/sources/backups/'.length);
+    const [rawKey, ...rest] = remainder.split('/');
+    const key = decodeURIComponent(rawKey ?? '');
+    if (!isSourceKey(key)) {
+      sendJson(res, 400, { error: 'Invalid source key.' });
+      return;
+    }
+
+    if (rest.length > 0) {
+      const timestamp = decodeURIComponent(rest.join('/'));
+      try {
+        const content = await readSourceBackup(key, timestamp);
+        sendJson(res, 200, { content });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Backup not found.';
+        sendJson(res, 404, { error: message });
+      }
+      return;
+    }
+
+    const backups = await listSourceBackups(key);
+    sendJson(res, 200, { backups });
+    return;
+  }
+
   if (method === 'GET' && url.pathname === '/api/huntr/jobs') {
     const client = await requireHuntrClient();
     const stageParam = url.searchParams.get('stage');
@@ -640,6 +694,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
       agents: resolveAgents(body.agents),
       promptOverrides: body.promptOverrides,
       theme: body.theme,
+      experienceOrder: body.experienceOrder,
       includeScoring: body.includeScoring ?? true,
       verbose: body.verbose ?? false,
     });
@@ -658,6 +713,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
       agents: resolveAgents(body.agents),
       promptOverrides: body.promptOverrides,
       theme: body.theme,
+      experienceOrder: body.experienceOrder,
       includeScoring: body.includeScoring ?? true,
       verbose: body.verbose ?? false,
     });
@@ -734,10 +790,10 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   }
 
   if (method === 'POST' && url.pathname === '/api/render') {
-    const rawBody = await readJsonBody<{ markdown: string; kind: unknown; title?: string; theme?: ResumeTheme }>(req);
+    const rawBody = await readJsonBody<{ markdown: string; kind: unknown; title?: string; theme?: ResumeTheme; experienceOrder?: ExperienceOrder }>(req);
     const kind = normalizeExportKind(rawBody.kind);
     const html = kind === 'resume'
-      ? renderResumeHtml(rawBody.markdown, rawBody.title || 'Resume', false, rawBody.theme)
+      ? renderResumeHtml(rawBody.markdown, rawBody.title || 'Resume', false, rawBody.theme, rawBody.experienceOrder)
       : renderCoverLetterHtml(rawBody.markdown, rawBody.title || 'Cover Letter', rawBody.theme);
     sendJson(res, 200, { html });
     return;

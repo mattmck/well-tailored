@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 interface Props {
   value: string;
   onChange: (value: string) => void;
-  onSelect: (name: string) => void;
+  onSelect: (option: { id: string; name: string }) => void;
   options: { id: string; name: string }[];
   placeholder?: string;
 }
@@ -29,8 +29,8 @@ export function WorkspaceCombobox({ value, onChange, onSelect, options, placehol
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  function handleSelect(name: string) {
-    onSelect(name);
+  function handleSelect(option: { id: string; name: string }) {
+    onSelect(option);
     setOpen(false);
   }
 
@@ -55,8 +55,8 @@ export function WorkspaceCombobox({ value, onChange, onSelect, options, placehol
               <button
                 type="button"
                 key={option.id}
-                onClick={() => handleSelect(option.name)}
-                onMouseDown={(e) => { e.preventDefault(); handleSelect(option.name); }}
+                onClick={() => handleSelect(option)}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(option); }}
                 className={cn(
                   'flex w-full items-center justify-between rounded-[0.9rem] px-3 py-2 text-left text-sm text-popover-foreground transition-colors hover:bg-accent/75 hover:text-accent-foreground',
                   value === option.name && 'bg-accent/55'

@@ -4,7 +4,7 @@ import { pathToFileURL, fileURLToPath } from 'url';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { Marked } from 'marked';
 import sanitizeHtmlLib from 'sanitize-html';
-import { ResumeTheme } from '../types/index.js';
+import { ResumeTheme, ExperienceOrder } from '../types/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -155,7 +155,7 @@ function sanitizeHtml(html: string): string {
       h2: ['role', 'section'],
       p: ['contact', 'links', 'date'],
       div: ['job-section', 'job-header', 'job-sub'],
-      span: ['job-company', 'job-location'],
+      span: ['job-company', 'job-location', 'order-tag'],
     },
     allowedSchemes: ['mailto', 'https', 'http'],
   });
@@ -234,7 +234,7 @@ function normalizeJobHeading(h: JobHeading): JobHeading {
 // Renderer
 // ---------------------------------------------------------------------------
 
-function makeRenderer() {
+function makeRenderer(experienceOrder?: ExperienceOrder) {
   const state = {
     prevToken: '',
     h2Count: 0,
@@ -267,7 +267,11 @@ function makeRenderer() {
         prefix = closeJobSection();
         state.inJobSection = true;
         state.prevToken = isRole ? 'role-h2' : 'section-h2';
-        return `${prefix}<div class="job-section">\n<h2 class="${isRole ? 'role' : 'section'}">${inline}</h2>\n`;
+        const isExperienceSection = !isRole && /^(additional\s+)?experience$/i.test(text.trim());
+        const orderTag = isExperienceSection && experienceOrder
+          ? `<span class="order-tag">${experienceOrder === 'relevance' ? 'relevance ↓' : 'chronological ↓'}</span>`
+          : '';
+        return `${prefix}<div class="job-section">\n<h2 class="${isRole ? 'role' : 'section'}">${inline}${orderTag}</h2>\n`;
       }
       
       if (depth === 3) {
@@ -397,6 +401,7 @@ h3 { color: ${resolved.jobTitle}; }
 p.date, .job-location { color: ${resolved.date}; }
 p.contact, p.links { color: ${resolved.contact}; }
 p.contact a, p.links a, a { color: ${resolved.link}; }
+@media print { html, body { background: white; } .resume { background: transparent; } }
 `;
 }
 
@@ -421,15 +426,16 @@ export async function renderResumePdfFit(
   htmlPath: string,
   pdfPath: string,
   theme?: Partial<ResumeTheme>,
+  experienceOrder?: ExperienceOrder,
 ): Promise<boolean> {
-  writeFileSync(htmlPath, renderResumeHtml(markdown, title, false, theme), 'utf8');
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title, false, theme, experienceOrder), 'utf8');
   await renderPdf(htmlPath, pdfPath);
 
   const pages = getPdfPageCount(pdfPath);
   if (pages <= 1) return true;
 
   // Slightly over — retry with compact CSS
-  writeFileSync(htmlPath, renderResumeHtml(markdown, title, true, theme), 'utf8');
+  writeFileSync(htmlPath, renderResumeHtml(markdown, title, true, theme, experienceOrder), 'utf8');
   await renderPdf(htmlPath, pdfPath);
   return getPdfPageCount(pdfPath) <= 1;
 }
@@ -493,6 +499,7 @@ export function renderResumeHtml(
   pageTitle?: string,
   compact = false,
   theme?: Partial<ResumeTheme>,
+  experienceOrder?: ExperienceOrder,
 ): string {
   const resolvedTitle = pageTitle ?? (extractH1(markdown) ? `${extractH1(markdown)} – Resume` : 'Resume');
   const cleaned = markdown
@@ -503,7 +510,7 @@ export function renderResumeHtml(
   // The AI sometimes omits the '- ' prefix, causing all entries to collapse into one paragraph.
   const normalized = normalizeContactLinks(normalizeAdditionalExperience(cleaned));
 
-  const { renderer, closeJobSection } = makeRenderer();
+  const { renderer, closeJobSection } = makeRenderer(experienceOrder);
   const m = new Marked({ renderer: renderer as any });
   let body = sanitizeHtml(m.parse(normalized) as string);
   

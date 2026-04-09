@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { Copy, FilePenLine, Plus, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import { ScrollArea } from '../../components/ui/scroll-area';
@@ -21,7 +21,7 @@ function getToolbarTabClass(isActive: boolean) {
   );
 }
 
-export function EditorColumn() {
+export function EditorColumn({ layoutControls }: { layoutControls?: ReactNode }) {
   const { state, dispatch } = useWorkspace();
 
   const job = state.activeJobId
@@ -260,34 +260,42 @@ export function EditorColumn() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="toolbar-segment flex rounded-full p-1">
-              <button
-                type="button"
-                onClick={() => handleDocTab('resume')}
-                className={getToolbarTabClass(state.activeDoc === 'resume')}
-              >
-                Resume
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDocTab('cover')}
-                className={getToolbarTabClass(state.activeDoc === 'cover')}
-              >
-                Cover Letter
-              </button>
-            </div>
+          <div className="flex min-w-0 flex-col items-end gap-2">
+            {layoutControls && (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {layoutControls}
+              </div>
+            )}
 
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopy}
-              title="Copy full document to clipboard"
-            >
-              <Copy className="size-3.5" />
-              Copy
-            </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="toolbar-segment flex rounded-full p-1">
+                <button
+                  type="button"
+                  onClick={() => handleDocTab('resume')}
+                  className={getToolbarTabClass(state.activeDoc === 'resume')}
+                >
+                  Resume
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDocTab('cover')}
+                  className={getToolbarTabClass(state.activeDoc === 'cover')}
+                >
+                  Cover Letter
+                </button>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                title="Copy full document to clipboard"
+              >
+                <Copy className="size-3.5" />
+                Copy
+              </Button>
+            </div>
           </div>
         </div>
       </div>

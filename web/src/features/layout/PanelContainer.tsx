@@ -48,6 +48,7 @@ export function PanelContainer() {
   const config = PANEL_CONFIG[state.activePanel];
   const canReload = state.activePanel === 'sources' || state.activePanel === 'prompts';
   const showSubtitle = state.activePanel !== 'jobs';
+  const showHeader = state.activePanel !== 'jobs';
 
   function handleClose() {
     dispatch({ type: 'SET_ACTIVE_PANEL', panel: null });
@@ -81,39 +82,41 @@ export function PanelContainer() {
       className="panel-surface flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[1.65rem] lg:w-[var(--panel-width)]"
       style={{ '--panel-width': `${config.width}px` } as CSSProperties}
     >
-      <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 shrink-0">
-        <div className="min-w-0">
-          <p className="editorial-label">Workbench Panel</p>
-          <h2 className="mt-1 font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
-            {config.title}
-          </h2>
-          {showSubtitle && (
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {config.subtitle}
-            </p>
-          )}
-        </div>
+      {showHeader && (
+        <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 shrink-0">
+          <div className="min-w-0">
+            <p className="editorial-label">Workbench Panel</p>
+            <h2 className="mt-1 font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
+              {config.title}
+            </h2>
+            {showSubtitle && (
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {config.subtitle}
+              </p>
+            )}
+          </div>
 
-        <div className="flex items-center gap-2">
-          {canReload && (
+          <div className="flex items-center gap-2">
+            {canReload && (
+              <button
+                onClick={handleReload}
+                disabled={reloading}
+                className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground disabled:opacity-40"
+                title="Reload from disk"
+              >
+                <RotateCcw size={13} strokeWidth={2} className={reloading ? 'animate-spin' : ''} />
+              </button>
+            )}
             <button
-              onClick={handleReload}
-              disabled={reloading}
-              className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground disabled:opacity-40"
-              title="Reload from disk"
+              onClick={handleClose}
+              className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
+              title="Close panel"
             >
-              <RotateCcw size={13} strokeWidth={2} className={reloading ? 'animate-spin' : ''} />
+              <X size={14} strokeWidth={2} />
             </button>
-          )}
-          <button
-            onClick={handleClose}
-            className="control-chip inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white hover:text-foreground"
-            title="Close panel"
-          >
-            <X size={14} strokeWidth={2} />
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {state.activePanel === 'jobs' ? (
