@@ -335,6 +335,7 @@ function resolveWorkspacePayload(body?: HuntrRunBody['workspace']) {
 async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const method = req.method ?? 'GET';
   const url = new URL(req.url ?? '/', 'http://localhost');
+  const pathname = url.pathname;
 
   if (method === 'GET' && url.pathname === '/health') {
     sendJson(res, 200, { status: 'ok', now: new Date().toISOString() });
@@ -406,42 +407,23 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
-  if (method === 'GET' && url.pathname === '/api/workspaces') {
-    sendJson(res, 200, { workspaces: listSavedWorkspaces() });
+  // ── DB-backed workspace routes ────────────────────────────────────────────
+  if (method === 'GET' && pathname === '/api/workspaces') {
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    sendJson(res, 200, { workspaces: workspaceRepo.list() });
     return;
   }
 
-  if (method === 'GET' && url.pathname.startsWith('/api/workspaces/')) {
-    const id = decodeURIComponent(url.pathname.slice('/api/workspaces/'.length));
-    try {
-      const workspace = loadSavedWorkspace(id);
-      sendJson(res, 200, workspace);
-    } catch (error) {
-      const err = error as Error;
-      const message = err.message || 'Workspace error';
-      const lowerMessage = message.toLowerCase();
-
-      // Heuristic mapping of expected errors to HTTP status codes
-      if (lowerMessage.includes('not found') || lowerMessage.includes('no such workspace')) {
-        sendJson(res, 404, { error: message });
-      } else if (
-        lowerMessage.includes('invalid') ||
-        lowerMessage.includes('bad request') ||
-        lowerMessage.includes('malformed') ||
-        err.name === 'SyntaxError' ||
-        err.name === 'TypeError'
-      ) {
-        sendJson(res, 400, { error: message });
-      } else {
-        // Unexpected error: avoid leaking internals
-        console.error('Error loading workspace:', err);
-        sendJson(res, 500, { error: 'Internal server error' });
-      }
-    }
+  if (method === 'POST' && pathname === '/api/workspaces') {
+    const body = await readJsonBody<{ name: string; sourceResume?: string; sourceBio?: string }>(req);
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    const ws = workspaceRepo.create({ ...body, name: body.name ?? 'Untitled' });
+    sendJson(res, 201, ws);
     return;
   }
 
-  if (method === 'POST' && url.pathname === '/api/workspaces/save') {
+  // Keep legacy save endpoint for backward compatibility
+  if (method === 'POST' && pathname === '/api/workspaces/save') {
     const body = await readJsonBody<SaveWorkspaceBody>(req);
     if (!body.snapshot) {
       throw new Error('Workspace save requires a snapshot payload.');
@@ -450,18 +432,108 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
-  if (method === 'DELETE' && url.pathname.startsWith('/api/workspaces/')) {
-    const id = decodeURIComponent(url.pathname.slice('/api/workspaces/'.length));
-    try {
-      deleteSavedWorkspace(id);
-      sendJson(res, 200, { ok: true, id });
-    } catch (error) {
-      const message = (error as Error).message || 'Workspace error';
-      const lowerMessage = message.toLowerCase();
-      sendJson(res, lowerMessage.includes('not found') ? 404 : 400, { error: message });
-    }
+  const wsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)$/);
+
+  if (method === 'GET' && wsMatch) {
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    const jobRepo = new JobRepo(getDb());
+    const ws = workspaceRepo.findById(wsMatch[1]);
+    if (!ws) { sendJson(res, 404, { error: 'Not found' }); return; }
+    const jobs = jobRepo.listByWorkspace(ws.id);
+    sendJson(res, 200, { ...ws, jobs });
     return;
   }
+
+  if (method === 'PATCH' && wsMatch) {
+    const body = await readJsonBody<Record<string, unknown>>(req);
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    const updated = workspaceRepo.update(wsMatch[1], body as never);
+    if (!updated) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, updated);
+    return;
+  }
+
+  if (method === 'DELETE' && wsMatch) {
+    new WorkspaceRepo(getDb()).delete(wsMatch[1]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  // ── DB-backed job routes ──────────────────────────────────────────────────
+  const wsJobsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)\/jobs$/);
+  if (method === 'POST' && wsJobsMatch) {
+    const body = await readJsonBody<{ company: string; title?: string; jd?: string; stage?: string }>(req);
+    const job = new JobRepo(getDb()).create({ workspaceId: wsJobsMatch[1], ...body });
+    sendJson(res, 201, job);
+    return;
+  }
+
+  const wsJobMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)\/jobs\/([a-z0-9-]+)$/);
+  if (method === 'PATCH' && wsJobMatch) {
+    const body = await readJsonBody<Record<string, unknown>>(req);
+    const updated = new JobRepo(getDb()).update(wsJobMatch[2], body as never);
+    if (!updated) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, updated);
+    return;
+  }
+
+  if (method === 'DELETE' && wsJobMatch) {
+    new JobRepo(getDb()).delete(wsJobMatch[2]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  // ── DB-backed document routes ─────────────────────────────────────────────
+  const docMatch = pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/documents\/(resume|cover)$/);
+  if (method === 'GET' && docMatch) {
+    const doc = new DocumentRepo(getDb()).findLatest(docMatch[1], docMatch[2] as 'resume' | 'cover');
+    if (!doc) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, doc);
+    return;
+  }
+
+  if (method === 'PUT' && docMatch) {
+    const body = await readJsonBody<{ markdown: string; editorDataJson?: string }>(req);
+    const doc = new DocumentRepo(getDb()).save({ jobId: docMatch[1], docType: docMatch[2] as 'resume' | 'cover', ...body });
+    sendJson(res, 200, doc);
+    return;
+  }
+
+  const versionsMatch = pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/documents\/(resume|cover)\/versions$/);
+  if (method === 'GET' && versionsMatch) {
+    const versions = new DocumentRepo(getDb()).listVersions(versionsMatch[1], versionsMatch[2] as 'resume' | 'cover');
+    sendJson(res, 200, { versions });
+    return;
+  }
+
+  // ── DB-backed task routes ─────────────────────────────────────────────────
+  if (method === 'GET' && pathname === '/api/tasks') {
+    const workspaceId = url.searchParams.get('workspaceId');
+    if (!workspaceId) { sendJson(res, 400, { error: 'workspaceId required' }); return; }
+    sendJson(res, 200, { tasks: new TaskRepo(getDb()).listByWorkspace(workspaceId) });
+    return;
+  }
+
+  if (method === 'POST' && pathname === '/api/tasks') {
+    const body = await readJsonBody<{ workspaceId: string; jobId: string; type: string; input: unknown }>(req);
+    const task = new TaskRepo(getDb()).create({
+      workspaceId: body.workspaceId,
+      jobId: body.jobId,
+      type: body.type as 'tailor' | 'score' | 'gap' | 'regenerate-section',
+      inputJson: JSON.stringify(body.input),
+    });
+    sendJson(res, 201, task);
+    return;
+  }
+
+  const taskMatch = pathname.match(/^\/api\/tasks\/([a-z0-9-]+)$/);
+  if (method === 'GET' && taskMatch) {
+    const task = new TaskRepo(getDb()).findById(taskMatch[1]);
+    if (!task) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, task);
+    return;
+  }
+  // ── End DB-backed routes ──────────────────────────────────────────────────
 
   if (method === 'GET' && url.pathname === '/api/huntr/jobs') {
     const client = await requireHuntrClient();
