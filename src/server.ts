@@ -34,7 +34,7 @@ import { runTailorWorkflow } from './services/runs.js';
 import { analyzeGapWithAI } from './services/gap.js';
 import { regenerateResumeSection } from './services/review.js';
 import { scoreTailoredOutput } from './services/scoring.js';
-import { deleteSavedWorkspace, listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
+import { saveWorkspaceSnapshot } from './services/workspace-store.js';
 import { resolveWorkspaceDocuments } from './services/workspace.js';
 import {
   AgentSelection,
@@ -43,7 +43,7 @@ import {
   TailorInput,
   WorkspaceSnapshot,
 } from './types/index.js';
-import { getDb } from './db/instance.js';
+import { getDb, getDbPath } from './db/instance.js';
 import { createWorker } from './worker.js';
 import { WorkspaceRepo } from './repositories/workspaces.js';
 import { JobRepo } from './repositories/jobs.js';
@@ -127,6 +127,7 @@ interface RegenerateSectionBody {
   jobDescription: string;
   jobTitle?: string;
   sectionId: string;
+  sectionHeading?: string;
   model?: string;
   verbose?: boolean;
 }
@@ -363,6 +364,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
         tailoringModels: config.tailoringModels,
         scoringModels: config.scoringModels,
       },
+      persistence: {
+        dbPath: getDbPath(),
+      },
     });
     return;
   }
@@ -415,7 +419,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   }
 
   if (method === 'POST' && pathname === '/api/workspaces') {
-    const body = await readJsonBody<{ name: string; sourceResume?: string; sourceBio?: string }>(req);
+    const body = await readJsonBody<{
+      name: string;
+      sourceResume?: string;
+      sourceBio?: string;
+      sourceCoverLetter?: string;
+      sourceSupplemental?: string;
+      promptResumeSystem?: string;
+      promptCoverLetterSystem?: string;
+      promptScoringSystem?: string;
+      themeJson?: string;
+      agentConfigJson?: string;
+    }>(req);
     const workspaceRepo = new WorkspaceRepo(getDb());
     const ws = workspaceRepo.create({ ...body, name: body.name ?? 'Untitled' });
     sendJson(res, 201, ws);
@@ -435,12 +450,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   const wsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)$/);
 
   if (method === 'GET' && wsMatch) {
-    const workspaceRepo = new WorkspaceRepo(getDb());
-    const jobRepo = new JobRepo(getDb());
-    const ws = workspaceRepo.findById(wsMatch[1]);
+    const db = getDb();
+    const ws = new WorkspaceRepo(db).findById(wsMatch[1]);
     if (!ws) { sendJson(res, 404, { error: 'Not found' }); return; }
-    const jobs = jobRepo.listByWorkspace(ws.id);
-    sendJson(res, 200, { ...ws, jobs });
+    const jobs = new JobRepo(db).listByWorkspace(ws.id);
+    const docs = new DocumentRepo(db).findLatestForJobs(jobs.map(j => j.id));
+    const jobsWithDocs = jobs.map(j => ({ ...j, documents: docs[j.id] ?? {} }));
+    sendJson(res, 200, { ...ws, jobs: jobsWithDocs });
     return;
   }
 
@@ -462,8 +478,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   // ── DB-backed job routes ──────────────────────────────────────────────────
   const wsJobsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)\/jobs$/);
   if (method === 'POST' && wsJobsMatch) {
-    const body = await readJsonBody<{ company: string; title?: string; jd?: string; stage?: string }>(req);
-    const job = new JobRepo(getDb()).create({ workspaceId: wsJobsMatch[1], ...body });
+    const body = await readJsonBody<{ company: string; title?: string; jd?: string; stage?: string; source?: string; huntrId?: string }>(req);
+    const job = new JobRepo(getDb()).createOrUpdate({ workspaceId: wsJobsMatch[1], ...body });
     sendJson(res, 201, job);
     return;
   }
@@ -515,12 +531,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
   }
 
   if (method === 'POST' && pathname === '/api/tasks') {
-    const body = await readJsonBody<{ workspaceId: string; jobId: string; type: string; input: unknown }>(req);
+    const body = await readJsonBody<{ workspaceId: string; jobId: string; type: string; input: unknown; agents?: unknown }>(req);
     const task = new TaskRepo(getDb()).create({
       workspaceId: body.workspaceId,
       jobId: body.jobId,
       type: body.type as 'tailor' | 'score' | 'gap' | 'regenerate-section',
-      inputJson: JSON.stringify(body.input),
+      inputJson: JSON.stringify({ input: body.input, agents: body.agents }),
     });
     sendJson(res, 201, task);
     return;
@@ -804,6 +820,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
       jobDescription: body.jobDescription ?? '',
       jobTitle: body.jobTitle,
       sectionId: body.sectionId,
+      sectionHeading: body.sectionHeading,
       model: body.model ?? config.tailoringModel,
       verbose: body.verbose ?? false,
     });
@@ -907,7 +924,7 @@ export async function startWorkbenchServer(
   // Reset any tasks that were mid-flight when server last stopped
   new TaskRepo(db).resetStuck();
   const worker = createWorker(db, {
-    runTailor: (input) => runTailorWorkflow({ input, agents: resolveAgents() }),
+    runTailor: (input, agents) => runTailorWorkflow({ input, agents: resolveAgents(agents as AgentSelection | undefined) }),
   });
   const { stop: stopWorker } = worker.start(2000);
 

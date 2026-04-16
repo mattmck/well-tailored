@@ -1,10 +1,10 @@
 import type { DatabaseAdapter } from './db/adapter.js';
 import { TaskRepo } from './repositories/tasks.js';
 import { DocumentRepo } from './repositories/documents.js';
-import type { TailorInput, TailorRunResult } from './types/index.js';
+import type { TailorInput } from './types/index.js';
 
 export interface WorkerDeps {
-  runTailor: (input: TailorInput) => Promise<{ output: { resume: string; coverLetter: string } }>;
+  runTailor: (input: TailorInput, agents?: unknown) => Promise<{ output: { resume: string; coverLetter: string } }>;
 }
 
 export interface Worker {
@@ -22,18 +22,24 @@ export function createWorker(db: DatabaseAdapter, deps: WorkerDeps): Worker {
     const task = taskRepo.claimNext();
     if (!task) return false;
 
+    console.log(`[worker] starting task ${task.id} type=${task.type} job=${task.jobId}`);
+
     try {
       if (task.type === 'tailor') {
-        const input = JSON.parse(task.inputJson) as TailorInput;
-        const result = await deps.runTailor(input);
+        const parsed = JSON.parse(task.inputJson) as { input: TailorInput; agents?: unknown };
+        const result = await deps.runTailor(parsed.input, parsed.agents);
         docRepo.save({ jobId: task.jobId, docType: 'resume', markdown: result.output.resume });
         docRepo.save({ jobId: task.jobId, docType: 'cover', markdown: result.output.coverLetter });
         taskRepo.complete(task.id, JSON.stringify(result));
+        console.log(`[worker] completed task ${task.id}`);
       } else {
         taskRepo.fail(task.id, `Unknown task type: ${task.type}`);
+        console.warn(`[worker] unknown task type: ${task.type} (task ${task.id})`);
       }
     } catch (err) {
-      taskRepo.fail(task.id, (err as Error).message ?? String(err));
+      const message = (err as Error).message ?? String(err);
+      console.error(`[worker] task ${task.id} failed: ${message}`);
+      taskRepo.fail(task.id, message);
     }
 
     return true;
