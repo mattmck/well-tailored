@@ -84,6 +84,78 @@ function stripJobDescriptionNoise(text: string): string {
   return kept.join('\n\n');
 }
 
+// ── Keyword grounding ─────────────────────────────────────────────────────
+
+// Normalize a term for fuzzy substring comparison against JD text.
+// Lowercase, strip punctuation, collapse whitespace, drop common suffixes.
+function normalizeTerm(term: string): string {
+  return term
+    .toLowerCase()
+    .replace(/\.js\b/g, '')
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()+?'"]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Common aliases / expansions the LLM might use that don't substring-match the JD.
+const TERM_ALIASES: Record<string, string[]> = {
+  'k8s': ['kubernetes'],
+  'kubernetes': ['k8s'],
+  'gcp': ['google cloud', 'google cloud platform'],
+  'aws': ['amazon web services'],
+  'ci/cd': ['cicd', 'continuous integration', 'continuous delivery', 'continuous deployment'],
+  'postgres': ['postgresql'],
+  'postgresql': ['postgres'],
+  'node': ['nodejs', 'node.js'],
+  'typescript': ['ts'],
+  'javascript': ['js'],
+};
+
+function termAppearsInJd(term: string, jdNormalized: string): boolean {
+  const normalized = normalizeTerm(term);
+  if (!normalized) return false;
+  if (jdNormalized.includes(normalized)) return true;
+  // Token-level check for multi-word terms: require all tokens appear in the JD.
+  const tokens = normalized.split(' ').filter((t) => t.length > 1);
+  if (tokens.length > 1 && tokens.every((t) => jdNormalized.includes(t))) return true;
+  const aliases = TERM_ALIASES[normalized];
+  if (aliases?.some((a) => jdNormalized.includes(a))) return true;
+  return false;
+}
+
+// Drops keywords the LLM hallucinated or pulled from the bio. Every JD-referenced
+// term must actually appear in the JD text (post-normalization). Returns a new
+// gap object plus counts of what was filtered for logging.
+function filterToJdGroundedKeywords(
+  gap: GapAnalysis,
+  jobDescription: string,
+): { gap: GapAnalysis; dropped: { matched: string[]; missing: string[]; partial: string[] } } {
+  const jdNormalized = normalizeTerm(jobDescription);
+
+  const dropped = { matched: [] as string[], missing: [] as string[], partial: [] as string[] };
+
+  const matchedKeywords = gap.matchedKeywords.filter((kw) => {
+    const keep = termAppearsInJd(kw.term, jdNormalized);
+    if (!keep) dropped.matched.push(kw.term);
+    return keep;
+  });
+  const missingKeywords = gap.missingKeywords.filter((kw) => {
+    const keep = termAppearsInJd(kw.term, jdNormalized);
+    if (!keep) dropped.missing.push(kw.term);
+    return keep;
+  });
+  const partialMatches = gap.partialMatches.filter((pm) => {
+    const keep = termAppearsInJd(pm.jdTerm, jdNormalized);
+    if (!keep) dropped.partial.push(pm.jdTerm);
+    return keep;
+  });
+
+  return {
+    gap: { ...gap, matchedKeywords, missingKeywords, partialMatches },
+    dropped,
+  };
+}
+
 // ── JSON extraction ───────────────────────────────────────────────────────
 
 function extractJsonObject(raw: string): string {
@@ -189,7 +261,7 @@ export async function analyzeGapWithAI(
 
   const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;
 
-  return {
+  const rawGap: GapAnalysis = {
     matchedKeywords: parseKeywordArray(parsed.matchedKeywords),
     missingKeywords: parseKeywordArray(parsed.missingKeywords),
     partialMatches: parsePartialMatches(parsed.partialMatches),
@@ -200,4 +272,15 @@ export async function analyzeGapWithAI(
     exactPhrases: Array.isArray(parsed.exactPhrases) ? parsed.exactPhrases.map(String) : [],
     tailoringHints: Array.isArray(parsed.tailoringHints) ? parsed.tailoringHints.map(String) : [],
   };
+
+  const { gap, dropped } = filterToJdGroundedKeywords(rawGap, jdForPrompt);
+  const totalDropped = dropped.matched.length + dropped.missing.length + dropped.partial.length;
+  if (totalDropped > 0) {
+    console.info('[gap] Dropped ungrounded keywords not present in JD', {
+      matched: dropped.matched,
+      missing: dropped.missing,
+      partial: dropped.partial,
+    });
+  }
+  return gap;
 }
