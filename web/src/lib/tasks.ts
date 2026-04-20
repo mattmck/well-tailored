@@ -18,7 +18,8 @@ export function getTailorTaskMetadata(task: Pick<TaskRecord, 'jobId' | 'inputJso
   let parsed: unknown = {};
   try {
     parsed = JSON.parse(task.inputJson || '{}');
-  } catch {
+  } catch (error) {
+    console.warn('[workbench] Failed to parse task input JSON', { jobId: task.jobId, error });
     parsed = {};
   }
 

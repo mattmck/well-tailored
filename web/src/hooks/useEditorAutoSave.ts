@@ -41,9 +41,10 @@ export function useEditorAutoSave(debounceMs = 1500) {
     const markdown = reconstructEditorData(pending.editorData);
     const editorDataJson = JSON.stringify(pending.editorData);
 
-    const resolveSaveJobId = async () => {
+    const resolveSaveJobId = async (): Promise<string | undefined> => {
       if (pending.dbJobId) return pending.dbJobId;
-      if (!pending.workspaceId) return null;
+      // Local-only sessions do not have DB records yet, so return undefined to skip auto-save.
+      if (!pending.workspaceId) return undefined;
 
       const dbJob = await api.createJob(pending.workspaceId, {
         company: pending.job.company,
@@ -107,6 +108,7 @@ export function useEditorAutoSave(debounceMs = 1500) {
     const editorData = job._editorData;
     const jobId = job.id;
 
+    // Auto-save requires a persisted DB target, either via workspace context or an existing DB job id.
     if (!state.activeWorkspaceId && !job.dbJobId) return;
 
     // Build a fingerprint to detect actual changes

@@ -286,6 +286,7 @@ function JobEntryEditor({
             <button
               type="button"
               onClick={() => handleSetDetailsMode('bullets')}
+              disabled={detailsMode === 'bullets'}
               className={cn(
                 'rounded-full px-2.5 py-1 text-[10px] font-medium transition-all',
                 detailsMode === 'bullets'
@@ -298,6 +299,7 @@ function JobEntryEditor({
             <button
               type="button"
               onClick={() => handleSetDetailsMode('text')}
+              disabled={detailsMode === 'text'}
               className={cn(
                 'rounded-full px-2.5 py-1 text-[10px] font-medium transition-all',
                 detailsMode === 'text'

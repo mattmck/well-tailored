@@ -9,4 +9,3 @@ export function legacyHuntrMatchKey(job: Pick<Job, 'company' | 'title'>): string
   const title = normalizedJobPart(job.title);
   return company && title ? `${company}\u0000${title}` : null;
 }
-

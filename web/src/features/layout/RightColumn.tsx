@@ -6,6 +6,9 @@ import { EditorColumn } from '../editor/EditorColumn';
 import { PreviewColumn } from '../preview/PreviewColumn';
 import { PanelContainer } from './PanelContainer';
 
+const MIN_EDITOR_PERCENT = 22;
+const MAX_EDITOR_PERCENT = 78;
+
 export function RightColumn() {
   const { state } = useWorkspace();
   const [editorCollapsed, setEditorCollapsed] = useState(false);
@@ -39,7 +42,7 @@ export function RightColumn() {
       const rect = container.getBoundingClientRect();
       if (rect.width <= 0) return;
       const nextPercent = ((clientX - rect.left) / rect.width) * 100;
-      setEditorPercent(Math.min(78, Math.max(22, nextPercent)));
+      setEditorPercent(Math.min(MAX_EDITOR_PERCENT, Math.max(MIN_EDITOR_PERCENT, nextPercent)));
     };
 
     updateFromClientX(event.clientX);
@@ -61,22 +64,22 @@ export function RightColumn() {
 
     if (event.key === 'ArrowLeft') {
       event.preventDefault();
-      setEditorPercent((current) => Math.max(22, current - 4));
+      setEditorPercent((current) => Math.max(MIN_EDITOR_PERCENT, current - 4));
       return;
     }
     if (event.key === 'ArrowRight') {
       event.preventDefault();
-      setEditorPercent((current) => Math.min(78, current + 4));
+      setEditorPercent((current) => Math.min(MAX_EDITOR_PERCENT, current + 4));
       return;
     }
     if (event.key === 'Home') {
       event.preventDefault();
-      setEditorPercent(22);
+      setEditorPercent(MIN_EDITOR_PERCENT);
       return;
     }
     if (event.key === 'End') {
       event.preventDefault();
-      setEditorPercent(78);
+      setEditorPercent(MAX_EDITOR_PERCENT);
     }
   }, [showEditor, showPreview]);
 
@@ -120,8 +123,8 @@ export function RightColumn() {
               role="separator"
               aria-orientation="vertical"
               tabIndex={0}
-              aria-valuemin={22}
-              aria-valuemax={78}
+              aria-valuemin={MIN_EDITOR_PERCENT}
+              aria-valuemax={MAX_EDITOR_PERCENT}
               aria-valuenow={Math.round(editorPercent)}
               onPointerDown={handleResizeStart}
               onKeyDown={handleResizeKeyDown}
