@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Download, Eye, FileSearch, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { ChevronsRight, Download, Eye, FileSearch, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
-import { DiffView } from './DiffView';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -10,10 +9,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/components/ui/utils';
 import { WorkbenchEmptyState } from '../layout/WorkbenchEmptyState';
 import { getJobDocumentMarkdown } from '@/lib/job-documents';
+import { sectionSync } from '../../lib/section-sync';
 import * as api from '../../api/client';
+
+const SECTION_CLICK_SCRIPT = `
+<script>
+(function(){
+  function attach() {
+    document.querySelectorAll('h1,h2,h3,h4').forEach(function(el) {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.parent.postMessage({ type: 'wt-section-click', heading: el.textContent.trim() }, '*');
+      });
+    });
+    document.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function(e) { e.preventDefault(); });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attach);
+  } else {
+    attach();
+  }
+})();
+</script>
+`;
 
 const PREVIEW_THEMES = {
   drafting: {
@@ -59,17 +82,12 @@ const PREVIEW_THEMES = {
 
 type PreviewThemeId = keyof typeof PREVIEW_THEMES;
 
-function getToolbarTabClass(isActive: boolean) {
-  return cn(
-    'rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200',
-    isActive
-      ? 'bg-primary text-primary-foreground shadow-[0_10px_24px_rgba(49,74,116,0.22)]'
-      : 'text-muted-foreground hover:bg-white hover:text-foreground',
-  );
+interface PreviewColumnProps {
+  onCollapse?: () => void;
 }
 
-export function PreviewColumn() {
-  const { state, dispatch } = useWorkspace();
+export function PreviewColumn({ onCollapse }: PreviewColumnProps) {
+  const { state } = useWorkspace();
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -86,9 +104,6 @@ export function PreviewColumn() {
 
   const activeMarkdown = getJobDocumentMarkdown(job, state.activeDoc);
 
-  const originalMarkdown = state.activeDoc === 'resume'
-    ? state.sourceResume
-    : state.sourceCoverLetter;
   const previewTheme = PREVIEW_THEMES[themeId].theme;
 
   const getDocumentSlug = useCallback(() => {
@@ -114,7 +129,6 @@ export function PreviewColumn() {
   }, []);
 
   useEffect(() => {
-    if (state.viewMode !== 'preview') return;
     if (!activeMarkdown) {
       setPreviewHtml('');
       setPreviewHeight(null);
@@ -144,7 +158,7 @@ export function PreviewColumn() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [activeMarkdown, job?.title, previewTheme, state.activeDoc, state.viewMode]);
+  }, [activeMarkdown, job?.title, previewTheme, state.activeDoc]);
 
   const handleExportPdf = useCallback(async () => {
     if (!activeMarkdown || exportingPdf) return;
@@ -194,12 +208,45 @@ export function PreviewColumn() {
     }
   }, [activeMarkdown, downloadTextFile, exportingHtml, getDocumentBaseName, job?.title, previewHtml, previewTheme, state.activeDoc]);
 
-  const handleSetViewMode = useCallback(
-    (mode: 'preview' | 'diff') => {
-      dispatch({ type: 'SET_VIEW_MODE', mode });
-    },
-    [dispatch],
-  );
+  // Inject section-click script into preview HTML
+  const previewHtmlWithScript = useMemo(() => {
+    if (!previewHtml) return '';
+    return previewHtml.replace('</body>', `${SECTION_CLICK_SCRIPT}</body>`);
+  }, [previewHtml]);
+
+  // Listen for heading clicks from the preview iframe
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === 'wt-section-click') {
+        sectionSync.emit(event.data.heading as string, 'preview');
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Scroll preview to matching heading when editor section is clicked
+  useEffect(() => {
+    return sectionSync.subscribe((heading, source) => {
+      if (source !== 'editor') return;
+      const iframe = previewFrameRef.current;
+      const iframeDoc = iframe?.contentDocument;
+      if (!iframeDoc) return;
+      const all = iframeDoc.querySelectorAll<HTMLElement>('h1, h2, h3, h4');
+      for (const el of all) {
+        if (el.textContent?.trim().toLowerCase() === heading.toLowerCase()) {
+          const iframeEl = iframe!;
+          const scrollContainer = previewScrollRef.current;
+          if (!scrollContainer) break;
+          const iframeTop = iframeEl.getBoundingClientRect().top;
+          const elTop = el.getBoundingClientRect().top;
+          const relativeTop = elTop - iframeTop;
+          scrollContainer.scrollTo({ top: scrollContainer.scrollTop + relativeTop - 80, behavior: 'smooth' });
+          break;
+        }
+      }
+    });
+  }, []);
 
   const syncPreviewHeight = useCallback(() => {
     const iframe = previewFrameRef.current;
@@ -237,7 +284,7 @@ export function PreviewColumn() {
   }, [configurePreviewDocument, syncPreviewHeight]);
 
   useEffect(() => {
-    if (state.viewMode !== 'preview' || !previewHtml) return;
+    if (!previewHtml) return;
 
     const disposers: Array<() => void> = [];
     const scheduleSync = () => {
@@ -287,7 +334,7 @@ export function PreviewColumn() {
         dispose();
       }
     };
-  }, [configurePreviewDocument, previewHtml, state.viewMode, syncPreviewHeight]);
+  }, [configurePreviewDocument, previewHtml, syncPreviewHeight]);
 
   if (!job) {
     return (
@@ -296,10 +343,10 @@ export function PreviewColumn() {
           className="w-full"
           eyebrow="Output Review"
           title="Choose a role to inspect the draft."
-          description="The preview desk renders the polished resume or cover letter, and the diff view shows exactly what changed from your source material."
+          description="The preview desk renders the polished resume or cover letter for final review and export."
           icon={Eye}
           tips={[
-            'Switch between preview and diff depending on whether you are reviewing polish or substance.',
+            'Use the live preview to check polish after section edits.',
             'PDF export uses the currently selected document and role title.',
           ]}
         />
@@ -315,8 +362,8 @@ export function PreviewColumn() {
           eyebrow="Output Review"
           title={job.status === 'tailoring' ? 'Preview preparing now.' : 'Run tailoring to populate the review pane.'}
           description={job.status === 'tailoring'
-            ? 'Once the draft finishes, this pane will render the finished document and a clean comparison against the source.'
-            : 'Generate a tailored draft first, then use preview for final polish and diff for change review.'}
+            ? 'Once the draft finishes, this pane will render the finished document.'
+            : 'Generate a tailored draft first, then use preview for final polish and export.'}
           icon={Sparkles}
           tips={[
             'The preview automatically refreshes after section edits.',
@@ -330,37 +377,10 @@ export function PreviewColumn() {
   return (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border/70 px-4 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="editorial-label">Output Review</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h2 className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
-                Review pane
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                {job.company} · {job.title}
-              </span>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="editorial-label">Output Review</p>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="toolbar-segment flex rounded-full p-1">
-              <button
-                type="button"
-                onClick={() => handleSetViewMode('preview')}
-                className={getToolbarTabClass(state.viewMode === 'preview')}
-              >
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetViewMode('diff')}
-                className={getToolbarTabClass(state.viewMode === 'diff')}
-              >
-                Diff
-              </button>
-            </div>
-
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Select value={themeId} onValueChange={(value) => setThemeId(value as PreviewThemeId)}>
               <SelectTrigger size="sm" className="w-[9.5rem] rounded-full border-border/80 bg-white/75 text-xs">
                 <SelectValue placeholder="Theme" />
@@ -409,58 +429,59 @@ export function PreviewColumn() {
               <Download className="size-3.5" />
               {exportingPdf ? 'Exporting…' : 'Export PDF'}
             </Button>
+            {onCollapse && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onCollapse}
+                title="Collapse preview"
+                aria-label="Collapse preview"
+                className="ml-1 px-2"
+              >
+                <ChevronsRight className="size-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0 min-w-0 overflow-hidden">
-        {state.viewMode === 'preview' ? (
-          previewLoading ? (
-            <div className="flex h-full p-4">
-              <WorkbenchEmptyState
-                className="w-full"
-                eyebrow="Output Review"
-                title="Rendering preview."
-                description="The paper view is refreshing so you can inspect the latest changes with the final document styling."
-                icon={FileSearch}
-              />
-            </div>
-          ) : previewHtml ? (
-            <div
-              ref={previewScrollRef}
-              className="h-full min-h-0 min-w-0 overflow-auto px-4 pb-4"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              <div className="paper-pane min-h-full rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.4),rgba(243,236,221,0.72))] p-4">
-                <div className="mx-auto w-full max-w-[54rem] rounded-[1.5rem] border border-border/80 bg-white p-3 shadow-[0_20px_46px_rgba(43,45,51,0.08)]">
-                  <iframe
-                    ref={previewFrameRef}
-                    onLoad={handlePreviewLoad}
-                    srcDoc={previewHtml}
-                    className="block w-full rounded-[1rem] border border-border/70 bg-white"
-                    style={{
-                      height: previewHeight ? `${previewHeight}px` : '100%',
-                      pointerEvents: 'none',
-                    }}
-                    title="Document preview"
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full p-4">
-              <WorkbenchEmptyState
-                className="w-full"
-                eyebrow="Output Review"
-                title="No preview content yet."
-                description="This document does not have any rendered content to display right now. Return to the editor and add or regenerate a section."
-                icon={Eye}
-              />
-            </div>
-          )
+        {previewLoading ? (
+          <div className="flex h-full p-4">
+            <WorkbenchEmptyState
+              className="w-full"
+              eyebrow="Output Review"
+              title="Rendering preview."
+              description="The paper view is refreshing so you can inspect the latest changes with the final document styling."
+              icon={FileSearch}
+            />
+          </div>
+        ) : previewHtml ? (
+          <div
+            ref={previewScrollRef}
+            className="h-full min-h-0 min-w-0 overflow-auto bg-white"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <iframe
+              ref={previewFrameRef}
+              onLoad={handlePreviewLoad}
+              srcDoc={previewHtmlWithScript}
+              className="block min-h-full w-full border-0 bg-white"
+              style={{ height: previewHeight ? `${Math.max(previewHeight, previewScrollRef.current?.clientHeight ?? 0)}px` : '100%' }}
+              title="Document preview"
+              sandbox="allow-scripts"
+            />
+          </div>
         ) : (
-          <div className="h-full px-4 pb-4">
-            <DiffView original={originalMarkdown} modified={activeMarkdown ?? ''} />
+          <div className="flex h-full p-4">
+            <WorkbenchEmptyState
+              className="w-full"
+              eyebrow="Output Review"
+              title="No preview content yet."
+              description="This document does not have any rendered content to display right now. Return to the editor and add or regenerate a section."
+              icon={Eye}
+            />
           </div>
         )}
       </div>
