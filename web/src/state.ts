@@ -401,10 +401,10 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         ...action.state,
         activityLog: [],
-        tailorProvider: state.tailorProvider,
-        tailorModel: state.tailorModel,
-        scoreProvider: state.scoreProvider,
-        scoreModel: state.scoreModel,
+        tailorProvider: action.state.tailorProvider ?? state.tailorProvider,
+        tailorModel: action.state.tailorModel ?? state.tailorModel,
+        scoreProvider: action.state.scoreProvider ?? state.scoreProvider,
+        scoreModel: action.state.scoreModel ?? state.scoreModel,
       };
 
     default: {

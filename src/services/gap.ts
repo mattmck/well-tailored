@@ -113,24 +113,56 @@ const RAW_TERM_ALIASES: Record<string, string[]> = {
   'javascript': ['js'],
 };
 
-const TERM_ALIASES: Record<string, string[]> = Object.fromEntries(
-  Object.entries(RAW_TERM_ALIASES).map(([term, aliases]) => [
-    normalizeTerm(term),
-    aliases
+// Build bidirectional alias map: both term→aliases and alias→term entries
+const TERM_ALIASES: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const [term, aliases] of Object.entries(RAW_TERM_ALIASES)) {
+    const normalizedTerm = normalizeTerm(term);
+    const normalizedAliases = aliases
       .map((alias) => normalizeTerm(alias))
-      .filter((alias) => alias.length > 0),
-  ]),
-);
+      .filter((alias) => alias.length > 0);
+
+    // term → aliases
+    map[normalizedTerm] = normalizedAliases;
+
+    // each alias → [term]
+    for (const alias of normalizedAliases) {
+      if (!map[alias]) map[alias] = [];
+      if (!map[alias].includes(normalizedTerm)) {
+        map[alias].push(normalizedTerm);
+      }
+    }
+  }
+  return map;
+})();
 
 function termAppearsInJd(term: string, jdNormalized: string): boolean {
   const normalized = normalizeTerm(term);
   if (!normalized) return false;
-  if (jdNormalized.includes(normalized)) return true;
-  // Token-level check for multi-word terms: require all tokens appear in the JD.
-  const tokens = normalized.split(' ').filter((t) => t.length > 1);
-  if (tokens.length > 1 && tokens.every((t) => jdNormalized.includes(t))) return true;
+
+  // Helper: check if a term matches with word boundaries
+  const matchesWithBoundary = (checkTerm: string): boolean => {
+    const tokens = checkTerm.split(' ').filter((t) => t.length > 0);
+    if (tokens.length === 1) {
+      // Single token: use word boundary check
+      const regex = new RegExp(`\\b${tokens[0].replace(/[+#/]/g, '\\$&')}\\b`);
+      return regex.test(jdNormalized);
+    } else {
+      // Multi-word: each token must match as whole word
+      return tokens.every((token) => {
+        const regex = new RegExp(`\\b${token.replace(/[+#/]/g, '\\$&')}\\b`);
+        return regex.test(jdNormalized);
+      });
+    }
+  };
+
+  // Check direct match
+  if (matchesWithBoundary(normalized)) return true;
+
+  // Check aliases
   const aliases = TERM_ALIASES[normalized];
-  if (aliases?.some((alias) => jdNormalized.includes(alias))) return true;
+  if (aliases?.some((alias) => matchesWithBoundary(alias))) return true;
+
   return false;
 }
 
@@ -288,9 +320,10 @@ export async function analyzeGapWithAI(
   const totalDropped = dropped.matched.length + dropped.missing.length + dropped.partial.length;
   if (totalDropped > 0) {
     console.info('[gap] Dropped ungrounded keywords not present in JD', {
-      matched: dropped.matched,
-      missing: dropped.missing,
-      partial: dropped.partial,
+      totalDropped,
+      matchedCount: dropped.matched.length,
+      missingCount: dropped.missing.length,
+      partialCount: dropped.partial.length,
     });
   }
   return gap;

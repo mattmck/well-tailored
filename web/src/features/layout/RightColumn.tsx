@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Eye, FilePenLine } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,10 @@ export function RightColumn() {
   const [previewCollapsed, setPreviewCollapsed] = useState(false);
   const [editorPercent, setEditorPercent] = useState(50);
   const splitRef = useRef<HTMLDivElement | null>(null);
+  const handlersRef = useRef<{ handleMove: ((e: PointerEvent) => void) | null; handleUp: (() => void) | null }>({
+    handleMove: null,
+    handleUp: null,
+  });
   // Jobs panel is now in LeftSidebar; only show the container for sources/prompts/config
   const showPanel = state.activePanel && state.activePanel !== 'jobs';
   const showEditor = !editorCollapsed;
@@ -53,11 +57,28 @@ export function RightColumn() {
     const handleUp = () => {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
+      handlersRef.current.handleMove = null;
+      handlersRef.current.handleUp = null;
     };
+
+    handlersRef.current.handleMove = handleMove;
+    handlersRef.current.handleUp = handleUp;
 
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp, { once: true });
   }, [showEditor, showPreview]);
+
+  // Cleanup listeners on unmount
+  useEffect(() => {
+    return () => {
+      if (handlersRef.current.handleMove) {
+        window.removeEventListener('pointermove', handlersRef.current.handleMove);
+      }
+      if (handlersRef.current.handleUp) {
+        window.removeEventListener('pointerup', handlersRef.current.handleUp);
+      }
+    };
+  }, []);
 
   const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!showEditor || !showPreview) return;

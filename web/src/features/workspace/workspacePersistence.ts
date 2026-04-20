@@ -141,7 +141,7 @@ function toWorkspaceJob(job: StoredJobRecord, selectedJobIds: string[]): Job | n
     dbJobId: asString(job.dbJobId) || null,
     huntrId: asString(job.huntrId) || asString(job.huntr_id) || (source === 'manual' ? null : id),
     boardId: asString(job.boardId) || null,
-    listAddedAt: asString(job.listAddedAt) ?? null,
+    listAddedAt: asString(job.listAddedAt) || null,
     listPosition: typeof job.listPosition === 'number' ? job.listPosition : null,
     status:
       job.status === 'tailoring'
@@ -329,7 +329,12 @@ function dbWorkspaceToState(workspace: SavedWorkspaceRecord): Partial<WorkspaceS
 
   let agentConfig: Record<string, unknown> = {};
   if (workspace.agentConfigJson) {
-    try { agentConfig = JSON.parse(workspace.agentConfigJson); } catch { /* ignore */ }
+    try {
+      const parsed = JSON.parse(workspace.agentConfigJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        agentConfig = parsed;
+      }
+    } catch { /* ignore */ }
   }
 
   return {
