@@ -272,6 +272,24 @@ describe('normalizeContactLinks / isUrlLike', () => {
     expect(liCount).toBe(1); // only the Experience bullet
   });
 
+  it('preserves explicit Additional Experience bullets', () => {
+    const md = [
+      '# Dev',
+      '## Engineer',
+      '',
+      'dev@example.com | linkedin.com/in/dev',
+      '',
+      '## Additional Experience',
+      '',
+      '- **Software Engineer, Fearless** (2018) — Orchestrated AWS environments with Terraform.',
+      '- **Senior Engineer, Philips Healthcare** (2017 – 2018) — Built real-time ICU monitoring.',
+    ].join('\n');
+    const html = renderResumeHtml(md);
+    expect(html).toContain('<li><strong>Software Engineer, Fearless</strong>');
+    expect(html).toContain('<li><strong>Senior Engineer, Philips Healthcare</strong>');
+    expect(html).not.toContain('Terraform. | <strong>Senior Engineer');
+  });
+
   it('does NOT count ### headings toward the h2 stop-linkify threshold', () => {
     // If ### incorrectly incremented h2Count, linkification would stop
     // too early and the contact link below would not be wrapped in <a>.

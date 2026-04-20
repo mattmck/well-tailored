@@ -437,9 +437,8 @@ export async function renderResumePdfFit(
 /**
  * Normalize "## Additional Experience" entries into a single pipe-separated paragraph.
  * The AI outputs each entry on its own line as `**Role, Company** (dates) — desc`.
- * This function collects all such lines (with or without leading `- `) and joins
- * them with ` | ` so they render as one compact paragraph consistent with the
- * pipe style used elsewhere in the resume.
+ * This function collects unbulleted lines and joins them with ` | ` so legacy
+ * AI output still renders compactly. Explicit Markdown bullets are preserved.
  */
 function normalizeAdditionalExperience(md: string): string {
   const lines = md.split('\n');
@@ -465,10 +464,13 @@ function normalizeAdditionalExperience(md: string): string {
 
     if (inAddlExp) {
       const trimmed = line.trim();
-      // Strip leading list marker if present, then check for a **bold** entry
-      const stripped = trimmed.replace(/^[-*]\s+/, '');
-      if (/^\*\*/.test(stripped)) {
-        entries.push(stripped);
+      if (/^[-*]\s+/.test(trimmed)) {
+        flush();
+        out.push(line);
+        continue;
+      }
+      if (/^\*\*/.test(trimmed)) {
+        entries.push(trimmed);
         continue;
       }
       // Blank line or non-entry line: flush collected entries first
@@ -499,8 +501,7 @@ export function renderResumeHtml(
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^• /gm, '- ')
     .trim();
-  // Normalize Additional Experience section: ensure each **Role/Company** entry is a bullet.
-  // The AI sometimes omits the '- ' prefix, causing all entries to collapse into one paragraph.
+  // Normalize legacy unbulleted Additional Experience entries while preserving real bullets.
   const normalized = normalizeContactLinks(normalizeAdditionalExperience(cleaned));
 
   const { renderer, closeJobSection } = makeRenderer();

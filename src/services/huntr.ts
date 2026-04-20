@@ -29,6 +29,9 @@ export interface HuntrJob {
   _list?: string;
   _company?: string;
   company?: HuntrCompany | string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastMovedAt?: string;
 }
 
 interface HuntrJobDetailAction {
@@ -50,12 +53,18 @@ export interface HuntrWishlistJob {
   company: string;
   listName?: string;
   descriptionText: string;
+  listAddedAt?: string;
+  listPosition?: number;
 }
 
 export interface HuntrJobStageSummary {
   boardId: string;
   id: string;
   listName?: string;
+}
+
+function getListAddedAt(job: HuntrJob): string | undefined {
+  return job.lastMovedAt ?? job.createdAt;
 }
 
 export interface HuntrApiClient {
@@ -84,7 +93,7 @@ export function createHuntrClient(token: string, timeoutMs = DEFAULT_TIMEOUT_MS)
       } catch (err) {
         clearTimeout(timer);
         if (err instanceof Error && err.name === 'AbortError') {
-          throw new Error(`Huntr API request timed out after ${timeoutMs}ms: ${baseURL}${endpoint}`);
+          throw new Error(`Huntr API request timed out after ${timeoutMs}ms: ${baseURL}${endpoint}`, { cause: err });
         }
         throw err;
       }
@@ -398,6 +407,7 @@ export async function listWishlistJobs(
     ]);
 
     const wishlistJobs = boardJobs.filter((candidate) => candidate._list === wishlistId);
+    const listOrder = new Map((lists[wishlistId]?._jobs ?? []).map((jobId, index) => [jobId, index]));
     const hydratedJobs = await mapWithConcurrency(
       wishlistJobs,
       4,
@@ -411,6 +421,8 @@ export async function listWishlistJobs(
         company: extractCompanyName(job),
         listName: job._list ? lists[job._list]?.name : undefined,
         descriptionText: job.htmlDescription ? stripHtml(job.htmlDescription) : `Job title: ${job.title}`,
+        listAddedAt: getListAddedAt(job),
+        listPosition: listOrder.get(job.id),
       });
     }
   }
@@ -462,6 +474,8 @@ export async function listAllJobs(
         company: extractCompanyName(job),
         listName: job._list ? listIdToName.get(job._list) : undefined,
         descriptionText: job.htmlDescription ? stripHtml(job.htmlDescription) : `Job title: ${job.title}`,
+        listAddedAt: getListAddedAt(job),
+        listPosition: jobOrder.get(job.id),
       });
     }
   }

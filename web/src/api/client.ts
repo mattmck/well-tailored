@@ -53,6 +53,9 @@ export interface ConfigResponse {
     tailoringModels: string[];
     scoringModels: string[];
   };
+  persistence?: {
+    dbPath?: string;
+  };
 }
 
 export interface LocalWorkspaceResponse {
@@ -91,6 +94,8 @@ export interface HuntrJob {
   listName: string;
   url: string;
   boardId: string;
+  listAddedAt?: string;
+  listPosition?: number | null;
 }
 
 export interface HuntrJobsResponse {
@@ -184,6 +189,7 @@ export interface ScoreBody {
 
 export interface RegenerateSectionBody {
   sectionId: string;
+  sectionHeading?: string;
   fullResume: string;
   jd: string;
   bio?: string;
@@ -381,6 +387,7 @@ export function regenerateSection(body: RegenerateSectionBody): Promise<Regenera
     jobDescription: body.jd,
     jobTitle: body.jobTitle,
     sectionId: body.sectionId,
+    sectionHeading: body.sectionHeading,
     provider: body.provider,
     model: body.model,
   });
@@ -423,4 +430,149 @@ export function saveWorkspace(body: SaveWorkspaceBody): Promise<WorkspaceRecord>
 /** DELETE /api/workspaces/:id — Delete a workspace */
 export function deleteWorkspace(id: string): Promise<DeleteWorkspaceResponse> {
   return request<DeleteWorkspaceResponse>(`/api/workspaces/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
+// New DB-backed workspace / job / document / task endpoints
+// ---------------------------------------------------------------------------
+
+export interface WorkspaceDetail {
+  id: string;
+  name: string;
+  slug: string;
+  sourceResume: string | null;
+  sourceBio: string | null;
+  sourceCoverLetter: string | null;
+  sourceSupplemental: string | null;
+  agentConfigJson: string | null;
+  themeJson: string | null;
+  createdAt: string;
+  updatedAt: string;
+  jobs: JobRecord[];
+}
+
+export interface WorkspaceUpsertInput {
+  name?: string;
+  sourceResume?: string;
+  sourceBio?: string;
+  sourceCoverLetter?: string;
+  sourceSupplemental?: string;
+  promptResumeSystem?: string;
+  promptCoverLetterSystem?: string;
+  promptScoringSystem?: string;
+  agentConfigJson?: string;
+  themeJson?: string;
+}
+
+export interface JobRecord {
+  id: string;
+  workspaceId: string;
+  company: string;
+  title: string | null;
+  jd: string | null;
+  stage: string;
+  source: string;
+  huntrId: string | null;
+  listAddedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentRecord {
+  id: string;
+  jobId: string;
+  docType: 'resume' | 'cover';
+  markdown: string;
+  editorDataJson: string | null;
+  version: number;
+  createdAt: string;
+}
+
+export interface TaskRecord {
+  id: string;
+  workspaceId: string;
+  jobId: string;
+  type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  inputJson: string;
+  resultJson: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function listWorkspacesV2(): Promise<{ workspaces: WorkspaceSummary[] }> {
+  return request<{ workspaces: WorkspaceSummary[] }>('/api/workspaces');
+}
+
+export function getWorkspace(id: string): Promise<WorkspaceDetail> {
+  return request<WorkspaceDetail>(`/api/workspaces/${encodeURIComponent(id)}`);
+}
+
+export function createWorkspace(input: WorkspaceUpsertInput & { name: string }): Promise<WorkspaceDetail> {
+  return request<WorkspaceDetail>('/api/workspaces', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateWorkspace(id: string, patch: WorkspaceUpsertInput): Promise<WorkspaceDetail> {
+  return request<WorkspaceDetail>(`/api/workspaces/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export function createJob(workspaceId: string, input: { company: string; title?: string; jd?: string; stage?: string; source?: string; huntrId?: string; listAddedAt?: string | null }): Promise<JobRecord> {
+  return request<JobRecord>(`/api/workspaces/${encodeURIComponent(workspaceId)}/jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateJob(workspaceId: string, jobId: string, patch: Partial<JobRecord>): Promise<JobRecord> {
+  return request<JobRecord>(`/api/workspaces/${encodeURIComponent(workspaceId)}/jobs/${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+}
+
+export function getDocument(jobId: string, docType: 'resume' | 'cover'): Promise<DocumentRecord> {
+  return request<DocumentRecord>(`/api/jobs/${encodeURIComponent(jobId)}/documents/${docType}`);
+}
+
+export function saveDocument(jobId: string, docType: 'resume' | 'cover', markdown: string, editorDataJson?: string): Promise<DocumentRecord> {
+  return request<DocumentRecord>(`/api/jobs/${encodeURIComponent(jobId)}/documents/${docType}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ markdown, editorDataJson }),
+  });
+}
+
+export function listTasks(workspaceId: string): Promise<{ tasks: TaskRecord[] }> {
+  return request<{ tasks: TaskRecord[] }>(`/api/tasks?workspaceId=${encodeURIComponent(workspaceId)}`);
+}
+
+export function enqueueTask(input: {
+  workspaceId: string;
+  jobId: string;
+  type: string;
+  input: unknown;
+  agents?: unknown;
+  promptOverrides?: Record<string, string>;
+  includeScoring?: boolean;
+}): Promise<TaskRecord> {
+  return request<TaskRecord>('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function getTask(id: string): Promise<TaskRecord> {
+  return request<TaskRecord>(`/api/tasks/${encodeURIComponent(id)}`);
 }

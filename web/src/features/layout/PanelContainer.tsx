@@ -7,6 +7,7 @@ import { SourcesPanel } from '../sources/SourcesPanel';
 import { PromptsPanel } from '../prompts/PromptsPanel';
 import { ConfigPanel } from '../config/ConfigPanel';
 import { JobsPanel } from '../jobs/JobsPanel';
+import { JdPanel } from '../jobs/JdPanel';
 import * as api from '../../api/client';
 
 const PANEL_CONFIG: Record<
@@ -37,6 +38,12 @@ const PANEL_CONFIG: Record<
     width: 360,
     placeholder: 'Prompts panel',
   },
+  jd: {
+    title: 'Job Description',
+    subtitle: 'Full job description for the selected role',
+    width: 420,
+    placeholder: 'No job selected',
+  },
 };
 
 export function PanelContainer() {
@@ -47,7 +54,7 @@ export function PanelContainer() {
 
   const config = PANEL_CONFIG[state.activePanel];
   const canReload = state.activePanel === 'sources' || state.activePanel === 'prompts';
-  const showSubtitle = state.activePanel !== 'jobs';
+  const showSubtitle = state.activePanel !== 'jobs' && state.activePanel !== 'jd';
 
   function handleClose() {
     dispatch({ type: 'SET_ACTIVE_PANEL', panel: null });
@@ -118,6 +125,8 @@ export function PanelContainer() {
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {state.activePanel === 'jobs' ? (
           <JobsPanel />
+        ) : state.activePanel === 'jd' ? (
+          <JdPanel />
         ) : state.activePanel === 'sources' ? (
           <SourcesPanel />
         ) : state.activePanel === 'config' ? (

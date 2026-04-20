@@ -39,24 +39,17 @@ export function MissingKeywords() {
   ];
 
   return (
-    <aside className="panel-surface flex min-h-0 w-full shrink-0 flex-col rounded-[1.65rem] px-4 py-4 lg:w-[220px]">
+    <aside className="panel-surface flex min-h-0 w-full flex-1 flex-col rounded-[1.65rem] px-4 py-4">
       <div className="shrink-0 border-b border-border/70 pb-4">
-        <p className="editorial-label">
-          Keyword Fit
-        </p>
-        <div className="mt-2 flex items-start justify-between gap-2">
-          <div>
-            <p className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
-              Coverage
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {matched.length} matched · {missing.length} missing
-            </p>
-          </div>
+        <div className="flex items-start justify-between gap-2">
+          <p className="editorial-label">Keyword Fit</p>
           <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${fitRatingColor(fitRating)}`}>
             {fitRating}
           </span>
         </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {matched.length} matched{partial.length > 0 ? ` · ${partial.length} partial` : ''} · {missing.length} missing
+        </p>
 
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[rgba(116,121,134,0.12)]">
           <div

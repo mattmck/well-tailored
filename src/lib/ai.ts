@@ -65,6 +65,36 @@ function resolveDelayMs(err: unknown, attempt: number): number {
   return Math.round(base * (0.8 + 0.4 * Math.random()));
 }
 
+function getHeader(err: unknown, key: string): string | undefined {
+  const headers = typeof err === 'object' && err !== null && 'headers' in err
+    ? (err as { headers?: { get?(k: string): string | null } }).headers
+    : undefined;
+  return headers?.get?.(key) ?? undefined;
+}
+
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === 'string') return err;
+  return String(err);
+}
+
+function logRetry(err: unknown, attempt: number, delayMs: number, context?: string): void {
+  const status = getErrorStatus(err);
+  const requestId =
+    getHeader(err, 'x-request-id')
+    ?? getHeader(err, 'request-id')
+    ?? getHeader(err, 'apim-request-id');
+  const pieces = [
+    `[ai] retry ${attempt + 1}/${MAX_ATTEMPTS - 1}`,
+    context ? `for ${context}` : undefined,
+    status ? `status=${status}` : undefined,
+    requestId ? `request_id=${requestId}` : undefined,
+    `wait=${Math.ceil(delayMs / 1000)}s`,
+    `error=${getErrorMessage(err)}`,
+  ].filter(Boolean);
+  console.warn(pieces.join(' '));
+}
+
 async function sleepWithSpinner(ms: number): Promise<void> {
   const spinner = startRetrySpinner(ms);
   await new Promise<void>((r) => setTimeout(r, ms));
@@ -76,13 +106,15 @@ async function sleepWithSpinner(ms: number): Promise<void> {
  * with exponential backoff + jitter and a live spinner while waiting.
  * Honors Retry-After headers when present.
  */
-async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, context?: string): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (err) {
       if (!isRateLimited(err) || attempt >= MAX_ATTEMPTS - 1) throw err;
-      await sleepWithSpinner(resolveDelayMs(err, attempt));
+      const delayMs = resolveDelayMs(err, attempt);
+      logRetry(err, attempt, delayMs, context);
+      await sleepWithSpinner(delayMs);
     }
   }
 }
@@ -158,7 +190,7 @@ export async function complete(
       if (!text) throw new Error('Gemini returned an empty response.');
       vlog(verbose, `    ⏱   ${((Date.now() - t0) / 1000).toFixed(1)}s · ${text.length} chars`);
       return text;
-    });
+    }, `${provider.label} · ${resolved}`);
   }
 
   // ── 2. Azure AI Foundry / Azure OpenAI ──────────────────────────────────
@@ -185,7 +217,7 @@ export async function complete(
       if (!text) throw new Error('Azure OpenAI returned an empty response.');
       vlog(verbose, `    ⏱   ${((Date.now() - t0) / 1000).toFixed(1)}s · ${text.length} chars`);
       return text;
-    });
+    }, `${provider.label} · ${resolved}`);
   }
 
   // ── 3. OpenAI (or custom OpenAI-compatible endpoint) ────────────────────
@@ -210,7 +242,7 @@ export async function complete(
       if (!text) throw new Error('OpenAI returned an empty response.');
       vlog(verbose, `    ⏱   ${((Date.now() - t0) / 1000).toFixed(1)}s · ${text.length} chars`);
       return text;
-    });
+    }, `${provider.label} · ${resolved}`);
   }
 
   // ── 4. Anthropic ─────────────────────────────────────────────────────────
@@ -231,7 +263,7 @@ export async function complete(
       if (!block || block.type !== 'text') throw new Error('Anthropic returned no text content.');
       vlog(verbose, `    ⏱   ${((Date.now() - t0) / 1000).toFixed(1)}s · ${block.text.length} chars`);
       return block.text.trim();
-    });
+    }, `${provider.label} · ${resolved}`);
   }
 
   throw new Error(`Unsupported provider configuration: ${provider.kind}`);

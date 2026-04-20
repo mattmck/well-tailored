@@ -9,6 +9,7 @@ import type {
   PromptSources,
   EditorData,
 } from './types.js';
+import { legacyHuntrMatchKey } from './lib/job-match.js';
 
 // ---------------------------------------------------------------------------
 // Initial state
@@ -27,6 +28,7 @@ export const initialState: WorkspaceState = {
   tailorModel: 'auto',
   scoreProvider: 'auto',
   scoreModel: 'auto',
+  dbPath: '',
   sourceResume: '',
   sourceBio: '',
   sourceCoverLetter: '',
@@ -48,6 +50,7 @@ export const initialState: WorkspaceState = {
   activePanel: null,
   activeScoreDetailsId: null,
   runFeedback: null,
+  activityLog: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -76,6 +79,7 @@ export type Action =
         scoringProvider: string;
         scoringModel: string;
       };
+      dbPath?: string;
     }
   | { type: 'SET_TAILOR_PROVIDER'; provider: string }
   | { type: 'SET_TAILOR_MODEL'; model: string }
@@ -97,6 +101,7 @@ export type Action =
   | { type: 'SET_ACTIVE_PANEL'; panel: ActivePanel }
   | { type: 'SET_SCORE_DETAILS'; id: string | null }
   | { type: 'SET_RUN_FEEDBACK'; feedback: { text: string; type: 'working' | 'done' | 'error' } | null }
+  | { type: 'ADD_ACTIVITY_LOG'; message: string; logType?: 'info' | 'working' | 'done' | 'error' }
   | { type: 'LOAD_WORKSPACE'; state: Partial<WorkspaceState> };
 
 // ---------------------------------------------------------------------------
@@ -110,9 +115,36 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
 
     case 'MERGE_JOBS': {
       const existingById = new Map(state.jobs.map((j) => [j.id, j]));
+      const existingByHuntrId = new Map(
+        state.jobs
+          .filter((job) => job.huntrId)
+          .map((job) => [job.huntrId as string, job]),
+      );
+      const legacyMatchesByKey = new Map<string, Job | null>();
+      for (const job of state.jobs) {
+        if (job.source === 'manual' || job.huntrId) continue;
+        const key = legacyHuntrMatchKey(job);
+        if (!key) continue;
+        legacyMatchesByKey.set(key, legacyMatchesByKey.has(key) ? null : job);
+      }
+      const incomingKeys = new Set(action.jobs.map(legacyHuntrMatchKey).filter((key): key is string => Boolean(key)));
+      const mergedIds = new Set<string>();
       const merged = action.jobs.map((incoming) => {
-        const existing = existingById.get(incoming.id);
-        if (!existing) return incoming;
+        let existing = existingById.get(incoming.id)
+          ?? (incoming.huntrId ? existingByHuntrId.get(incoming.huntrId) : undefined);
+        if (!existing && incoming.source !== 'manual') {
+          const legacyKey = legacyHuntrMatchKey(incoming) ?? '';
+          const legacyMatch = legacyMatchesByKey.get(legacyKey);
+          if (legacyMatch && !mergedIds.has(legacyMatch.id)) {
+            existing = legacyMatch;
+            legacyMatchesByKey.delete(legacyKey);
+          }
+        }
+        if (!existing) {
+          mergedIds.add(incoming.id);
+          return incoming;
+        }
+        mergedIds.add(existing.id);
         // Preserve tailoring results, editor data, status, checked — refresh metadata.
         // If key metadata changed, clear derived fields so stale results aren't shown.
         const metaChanged =
@@ -125,6 +157,12 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           title: incoming.title,
           jd: incoming.jd,
           stage: incoming.stage,
+          source: incoming.source ?? existing.source,
+          dbJobId: incoming.dbJobId ?? existing.dbJobId,
+          huntrId: incoming.huntrId ?? existing.huntrId,
+          boardId: incoming.boardId ?? existing.boardId,
+          listAddedAt: incoming.listAddedAt ?? existing.listAddedAt,
+          listPosition: incoming.listPosition ?? existing.listPosition,
           ...(metaChanged && {
             result: undefined,
             _editorData: null,
@@ -134,7 +172,30 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           }),
         };
       });
-      return { ...state, jobs: merged };
+      const preserved = state.jobs.filter((job) =>
+        !mergedIds.has(job.id)
+        && (job.source === 'manual' || !job.huntrId)
+        && (job.source === 'manual' || !incomingKeys.has(legacyHuntrMatchKey(job) ?? ''))
+      );
+      const jobs = [...merged, ...preserved];
+      const activeJobExists = state.activeJobId
+        ? jobs.some((job) => job.id === state.activeJobId)
+        : false;
+      const previousActiveJob = state.activeJobId
+        ? state.jobs.find((job) => job.id === state.activeJobId)
+        : null;
+      const activeReplacementKey = previousActiveJob ? legacyHuntrMatchKey(previousActiveJob) : null;
+      const activeReplacement = activeReplacementKey
+        ? jobs.find((job) => legacyHuntrMatchKey(job) === activeReplacementKey)
+        : null;
+
+      return {
+        ...state,
+        jobs,
+        activeJobId: activeJobExists
+          ? state.activeJobId
+          : activeReplacement?.id ?? jobs[0]?.id ?? null,
+      };
     }
 
     case 'SET_ACTIVE_JOB':
@@ -162,8 +223,8 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
       return {
         ...state,
         jobs: state.jobs.map((job) =>
-          action.stages[job.id]
-            ? { ...job, stage: action.stages[job.id] }
+          action.stages[job.id] || (job.huntrId && action.stages[job.huntrId])
+            ? { ...job, stage: action.stages[job.id] ?? action.stages[job.huntrId as string] }
             : job
         ),
       };
@@ -206,6 +267,7 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
           state.scoreModel === 'auto'
             ? action.defaults.scoringModel || 'auto'
             : state.scoreModel,
+        dbPath: action.dbPath ?? state.dbPath,
       };
 
     case 'SET_TAILOR_PROVIDER':
@@ -321,26 +383,28 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
     case 'SET_RUN_FEEDBACK':
       return { ...state, runFeedback: action.feedback };
 
+    case 'ADD_ACTIVITY_LOG': {
+      const entry = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        timestamp: Date.now(),
+        message: action.message,
+        type: action.logType ?? 'info',
+      };
+      return {
+        ...state,
+        activityLog: [entry, ...state.activityLog].slice(0, 40),
+      };
+    }
+
     case 'LOAD_WORKSPACE':
       return {
         ...state,
         ...action.state,
-        tailorProvider:
-          action.state.tailorProvider && action.state.tailorProvider !== 'auto'
-            ? action.state.tailorProvider
-            : state.tailorProvider,
-        tailorModel:
-          action.state.tailorModel && action.state.tailorModel !== 'auto'
-            ? action.state.tailorModel
-            : state.tailorModel,
-        scoreProvider:
-          action.state.scoreProvider && action.state.scoreProvider !== 'auto'
-            ? action.state.scoreProvider
-            : state.scoreProvider,
-        scoreModel:
-          action.state.scoreModel && action.state.scoreModel !== 'auto'
-            ? action.state.scoreModel
-            : state.scoreModel,
+        activityLog: [],
+        tailorProvider: action.state.tailorProvider ?? state.tailorProvider,
+        tailorModel: action.state.tailorModel ?? state.tailorModel,
+        scoreProvider: action.state.scoreProvider ?? state.scoreProvider,
+        scoreModel: action.state.scoreModel ?? state.scoreModel,
       };
 
     default: {

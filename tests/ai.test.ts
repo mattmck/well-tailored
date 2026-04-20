@@ -164,15 +164,18 @@ describe('provider selection', () => {
     expect(mockChatCreate).not.toHaveBeenCalled();
   });
 
-  it('prefers Gemini over OpenAI when both keys are present', async () => {
+  it('prefers OpenAI over Gemini when both legacy keys are present', async () => {
     process.env.GEMINI_API_KEY = 'gemini-key';
     process.env.OPENAI_API_KEY = 'openai-key';
-    mockChatCreate.mockResolvedValueOnce(openaiOk('gemini wins'));
+    mockChatCreate.mockResolvedValueOnce(openaiOk('openai wins'));
 
     const result = await complete('auto', 'sys', 'user');
 
-    expect(result).toBe('gemini wins');
+    expect(result).toBe('openai wins');
     expect(mockChatCreate).toHaveBeenCalledOnce();
+    expect(mockChatCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'gpt-4o-mini' }),
+    );
   });
 
   it('prefers Azure over OpenAI and Anthropic', async () => {

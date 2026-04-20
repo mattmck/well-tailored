@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/components/ui/utils';
 import { genId } from '../../lib/markdown';
+import { sectionSync } from '../../lib/section-sync';
 import type { EditorSection as SectionData, BulletItem, JobEntry, SectionType } from '../../types';
 
 interface EditorSectionProps {
@@ -189,6 +190,13 @@ function BulletList({
   );
 }
 
+function extractLatestYear(date: string): number {
+  if (/present/i.test(date)) return 9999;
+  const matches = date.match(/\b(20\d{2}|19\d{2})\b/g);
+  if (!matches) return 0;
+  return Math.max(...matches.map(Number));
+}
+
 function JobEntryEditor({
   job,
   index,
@@ -196,6 +204,7 @@ function JobEntryEditor({
   onUpdate,
   onMove,
   onRemove,
+  moveDisabled,
 }: {
   job: JobEntry;
   index: number;
@@ -203,7 +212,10 @@ function JobEntryEditor({
   onUpdate: (updated: JobEntry) => void;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
+  moveDisabled?: boolean;
 }) {
+  const detailsMode = job.detailsMode ?? 'bullets';
+
   function field(fieldName: 'title' | 'company' | 'location' | 'date') {
     return (
       <input
@@ -215,12 +227,36 @@ function JobEntryEditor({
     );
   }
 
+  function handleSetDetailsMode(next: 'bullets' | 'text') {
+    if (next === detailsMode) return;
+    if (next === 'text') {
+      // Convert bullets → text
+      const text = job.bullets.map((b) => b.text).filter(Boolean).join('\n');
+      onUpdate({ ...job, detailsMode: 'text', detailsText: text });
+    } else {
+      // Convert text → bullets
+      const lines = (job.detailsText ?? '').split('\n').filter((l) => l.trim());
+      const bullets = lines.length > 0
+        ? lines.map((text) => ({ id: genId(), text: text.trim() }))
+        : [{ id: genId(), text: '' }];
+      onUpdate({ ...job, detailsMode: 'bullets', bullets });
+    }
+  }
+
+  function handleTextChange(value: string) {
+    onUpdate({ ...job, detailsText: value });
+  }
+
+  function handleBulletsChange(bullets: BulletItem[]) {
+    onUpdate({ ...job, bullets });
+  }
+
   return (
     <div className="paper-pane rounded-[1.2rem] p-3.5">
       <div className="flex items-center gap-2">
         <span className="editorial-label flex-1">Job {index + 1}</span>
-        <IconBtn title="Move job up" onClick={() => onMove(-1)} disabled={index === 0}><ChevronUp /></IconBtn>
-        <IconBtn title="Move job down" onClick={() => onMove(1)} disabled={index === total - 1}><ChevronDown /></IconBtn>
+        <IconBtn title="Move job up" onClick={() => onMove(-1)} disabled={moveDisabled || index === 0}><ChevronUp /></IconBtn>
+        <IconBtn title="Move job down" onClick={() => onMove(1)} disabled={moveDisabled || index === total - 1}><ChevronDown /></IconBtn>
         <IconBtn title="Remove job" onClick={onRemove} danger><XIcon /></IconBtn>
       </div>
 
@@ -244,11 +280,47 @@ function JobEntryEditor({
       </div>
 
       <div className="mt-3">
-        <p className="editorial-label mb-2">Bullets</p>
-        <BulletList
-          items={job.bullets}
-          onChange={(bullets) => onUpdate({ ...job, bullets })}
-        />
+        <div className="mb-2 flex items-center gap-2">
+          <p className="editorial-label flex-1">Details</p>
+          <div className="toolbar-segment flex rounded-full p-0.5">
+            <button
+              type="button"
+              onClick={() => handleSetDetailsMode('bullets')}
+              disabled={detailsMode === 'bullets'}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-[10px] font-medium transition-all',
+                detailsMode === 'bullets'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-white hover:text-foreground'
+              )}
+            >
+              Bullets
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetDetailsMode('text')}
+              disabled={detailsMode === 'text'}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-[10px] font-medium transition-all',
+                detailsMode === 'text'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-white hover:text-foreground'
+              )}
+            >
+              Text
+            </button>
+          </div>
+        </div>
+
+        {detailsMode === 'text' ? (
+          <AutoTextarea
+            value={job.detailsText ?? ''}
+            onChange={handleTextChange}
+            placeholder="Job details as free text…"
+          />
+        ) : (
+          <BulletList items={job.bullets} onChange={handleBulletsChange} />
+        )}
       </div>
     </div>
   );
@@ -267,6 +339,8 @@ export function EditorSection({
   onAccept,
   onRegenerate,
 }: EditorSectionProps) {
+  const sortOrder = section.sortOrder ?? 'relevance';
+
   function handleTypeChange(newType: SectionType) {
     if (newType === section.type) return;
     const updates: Partial<SectionData> = { type: newType };
@@ -275,11 +349,7 @@ export function EditorSection({
     }
     if (newType === 'jobs' && section.jobs.length === 0) {
       updates.jobs = [{
-        id: genId(),
-        title: '',
-        company: '',
-        location: '',
-        date: '',
+        id: genId(), title: '', company: '', location: '', date: '',
         bullets: [{ id: genId(), text: '' }],
       }];
     }
@@ -287,10 +357,7 @@ export function EditorSection({
   }
 
   function updateJob(jobId: string, updated: JobEntry) {
-    onUpdate({
-      ...section,
-      jobs: section.jobs.map((job) => (job.id === jobId ? updated : job)),
-    });
+    onUpdate({ ...section, jobs: section.jobs.map((job) => (job.id === jobId ? updated : job)) });
   }
 
   function moveJob(jobId: string, dir: -1 | 1) {
@@ -304,31 +371,37 @@ export function EditorSection({
   }
 
   function removeJob(jobId: string) {
-    onUpdate({
-      ...section,
-      jobs: section.jobs.filter((job) => job.id !== jobId),
-    });
+    onUpdate({ ...section, jobs: section.jobs.filter((job) => job.id !== jobId) });
   }
 
   function addJob() {
     const newJob: JobEntry = {
-      id: genId(),
-      title: '',
-      company: '',
-      location: '',
-      date: '',
+      id: genId(), title: '', company: '', location: '', date: '',
       bullets: [{ id: genId(), text: '' }],
     };
     onUpdate({ ...section, jobs: [...section.jobs, newJob] });
   }
 
+  function toggleSortOrder() {
+    onUpdate({ ...section, sortOrder: sortOrder === 'relevance' ? 'chronological' : 'relevance' });
+  }
+
+  const displayJobs = sortOrder === 'chronological'
+    ? [...section.jobs].sort((a, b) => extractLatestYear(b.date) - extractLatestYear(a.date))
+    : section.jobs;
+
   return (
-    <section className="paper-pane rounded-[1.35rem] px-4 py-4">
+    <section
+      data-section-heading={section.heading}
+      className="paper-pane rounded-[1.35rem] px-4 py-4"
+      onClick={() => sectionSync.emit(section.heading, 'editor')}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           value={section.heading}
           onChange={(event) => onUpdate({ ...section, heading: event.target.value })}
+          onClick={(e) => e.stopPropagation()}
           className="min-w-[12rem] flex-1 rounded-[0.9rem] border-none bg-transparent px-1 text-base font-semibold text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-white/45"
           placeholder="Section title…"
         />
@@ -336,12 +409,29 @@ export function EditorSection({
         <select
           value={section.type}
           onChange={(event) => handleTypeChange(event.target.value as SectionType)}
+          onClick={(e) => e.stopPropagation()}
           className="control-chip rounded-full px-3 py-1 text-[11px] font-medium text-muted-foreground outline-none transition-colors focus:border-ring"
         >
           <option value="text">Text</option>
           <option value="bullets">Bullets</option>
           <option value="jobs">Jobs</option>
         </select>
+
+        {section.type === 'jobs' && (
+          <button
+            type="button"
+            title={sortOrder === 'relevance' ? 'Sort chronologically' : 'Sort by relevance'}
+            onClick={(e) => { e.stopPropagation(); toggleSortOrder(); }}
+            className={cn(
+              'control-chip inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors',
+              sortOrder === 'chronological'
+                ? 'border-primary/20 bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-white hover:text-foreground'
+            )}
+          >
+            {sortOrder === 'chronological' ? 'Chrono' : 'Relevance'}
+          </button>
+        )}
 
         <IconBtn title="Move section up" onClick={onMoveUp} disabled={!canMoveUp}><ChevronUp /></IconBtn>
         <IconBtn title="Move section down" onClick={onMoveDown} disabled={!canMoveDown}><ChevronDown /></IconBtn>
@@ -364,23 +454,21 @@ export function EditorSection({
         )}
 
         {section.type === 'bullets' && (
-          <BulletList
-            items={section.items}
-            onChange={(items) => onUpdate({ ...section, items })}
-          />
+          <BulletList items={section.items} onChange={(items) => onUpdate({ ...section, items })} />
         )}
 
         {section.type === 'jobs' && (
           <div className="space-y-3">
-            {section.jobs.map((job, idx) => (
+            {displayJobs.map((job, idx) => (
               <JobEntryEditor
                 key={job.id}
                 job={job}
                 index={idx}
-                total={section.jobs.length}
+                total={displayJobs.length}
                 onUpdate={(updated) => updateJob(job.id, updated)}
                 onMove={(dir) => moveJob(job.id, dir)}
                 onRemove={() => removeJob(job.id)}
+                moveDisabled={sortOrder === 'chronological'}
               />
             ))}
 

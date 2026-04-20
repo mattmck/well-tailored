@@ -9,6 +9,7 @@ export interface RegenerateResumeSectionArgs {
   jobDescription: string;
   jobTitle?: string;
   sectionId: string;
+  sectionHeading?: string;
   model: string;
   verbose?: boolean;
   complete?: typeof defaultComplete;
@@ -60,13 +61,18 @@ export async function regenerateResumeSection(
   args: RegenerateResumeSectionArgs,
 ): Promise<RegenerateResumeSectionResult> {
   const sections = parseResumeSections(args.resume);
+  const normalizedHeading = args.sectionHeading?.trim().toLowerCase();
   const index = sections.findIndex((section) => section.id === args.sectionId);
+  const fallbackIndex = index === -1 && normalizedHeading
+    ? sections.findIndex((section) => section.heading.trim().toLowerCase() === normalizedHeading)
+    : -1;
+  const targetIndex = index === -1 ? fallbackIndex : index;
 
-  if (index === -1) {
+  if (targetIndex === -1) {
     throw new Error(`Could not find resume section "${args.sectionId}".`);
   }
 
-  const section = sections[index];
+  const section = sections[targetIndex];
   const complete = args.complete ?? defaultComplete;
   const updatedContent = await complete(
     args.model,
@@ -85,7 +91,7 @@ export async function regenerateResumeSection(
 
   const updatedSection = rebuildSection(section, updatedContent);
   const updatedSections = sections.map((candidate, candidateIndex) =>
-    candidateIndex === index ? updatedSection : candidate);
+    candidateIndex === targetIndex ? updatedSection : candidate);
 
   return {
     section: updatedSection,

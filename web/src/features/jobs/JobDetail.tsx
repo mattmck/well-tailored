@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWorkspace } from '../../context';
+import { formatStageLabel, getDisplayStage } from './stages';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/components/ui/utils';
@@ -65,7 +66,7 @@ export function JobDetail() {
           </div>
 
           <span className="control-chip rounded-full px-2.5 py-1 text-[11px] font-medium text-foreground">
-            {job.stage || 'Unknown stage'}
+            {formatStageLabel(getDisplayStage(job))}
           </span>
         </div>
 

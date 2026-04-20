@@ -1,11 +1,36 @@
-import type { Job, JobListFilter, SourcePaths, WorkspaceState } from '@/types';
+import type { EditorData, Job, JobListFilter, SourcePaths, WorkspaceState } from '@/types';
 import { normalizeTailorResult } from '@/lib/result-normalizers';
-import { normalizeStage } from '@/features/jobs/stages';
+import { normalizeEditorData } from '@/lib/markdown';
+import { getDisplayStage, isStatusLikeStage, normalizeStage } from '@/features/jobs/stages';
+
+interface DbJobRecord {
+  id: string;
+  company: string;
+  title: string | null;
+  jd: string | null;
+  stage: string;
+  source: string;
+  huntrId?: string | null;
+  listAddedAt?: string | null;
+  documents?: { resume?: string; cover?: string; resumeEditorDataJson?: string | null; coverEditorDataJson?: string | null };
+  scorecard?: unknown;
+  gapAnalysis?: unknown;
+}
 
 interface SavedWorkspaceRecord {
   id: string;
   name: string;
   snapshot?: unknown;
+  // DB workspace format (top-level fields, no snapshot)
+  sourceResume?: string | null;
+  sourceBio?: string | null;
+  sourceCoverLetter?: string | null;
+  sourceSupplemental?: string | null;
+  promptResumeSystem?: string | null;
+  promptCoverLetterSystem?: string | null;
+  promptScoringSystem?: string | null;
+  agentConfigJson?: string | null;
+  jobs?: DbJobRecord[];
 }
 
 interface SavedWorkspaceSnapshot {
@@ -45,6 +70,12 @@ interface StoredJobRecord {
   stage?: unknown;
   listName?: unknown;
   source?: unknown;
+  dbJobId?: unknown;
+  huntrId?: unknown;
+  huntr_id?: unknown;
+  boardId?: unknown;
+  listAddedAt?: unknown;
+  listPosition?: unknown;
   status?: unknown;
   checked?: unknown;
   error?: unknown;
@@ -91,16 +122,27 @@ function getDocumentSources(snapshot?: SavedWorkspaceSnapshot): SourcePaths {
 function toWorkspaceJob(job: StoredJobRecord, selectedJobIds: string[]): Job | null {
   const id = asString(job.id);
   if (!id) return null;
+  const rawStage =
+    asString(job.stage)
+    || asString(job.listName)
+    || (asString((job as Record<string, unknown>).source) === 'manual' ? 'manual' : 'other');
+  const source = asString((job as Record<string, unknown>).source);
+  const stage = isStatusLikeStage(rawStage)
+    ? source === 'manual' ? 'manual' : 'other'
+    : rawStage;
 
   return {
     id,
     company: asString(job.company, 'Company'),
     title: asString(job.title, 'Job'),
     jd: asString(job.jd) || asString(job.descriptionText),
-    stage:
-      asString(job.stage)
-      || asString(job.listName)
-      || (asString((job as Record<string, unknown>).source) === 'manual' ? 'manual' : 'wishlist'),
+    stage,
+    source: source === 'manual' ? 'manual' : 'huntr',
+    dbJobId: asString(job.dbJobId) || null,
+    huntrId: asString(job.huntrId) || asString(job.huntr_id) || (source === 'manual' ? null : id),
+    boardId: asString(job.boardId) || null,
+    listAddedAt: asString(job.listAddedAt) || null,
+    listPosition: typeof job.listPosition === 'number' ? job.listPosition : null,
     status:
       job.status === 'tailoring'
       || job.status === 'tailored'
@@ -172,32 +214,41 @@ export function buildWorkspaceSnapshot(state: WorkspaceState): Record<string, un
     activeJobId: state.activeJobId,
     selectedHuntrJob: activeJob
       ? {
-          boardId: '',
-          id: activeJob.id,
+          boardId: activeJob.boardId ?? '',
+          id: activeJob.huntrId ?? activeJob.id,
           title: activeJob.title,
           company: activeJob.company,
           listName: activeJob.stage,
           descriptionText: activeJob.jd,
-          source: normalizeStage(activeJob.stage) === 'manual' ? 'manual' : 'huntr',
+          source: activeJob.source ?? (normalizeStage(activeJob.stage) === 'manual' ? 'manual' : 'huntr'),
+          listAddedAt: activeJob.listAddedAt ?? null,
+          listPosition: activeJob.listPosition ?? null,
         }
       : null,
     result: activeJob?.result ?? null,
     huntrJobs: state.jobs.map((job) => ({
-      boardId: '',
-      id: job.id,
+      boardId: job.boardId ?? '',
+      id: job.huntrId ?? job.id,
       title: job.title,
       company: job.company,
       listName: job.stage,
       descriptionText: job.jd,
-      source: normalizeStage(job.stage) === 'manual' ? 'manual' : 'huntr',
+      source: job.source ?? (normalizeStage(job.stage) === 'manual' ? 'manual' : 'huntr'),
+      listAddedAt: job.listAddedAt ?? null,
+      listPosition: job.listPosition ?? null,
     })),
     savedJobs: state.jobs.map((job) => ({
       id: job.id,
+      dbJobId: job.dbJobId,
+      huntrId: job.huntrId,
+      boardId: job.boardId,
+      listAddedAt: job.listAddedAt,
+      listPosition: job.listPosition,
       company: job.company,
       title: job.title,
       jd: job.jd,
       stage: job.stage,
-      source: normalizeStage(job.stage) === 'manual' ? 'manual' : 'huntr',
+      source: job.source ?? (normalizeStage(job.stage) === 'manual' ? 'manual' : 'huntr'),
       status: job.status,
       checked: job.checked,
       error: job.error,
@@ -207,17 +258,129 @@ export function buildWorkspaceSnapshot(state: WorkspaceState): Record<string, un
 }
 
 export function getWorkspaceHuntrIdsMissingStage(workspace: SavedWorkspaceRecord): string[] {
+  const shouldRefreshStage = (rawStage: string | null | undefined): boolean => {
+    const stage = normalizeStage(rawStage);
+    return !stage || stage === 'other' || isStatusLikeStage(stage);
+  };
+
+  if (!workspace.snapshot && Array.isArray(workspace.jobs)) {
+    return workspace.jobs
+      .filter((job) => job.source !== 'manual')
+      .filter((job) => shouldRefreshStage(job.stage))
+      .map((job) => job.huntrId ?? null)
+      .filter((id): id is string => Boolean(id));
+  }
+
   const snapshot = getSnapshot(workspace);
 
   return getSavedJobs(snapshot)
     .filter((job) => asString(job.id))
-    .filter((job) => asString(job.source) === 'huntr')
-    .filter((job) => !asString(job.stage) && !asString(job.listName))
-    .map((job) => asString(job.id))
+    .filter((job) => asString(job.source) !== 'manual')
+    .filter((job) => shouldRefreshStage(asString(job.stage) || asString(job.listName)))
+    .map((job) => asString(job.huntrId) || asString(job.id))
     .filter((id): id is string => Boolean(id));
 }
 
+function tryParseEditorData(json: string | null | undefined): EditorData | null {
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.sections)) {
+      return normalizeEditorData(parsed as EditorData);
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function dbWorkspaceToState(workspace: SavedWorkspaceRecord): Partial<WorkspaceState> {
+  const jobs: Job[] = (workspace.jobs ?? []).map((job) => {
+    const resume = job.documents?.resume ?? '';
+    const cover = job.documents?.cover ?? '';
+    const hasDocs = Boolean(resume || cover);
+    const stage = getDisplayStage({ stage: job.stage, source: job.source });
+    // Hydrate _editorData from the resume editor JSON if available
+    const resumeEditorData = tryParseEditorData(job.documents?.resumeEditorDataJson);
+    const rehydrated = hasDocs
+      ? normalizeTailorResult({
+          output: { resume, coverLetter: cover },
+          scorecard: job.scorecard,
+          gapAnalysis: job.gapAnalysis,
+        })
+      : null;
+    return {
+      id: job.id,
+      company: job.company,
+      title: job.title ?? '',
+      jd: job.jd ?? '',
+      stage,
+      source: job.source === 'manual' ? 'manual' : 'huntr',
+      dbJobId: job.id,
+      huntrId: job.huntrId ?? null,
+      listAddedAt: job.listAddedAt ?? null,
+      boardId: null,
+      status: hasDocs ? ('tailored' as const) : ('loaded' as const),
+      checked: false,
+      scoresStale: false,
+      result: rehydrated,
+      error: null,
+      _editorData: resumeEditorData,
+    };
+  });
+
+  let agentConfig: Record<string, unknown> = {};
+  if (workspace.agentConfigJson) {
+    try {
+      const parsed = JSON.parse(workspace.agentConfigJson);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        agentConfig = parsed;
+      }
+    } catch { /* ignore */ }
+  }
+
+  return {
+    workspaceName: workspace.name,
+    activeWorkspaceId: workspace.id,
+    sourceResume: workspace.sourceResume ?? '',
+    sourceBio: workspace.sourceBio ?? '',
+    sourceCoverLetter: workspace.sourceCoverLetter ?? '',
+    sourceSupplemental: workspace.sourceSupplemental ?? '',
+    sourcePaths: {},
+    promptSources: {
+      resumeSystem: workspace.promptResumeSystem ?? '',
+      coverLetterSystem: workspace.promptCoverLetterSystem ?? '',
+      scoringSystem: workspace.promptScoringSystem ?? '',
+    },
+    tailorProvider: asString(agentConfig.tailoringProvider, 'auto') || 'auto',
+    tailorModel: asString(agentConfig.tailoringModel, 'auto') || 'auto',
+    scoreProvider: asString(agentConfig.scoringProvider, 'auto') || 'auto',
+    scoreModel: asString(agentConfig.scoringModel, 'auto') || 'auto',
+    jobs,
+    activeJobId: jobs[0]?.id ?? null,
+    jobListFilter: 'all',
+    activeDoc: 'resume',
+    viewMode: 'preview',
+    tailorQueue: [],
+    tailorQueueTotal: 0,
+    tailorRunning: null,
+    tailorRunningStartedAt: 0,
+    tailorLastSummary: null,
+    regradeQueue: [],
+    regradeQueueTotal: 0,
+    regradeRunning: null,
+    regradeRunningStartedAt: 0,
+    runFeedback: null,
+    activityLog: [],
+    regeneratingSection: null,
+    activeScoreDetailsId: null,
+  };
+}
+
 export function workspaceRecordToState(workspace: SavedWorkspaceRecord): Partial<WorkspaceState> {
+  // DB format: has top-level source fields instead of a snapshot blob
+  if (!workspace.snapshot && workspace.sourceResume !== undefined) {
+    return dbWorkspaceToState(workspace);
+  }
+
   const snapshot = getSnapshot(workspace);
   const selectedJobIds = asStringArray(snapshot?.selectedJobIds);
   const selectedJob = getSelectedJob(snapshot);
@@ -275,6 +438,7 @@ export function workspaceRecordToState(workspace: SavedWorkspaceRecord): Partial
     regradeRunning: null,
     regradeRunningStartedAt: 0,
     runFeedback: null,
+    activityLog: [],
     regeneratingSection: null,
     activeScoreDetailsId: null,
   };

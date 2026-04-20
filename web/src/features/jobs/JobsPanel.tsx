@@ -29,6 +29,12 @@ export function JobsPanel() {
         title: huntrJob.title,
         jd: huntrJob.descriptionText,
         stage: huntrJob.listName,
+        source: 'huntr',
+        dbJobId: null,
+        huntrId: huntrJob.id,
+        boardId: huntrJob.boardId,
+        listAddedAt: huntrJob.listAddedAt ?? null,
+        listPosition: huntrJob.listPosition ?? null,
         status: 'loaded',
         checked: false,
         scoresStale: false,
@@ -61,9 +67,6 @@ export function JobsPanel() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="editorial-label">Opportunity Queue</p>
-              <h3 className="mt-1 font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
-                Jobs
-              </h3>
             </div>
           </div>
 

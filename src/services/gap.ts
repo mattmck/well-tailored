@@ -84,6 +84,125 @@ function stripJobDescriptionNoise(text: string): string {
   return kept.join('\n\n');
 }
 
+// ── Keyword grounding ─────────────────────────────────────────────────────
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Normalize a term for fuzzy substring comparison against JD text.
+// Lowercase, strip punctuation, collapse whitespace, drop common suffixes.
+function normalizeTerm(term: string): string {
+  return term
+    .toLowerCase()
+    .replace(/\.js\b/g, '')
+    // Remove everything except unicode letters (\p{L}), numbers (\p{N}),
+    // whitespace, +, #, and / so terms like C++, C#, and CI/CD stay distinguishable.
+    .replace(/[^\p{L}\p{N}\s+#/]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Common aliases / expansions the LLM might use that don't substring-match the JD.
+const RAW_TERM_ALIASES: Record<string, string[]> = {
+  'k8s': ['kubernetes'],
+  'kubernetes': ['k8s'],
+  'gcp': ['google cloud', 'google cloud platform'],
+  'aws': ['amazon web services'],
+  'ci/cd': ['ci cd', 'cicd', 'continuous integration', 'continuous delivery', 'continuous deployment'],
+  'postgres': ['postgresql'],
+  'postgresql': ['postgres'],
+  'node': ['nodejs', 'node.js'],
+  'typescript': ['ts'],
+  'javascript': ['js'],
+};
+
+// Build bidirectional alias map: both term→aliases and alias→term entries
+const TERM_ALIASES: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const [term, aliases] of Object.entries(RAW_TERM_ALIASES)) {
+    const normalizedTerm = normalizeTerm(term);
+    const normalizedAliases = aliases
+      .map((alias) => normalizeTerm(alias))
+      .filter((alias) => alias.length > 0);
+
+    // term → aliases
+    map[normalizedTerm] = normalizedAliases;
+
+    // each alias → [term]
+    for (const alias of normalizedAliases) {
+      if (!map[alias]) map[alias] = [];
+      if (!map[alias].includes(normalizedTerm)) {
+        map[alias].push(normalizedTerm);
+      }
+    }
+  }
+  return map;
+})();
+
+function termAppearsInJd(term: string, jdNormalized: string): boolean {
+  const normalized = normalizeTerm(term);
+  if (!normalized) return false;
+
+  // Helper: check if a term matches with word boundaries
+  const matchesWithBoundary = (checkTerm: string): boolean => {
+    const tokens = checkTerm.split(' ').filter((t) => t.length > 0);
+    if (tokens.length === 1) {
+      // Single token: use word boundary check
+      const regex = new RegExp(`\\b${escapeRegExp(tokens[0])}\\b`);
+      return regex.test(jdNormalized);
+    } else {
+      // Multi-word: each token must match as whole word
+      return tokens.every((token) => {
+        const regex = new RegExp(`\\b${escapeRegExp(token)}\\b`);
+        return regex.test(jdNormalized);
+      });
+    }
+  };
+
+  // Check direct match
+  if (matchesWithBoundary(normalized)) return true;
+
+  // Check aliases
+  const aliases = TERM_ALIASES[normalized];
+  if (aliases?.some((alias) => matchesWithBoundary(alias))) return true;
+
+  return false;
+}
+
+// Drops keywords the LLM hallucinated or pulled from the bio. Every JD-referenced
+// term must actually appear in the JD text (post-normalization). Returns a new
+// gap object plus counts of what was filtered for logging.
+function filterToJdGroundedKeywords(
+  gap: GapAnalysis,
+  jobDescription: string,
+): { gap: GapAnalysis; dropped: { matched: string[]; missing: string[]; partial: string[] } } {
+  const jdNormalized = normalizeTerm(jobDescription);
+
+  const dropped = { matched: [] as string[], missing: [] as string[], partial: [] as string[] };
+
+  const matchedKeywords = gap.matchedKeywords.filter((kw) => {
+    const keep = termAppearsInJd(kw.term, jdNormalized);
+    if (!keep) dropped.matched.push(kw.term);
+    return keep;
+  });
+  const missingKeywords = gap.missingKeywords.filter((kw) => {
+    const keep = termAppearsInJd(kw.term, jdNormalized);
+    if (!keep) dropped.missing.push(kw.term);
+    return keep;
+  });
+  const partialMatches = gap.partialMatches.filter((pm) => {
+    const keep = termAppearsInJd(pm.jdTerm, jdNormalized);
+    if (!keep) dropped.partial.push(pm.jdTerm);
+    return keep;
+  });
+
+  return {
+    gap: { ...gap, matchedKeywords, missingKeywords, partialMatches },
+    dropped,
+  };
+}
+
 // ── JSON extraction ───────────────────────────────────────────────────────
 
 function extractJsonObject(raw: string): string {
@@ -189,7 +308,7 @@ export async function analyzeGapWithAI(
 
   const parsed = JSON.parse(extractJsonObject(raw)) as Record<string, unknown>;
 
-  return {
+  const rawGap: GapAnalysis = {
     matchedKeywords: parseKeywordArray(parsed.matchedKeywords),
     missingKeywords: parseKeywordArray(parsed.missingKeywords),
     partialMatches: parsePartialMatches(parsed.partialMatches),
@@ -200,4 +319,16 @@ export async function analyzeGapWithAI(
     exactPhrases: Array.isArray(parsed.exactPhrases) ? parsed.exactPhrases.map(String) : [],
     tailoringHints: Array.isArray(parsed.tailoringHints) ? parsed.tailoringHints.map(String) : [],
   };
+
+  const { gap, dropped } = filterToJdGroundedKeywords(rawGap, jdForPrompt);
+  const totalDropped = dropped.matched.length + dropped.missing.length + dropped.partial.length;
+  if (totalDropped > 0) {
+    console.info('[gap] Dropped ungrounded keywords not present in JD', {
+      totalDropped,
+      matchedCount: dropped.matched.length,
+      missingCount: dropped.missing.length,
+      partialCount: dropped.partial.length,
+    });
+  }
+  return gap;
 }

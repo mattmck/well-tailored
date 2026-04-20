@@ -1,6 +1,8 @@
 import { useCallback, useEffect } from 'react';
-import { Copy, FilePenLine, Plus, Sparkles } from 'lucide-react';
+import { CheckCircle2, ChevronsLeft, Circle, Copy, FilePenLine, Plus, RefreshCw, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context';
+import { appendUniqueJobIdsToQueue } from '@/lib/queues';
+import { sectionSync } from '../../lib/section-sync';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { EditorSection } from './EditorSection';
 import { Button } from '@/components/ui/button';
@@ -21,8 +23,26 @@ function getToolbarTabClass(isActive: boolean) {
   );
 }
 
-export function EditorColumn() {
+interface EditorColumnProps {
+  onCollapse?: () => void;
+}
+
+export function EditorColumn({ onCollapse }: EditorColumnProps) {
   const { state, dispatch } = useWorkspace();
+
+  // Scroll editor to matching section when preview heading is clicked
+  useEffect(() => {
+    return sectionSync.subscribe((heading, source) => {
+      if (source !== 'preview') return;
+      const all = document.querySelectorAll<HTMLElement>('[data-section-heading]');
+      for (const el of all) {
+        if (el.getAttribute('data-section-heading')?.toLowerCase() === heading.toLowerCase()) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          break;
+        }
+      }
+    });
+  }, []);
 
   const job = state.activeJobId
     ? state.jobs.find((j) => j.id === state.activeJobId)
@@ -125,17 +145,23 @@ export function EditorColumn() {
 
   const handleSectionAccept = useCallback(
     (sectionId: string) => {
-      if (!editorData) return;
-      patchSections(
-        editorData.sections.map((section) => (
+      if (!job || !editorData) return;
+      const nextSections = editorData.sections.map((section) => (
           section.id === sectionId
             ? { ...section, accepted: !section.accepted }
             : section
-        )),
-      );
+        ));
+      patchSections(nextSections);
+
+      const allAccepted = nextSections.length > 0 && nextSections.every((section) => section.accepted);
+      if (allAccepted && job.status === 'tailored') {
+        dispatch({ type: 'UPDATE_JOB', id: job.id, patch: { status: 'reviewed' } });
+      } else if (!allAccepted && job.status === 'reviewed') {
+        dispatch({ type: 'UPDATE_JOB', id: job.id, patch: { status: 'tailored' } });
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editorData],
+    [job, editorData],
   );
 
   const handleAddSection = useCallback(() => {
@@ -160,10 +186,22 @@ export function EditorColumn() {
       if (!section) return;
 
       dispatch({ type: 'SET_REGENERATING_SECTION', section: sectionId });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Regenerating "${section.heading}" for ${job.company}.`,
+        logType: 'working',
+      });
+      console.info('[workbench] Regenerating section', {
+        jobId: job.id,
+        company: job.company,
+        sectionId,
+        sectionHeading: section.heading,
+      });
 
       try {
         const res = await api.regenerateSection({
           sectionId,
+          sectionHeading: section.heading,
           fullResume: fullMarkdown,
           jd: job.jd,
           bio: state.sourceBio,
@@ -188,8 +226,18 @@ export function EditorColumn() {
         patchSections(editorData.sections.map((candidate) => (
           candidate.id === sectionId ? newSection : candidate
         )));
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Regenerated "${newHeading}" for ${job.company}.`,
+          logType: 'done',
+        });
       } catch (err) {
         console.error('Regenerate section failed:', err);
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Section regenerate failed for ${job.company}: ${err instanceof Error ? err.message : String(err)}`,
+          logType: 'error',
+        });
       } finally {
         dispatch({ type: 'SET_REGENERATING_SECTION', section: null });
       }
@@ -244,23 +292,37 @@ export function EditorColumn() {
     );
   }
 
+  const currentJob = job;
+  const regrading = state.regradeRunning === currentJob.id;
+  const queued = !regrading && state.regradeQueue.includes(currentJob.id);
+  const canRegrade =
+    Boolean(currentJob.result)
+    && (currentJob.scoresStale || !currentJob.result?.scorecard || !currentJob.result?.gapAnalysis);
+  const canReview = currentJob.status === 'tailored' || currentJob.status === 'reviewed';
+
+  function handleRegrade() {
+    const next = appendUniqueJobIdsToQueue({
+      queue: state.regradeQueue,
+      runningId: state.regradeRunning,
+      total: state.regradeQueueTotal,
+      incomingIds: [currentJob.id],
+    });
+    if (next.added.length === 0) return;
+    dispatch({ type: 'SET_REGRADE_QUEUE', queue: next.queue, total: next.total });
+  }
+
+  function handleToggleReviewed() {
+    const nextStatus = currentJob.status === 'reviewed' ? 'tailored' : 'reviewed';
+    dispatch({ type: 'UPDATE_JOB', id: currentJob.id, patch: { status: nextStatus } });
+  }
+
   return (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col">
       <div className="shrink-0 border-b border-border/70 px-4 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="editorial-label">Draft Editor</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h2 className="font-[Manrope] text-base font-semibold tracking-[-0.03em] text-foreground">
-                Structured sections
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                {job.company} · {job.title}
-              </span>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="editorial-label">Draft Editor</p>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="toolbar-segment flex rounded-full p-1">
               <button
                 type="button"
@@ -278,6 +340,30 @@ export function EditorColumn() {
               </button>
             </div>
 
+            {canReview && (
+              <Button
+                onClick={handleToggleReviewed}
+                variant={job.status === 'reviewed' ? 'default' : 'outline'}
+                size="sm"
+                className={job.status === 'reviewed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              >
+                {job.status === 'reviewed'
+                  ? <CheckCircle2 className="h-3 w-3" />
+                  : <Circle className="h-3 w-3" />}
+                {job.status === 'reviewed' ? 'Reviewed' : 'Mark reviewed'}
+              </Button>
+            )}
+
+            <Button
+              onClick={handleRegrade}
+              disabled={!canRegrade || regrading || queued}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-3 w-3 ${regrading ? 'animate-spin' : ''}`} />
+              {regrading ? 'Re-grading…' : queued ? 'Queued' : 'Re-grade'}
+            </Button>
+
             <Button
               type="button"
               variant="outline"
@@ -288,6 +374,19 @@ export function EditorColumn() {
               <Copy className="size-3.5" />
               Copy
             </Button>
+            {onCollapse && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onCollapse}
+                title="Collapse editor"
+                aria-label="Collapse editor"
+                className="ml-1 px-2"
+              >
+                <ChevronsLeft className="size-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

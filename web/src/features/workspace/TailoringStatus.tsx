@@ -11,6 +11,7 @@ export function TailoringStatus() {
       queue={state.tailorQueue}
       total={state.tailorQueueTotal}
       verb="Tailoring"
+      detail="generating resume, cover letter, scorecard, and keyword gap"
       containerClassName="border-b border-border bg-primary/5 px-4 py-2 shrink-0"
       progressClassName="mt-2 h-1.5 bg-primary/15"
     />

@@ -1,22 +1,146 @@
-import { useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { Toaster } from 'sonner';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { WorkspaceContext } from './context';
+import { WorkspaceContext, useWorkspace } from './context';
 import { initialState, reducer } from './state';
 import { TopBar } from './features/workspace/TopBar';
-import { IconRail } from './features/layout/IconRail';
-import { PanelContainer } from './features/layout/PanelContainer';
-import { ScoreCards } from './features/scores/ScoreCards';
-import { EditorColumn } from './features/editor/EditorColumn';
-import { PreviewColumn } from './features/preview/PreviewColumn';
-import { MissingKeywords } from './features/editor/MissingKeywords';
+import { LeftSidebar } from './features/layout/LeftSidebar';
+import { RightColumn } from './features/layout/RightColumn';
 import { useTailorQueue } from './hooks/useTailorQueue';
 import { useRegradeQueue } from './hooks/useRegradeQueue';
+import { useTaskPolling } from './hooks/useTaskPolling';
+import { useEditorAutoSave } from './hooks/useEditorAutoSave';
+import { normalizeTailorResult } from './lib/result-normalizers';
+import { getTailorTaskMetadata } from './lib/tasks';
+import { workspaceRecordToState } from './features/workspace/workspacePersistence';
+import type { TaskRecord } from './api/client';
 import * as api from './api/client';
 
 function AppShell() {
   useTailorQueue();
   useRegradeQueue();
+  useEditorAutoSave();
+
+  const { state, dispatch } = useWorkspace();
+
+  const handleTaskCompleted = useCallback((task: TaskRecord) => {
+    if (task.type !== 'tailor') return;
+    try {
+      const input = getTailorTaskMetadata(task);
+      const frontendJobId = input.frontendJobId;
+      const jobLabel = `${input.company ?? 'selected company'}${input.jobTitle ? ` — ${input.jobTitle}` : ''}`;
+      const rawResult = JSON.parse(task.resultJson ?? 'null');
+      const result = normalizeTailorResult(rawResult);
+      dispatch({
+        type: 'UPDATE_JOB',
+        id: frontendJobId,
+        patch: {
+          status: result ? 'tailored' : 'error',
+          dbJobId: task.jobId,
+          result: result ?? null,
+          scoresStale: false,
+          error: result ? null : 'Tailoring produced no output',
+        },
+      });
+      dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
+      dispatch({
+        type: 'SET_RUN_FEEDBACK',
+        feedback: { text: 'Tailoring complete', type: 'done' },
+      });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: result
+          ? `Finished tailoring ${jobLabel}. Resume and cover letter are ready.`
+          : `Tailoring finished for ${jobLabel}, but no output was returned.`,
+        logType: result ? 'done' : 'error',
+      });
+      console.info('[workbench] Tailoring task completed', {
+        taskId: task.id,
+        frontendJobId,
+        hasResult: Boolean(result),
+      });
+    } catch (err) {
+      console.error('Failed to parse task result:', err);
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Could not read completed tailoring task ${task.id}: ${err instanceof Error ? err.message : String(err)}`,
+        logType: 'error',
+      });
+      dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
+    }
+  }, [dispatch]);
+
+  const handleTaskFailed = useCallback((task: TaskRecord) => {
+    if (task.type !== 'tailor') return;
+    try {
+      const input = getTailorTaskMetadata(task);
+      const frontendJobId = input.frontendJobId;
+      const jobLabel = `${input.company ?? 'selected company'}${input.jobTitle ? ` — ${input.jobTitle}` : ''}`;
+      dispatch({
+        type: 'UPDATE_JOB',
+        id: frontendJobId,
+        patch: { status: 'error', error: task.error ?? 'Tailoring failed' },
+      });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Tailoring failed for ${jobLabel}: ${task.error ?? 'unknown error'}`,
+        logType: 'error',
+      });
+      console.error('[workbench] Tailoring task failed', {
+        taskId: task.id,
+        frontendJobId,
+        error: task.error,
+      });
+    } catch {
+      // ignore parse errors
+    }
+    dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
+    dispatch({
+      type: 'SET_RUN_FEEDBACK',
+      feedback: { text: 'Tailoring failed', type: 'error' },
+    });
+  }, [dispatch]);
+
+  const handleActiveTask = useCallback((task: TaskRecord) => {
+    if (task.type !== 'tailor') return;
+    if (state.tailorRunning) return;
+    try {
+      const input = getTailorTaskMetadata(task);
+      const frontendJobId = input.frontendJobId;
+      const jobLabel = `${input.company ?? 'selected company'}${input.jobTitle ? ` — ${input.jobTitle}` : ''}`;
+      const startedAt = Date.parse(task.updatedAt) || Date.parse(task.createdAt) || Date.now();
+      dispatch({ type: 'SET_TAILOR_RUNNING', id: frontendJobId, startedAt });
+      dispatch({
+        type: 'UPDATE_JOB',
+        id: frontendJobId,
+        patch: { status: 'tailoring', dbJobId: task.jobId },
+      });
+      dispatch({
+        type: 'SET_RUN_FEEDBACK',
+        feedback: { text: `Tailoring ${jobLabel}…`, type: 'working' },
+      });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Resumed tracking in-flight tailoring for ${jobLabel}.`,
+        logType: 'working',
+      });
+      console.info('[workbench] Resumed tracking active tailoring task', {
+        taskId: task.id,
+        frontendJobId,
+        status: task.status,
+      });
+    } catch (err) {
+      console.warn('[workbench] Could not rehydrate active task', err);
+    }
+  }, [dispatch, state.tailorRunning]);
+
+  useTaskPolling({
+    workspaceId: state.activeWorkspaceId,
+    onTaskCompleted: handleTaskCompleted,
+    onTaskFailed: handleTaskFailed,
+    onActiveTask: handleActiveTask,
+  });
+
   const [isDesktop, setIsDesktop] = useState(() => (
     typeof window === 'undefined' ? true : window.matchMedia('(min-width: 1024px)').matches
   ));
@@ -41,39 +165,29 @@ function AppShell() {
           <div className="shell-surface relative z-10 flex min-h-0 flex-1 flex-col rounded-[1.7rem]">
             <TopBar />
 
-            <div className={`flex min-h-0 flex-1 gap-3 px-3 pb-3 pt-4 ${isDesktop ? 'flex-row overflow-hidden' : 'flex-col overflow-auto'}`}>
-              <IconRail />
-              <PanelContainer />
+            <div className={`flex min-h-0 flex-1 gap-3 px-3 pb-3 pt-2 ${isDesktop ? 'flex-row overflow-hidden' : 'flex-col overflow-auto'}`}>
+              {isDesktop ? (
+                <PanelGroup direction="horizontal" className="flex-1 overflow-hidden min-h-0">
+                  {/* Left sidebar */}
+                  <Panel defaultSize={22} minSize={18} maxSize={35} className="min-h-0 min-w-0 flex flex-col">
+                    <LeftSidebar />
+                  </Panel>
 
-              <main className={`flex min-w-0 flex-1 gap-3 ${isDesktop ? 'flex-row overflow-hidden' : 'flex-col'}`}>
-                <section className={`panel-surface flex min-w-0 flex-1 flex-col overflow-hidden rounded-[1.65rem] ${isDesktop ? 'min-h-0' : 'min-h-[36rem]'}`}>
-                  <ScoreCards />
+                  <PanelResizeHandle className="group relative flex items-center justify-center bg-transparent mx-1 w-4">
+                    <div className="h-24 w-[3px] rounded-full bg-border/90 transition-colors duration-200 group-hover:bg-primary/35" />
+                  </PanelResizeHandle>
 
-                  <div className="flex flex-1 min-h-0 overflow-hidden px-3 pb-3">
-                    <div className="paper-pane flex min-h-0 flex-1 overflow-hidden rounded-[1.45rem]">
-                      <PanelGroup direction={isDesktop ? 'horizontal' : 'vertical'} className="flex-1 overflow-hidden min-h-0">
-                        <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
-                          <div className="h-full min-h-0 flex w-full">
-                            <EditorColumn />
-                          </div>
-                        </Panel>
-
-                        <PanelResizeHandle className={`group relative flex items-center justify-center bg-transparent ${isDesktop ? 'mx-1 w-4' : 'my-1 h-4'}`}>
-                          <div className={`${isDesktop ? 'h-24 w-[3px]' : 'h-[3px] w-24'} rounded-full bg-border/90 transition-colors duration-200 group-hover:bg-primary/35`} />
-                        </PanelResizeHandle>
-
-                        <Panel defaultSize={50} minSize={30} className="min-h-0 min-w-0 flex">
-                          <div className="h-full min-h-0 flex w-full">
-                            <PreviewColumn />
-                          </div>
-                        </Panel>
-                      </PanelGroup>
-                    </div>
-                  </div>
-                </section>
-
-                <MissingKeywords />
-              </main>
+                  {/* Right editor/preview column */}
+                  <Panel defaultSize={78} minSize={50} className="min-h-0 min-w-0 flex flex-col">
+                    <RightColumn />
+                  </Panel>
+                </PanelGroup>
+              ) : (
+                <>
+                  <LeftSidebar />
+                  <RightColumn />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -96,22 +210,55 @@ export default function App() {
         type: 'INITIALIZE_CONFIG',
         providers,
         defaults: cfg.defaults,
+        dbPath: cfg.persistence?.dbPath,
       });
     }).catch(console.error);
 
-    api.getLocalWorkspace().then((ws) => {
-      const docs = ws.documents || {} as Record<string, string>;
-      dispatch({ type: 'SET_SOURCE', field: 'sourceResume', value: docs.resume || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceBio', value: docs.bio || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceCoverLetter', value: docs.baseCoverLetter || '' });
-      dispatch({ type: 'SET_SOURCE', field: 'sourceSupplemental', value: docs.resumeSupplemental || '' });
-      dispatch({ type: 'SET_SOURCE_PATHS', paths: ws.paths || {} });
-      dispatch({ type: 'SET_PROMPT_SOURCES', sources: ws.prompts || {} });
-    }).catch(console.error);
+    async function initializeWorkspace() {
+      try {
+        const res = await api.listWorkspaces();
+        dispatch({ type: 'SET_SAVED_WORKSPACES', workspaces: res.workspaces });
 
-    api.listWorkspaces().then((res) => {
-      dispatch({ type: 'SET_SAVED_WORKSPACES', workspaces: res.workspaces });
-    }).catch(console.error);
+        const latestWorkspace = res.workspaces[0];
+        if (latestWorkspace) {
+          const data = await api.loadWorkspace(latestWorkspace.id);
+          dispatch({ type: 'LOAD_WORKSPACE', state: workspaceRecordToState(data) });
+          dispatch({
+            type: 'ADD_ACTIVITY_LOG',
+            message: `Loaded latest DB workspace "${latestWorkspace.name}".`,
+            logType: 'done',
+          });
+          console.info('[workbench] Loaded latest DB workspace on startup', {
+            id: latestWorkspace.id,
+            name: latestWorkspace.name,
+          });
+          return;
+        }
+
+        const ws = await api.getLocalWorkspace();
+        const docs = ws.documents || {} as Record<string, string>;
+        dispatch({ type: 'SET_SOURCE', field: 'sourceResume', value: docs.resume || '' });
+        dispatch({ type: 'SET_SOURCE', field: 'sourceBio', value: docs.bio || '' });
+        dispatch({ type: 'SET_SOURCE', field: 'sourceCoverLetter', value: docs.baseCoverLetter || '' });
+        dispatch({ type: 'SET_SOURCE', field: 'sourceSupplemental', value: docs.resumeSupplemental || '' });
+        dispatch({ type: 'SET_SOURCE_PATHS', paths: ws.paths || {} });
+        dispatch({ type: 'SET_PROMPT_SOURCES', sources: ws.prompts || {} });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: 'No DB workspace found; loaded local source files.',
+          logType: 'info',
+        });
+      } catch (err) {
+        console.error('Failed to initialize workspace:', err);
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Workspace initialization failed: ${err instanceof Error ? err.message : String(err)}`,
+          logType: 'error',
+        });
+      }
+    }
+
+    void initializeWorkspace();
   }, []);
 
   return (

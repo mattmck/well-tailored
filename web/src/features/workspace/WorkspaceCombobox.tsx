@@ -35,8 +35,8 @@ export function WorkspaceCombobox({ value, onChange, onSelect, options, placehol
   }
 
   return (
-    <div ref={containerRef} className="relative w-full min-w-[15rem] max-w-[26rem]">
-      <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground/80" />
+    <div ref={containerRef} className="relative w-full min-w-[13rem]">
+      <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground/80" />
       <Input
         type="text"
         value={value}
@@ -44,12 +44,12 @@ export function WorkspaceCombobox({ value, onChange, onSelect, options, placehol
         onFocus={() => setOpen(true)}
         onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
         placeholder={placeholder}
-        className="h-11 rounded-[1rem] pl-10 pr-10"
+        className="h-9 rounded-lg pl-9 pr-9 text-sm"
       />
-      <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground/70" />
+      <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground/70" />
 
       {open && (
-        <div className="panel-surface absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[1.1rem] border border-border/80 p-1.5">
+        <div className="panel-surface absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-lg border border-border/80 p-1.5">
           {filtered.length > 0 ? (
             filtered.map((option) => (
               <button
@@ -58,7 +58,7 @@ export function WorkspaceCombobox({ value, onChange, onSelect, options, placehol
                 onClick={() => handleSelect(option.name)}
                 onMouseDown={(e) => { e.preventDefault(); handleSelect(option.name); }}
                 className={cn(
-                  'flex w-full items-center justify-between rounded-[0.9rem] px-3 py-2 text-left text-sm text-popover-foreground transition-colors hover:bg-accent/75 hover:text-accent-foreground',
+                  'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left text-sm text-popover-foreground transition-colors hover:bg-accent/75 hover:text-accent-foreground',
                   value === option.name && 'bg-accent/55'
                 )}
               >

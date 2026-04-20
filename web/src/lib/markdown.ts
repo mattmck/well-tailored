@@ -91,6 +91,44 @@ function splitDateLocation(text: string): { date: string; location: string } {
   return { date: parts[0], location: parts.slice(1).join(' | ') };
 }
 
+function splitImplicitBullets(content: string): string[] {
+  const trimmed = content.trim();
+  if (!trimmed) return [];
+  const lines = trimmed.split('\n').map(line => line.trim()).filter(Boolean);
+  if (lines.length > 1) return lines;
+  if (trimmed.includes('|')) {
+    return trimmed.split(/\s+\|\s+/).map(part => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function normalizeSection(section: EditorSection): EditorSection {
+  if (
+    section.type === 'text' &&
+    /additional\s+experience/i.test(section.heading) &&
+    section.content.trim()
+  ) {
+    const items = splitImplicitBullets(section.content);
+    if (items.length > 0) {
+      return {
+        ...section,
+        type: 'bullets',
+        content: '',
+        items: items.map(text => ({ id: genId(), text })),
+      };
+    }
+  }
+
+  return section;
+}
+
+export function normalizeEditorData(editorData: EditorData): EditorData {
+  return {
+    ...editorData,
+    sections: editorData.sections.map(normalizeSection),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Resume markdown parser — full structured parse with jobs/bullets/text types
 // ---------------------------------------------------------------------------
@@ -309,7 +347,7 @@ function parseResumeEditorData(markdown: string, previous?: EditorData | null): 
   return {
     kind: 'resume',
     header: { name, role, contact, links },
-    sections: mergedSections,
+    sections: mergedSections.map(normalizeSection),
   };
 }
 

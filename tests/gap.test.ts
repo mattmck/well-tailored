@@ -79,7 +79,7 @@ describe('analyzeGapWithAI', () => {
     const result = await analyzeGapWithAI(
       'Resume text',
       'Bio text',
-      'Job description',
+      'Job description mentioning Foo',
       undefined,
       'test-model',
       async () => JSON.stringify({
@@ -96,5 +96,89 @@ describe('analyzeGapWithAI', () => {
     );
 
     expect(result.matchedKeywords[0].category).toBe('other');
+  });
+
+  it('drops keywords the model returned that are not present in the JD', async () => {
+    const result = await analyzeGapWithAI(
+      'Built Java services with IBM MQ and React dashboards.',
+      'Backend engineer with enterprise integration background.',
+      'Looking for a Senior Frontend Engineer with React, TypeScript, and Kubernetes experience.',
+      'Senior Frontend Engineer',
+      'test-model',
+      async () => JSON.stringify({
+        matchedKeywords: [
+          { term: 'React', category: 'framework' },
+          { term: 'IBM MQ', category: 'tool' },
+        ],
+        missingKeywords: [
+          { term: 'K8s', category: 'infrastructure' },
+          { term: 'Scala', category: 'language' },
+        ],
+        partialMatches: [
+          { jdTerm: 'TypeScript', resumeTerm: 'JavaScript', relationship: 'related' },
+          { jdTerm: 'Akka', resumeTerm: 'Java', relationship: 'related' },
+        ],
+        impliedSkills: [],
+        experienceRequirements: [],
+        overallFit: 'moderate',
+        narrative: '',
+        exactPhrases: [],
+        tailoringHints: [],
+      }),
+    );
+
+    expect(result.matchedKeywords.map((k) => k.term)).toEqual(['React']);
+    // K8s kept via alias match on 'kubernetes'; Scala dropped (not in JD).
+    expect(result.missingKeywords.map((k) => k.term)).toEqual(['K8s']);
+    expect(result.partialMatches.map((p) => p.jdTerm)).toEqual(['TypeScript']);
+  });
+
+  it('keeps CI/CD terms when only alias forms appear in the JD', async () => {
+    const result = await analyzeGapWithAI(
+      'Built deployment pipelines with GitHub Actions.',
+      'Platform engineer.',
+      'Need CI CD ownership and strong incident response habits.',
+      'Platform Engineer',
+      'test-model',
+      async () => JSON.stringify({
+        matchedKeywords: [],
+        missingKeywords: [{ term: 'CI/CD', category: 'operational' }],
+        partialMatches: [],
+        impliedSkills: [],
+        experienceRequirements: [],
+        overallFit: 'moderate',
+        narrative: '',
+        exactPhrases: [],
+        tailoringHints: [],
+      }),
+    );
+
+    expect(result.missingKeywords.map((k) => k.term)).toEqual(['CI/CD']);
+  });
+
+  it('does not collapse C++ and C# terms to generic C during grounding', async () => {
+    const result = await analyzeGapWithAI(
+      'Built backend services in C++.',
+      'Systems engineer.',
+      'Looking for C# and distributed systems experience.',
+      'Systems Engineer',
+      'test-model',
+      async () => JSON.stringify({
+        matchedKeywords: [],
+        missingKeywords: [
+          { term: 'C#', category: 'language' },
+          { term: 'C++', category: 'language' },
+        ],
+        partialMatches: [],
+        impliedSkills: [],
+        experienceRequirements: [],
+        overallFit: 'moderate',
+        narrative: '',
+        exactPhrases: [],
+        tailoringHints: [],
+      }),
+    );
+
+    expect(result.missingKeywords.map((k) => k.term)).toEqual(['C#']);
   });
 });

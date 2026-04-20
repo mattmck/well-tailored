@@ -269,6 +269,7 @@ Use exactly one of these per keyword:
 - "partial": resume shows a related/similar skill but not an exact match (explain the relationship)
 - "missing": resume has no evidence of this skill
 - Do not mark something as "matched" unless the resume really supports it
+- CRITICAL: Every term in matchedKeywords, missingKeywords, and partialMatches.jdTerm MUST appear verbatim or as a clear synonym in the Job Description. If a technology or skill only appears in the bio or resume but NOT in the Job Description, DO NOT include it in any keyword list — it is not a JD requirement, regardless of whether the candidate has it. Such skills belong only in impliedSkills when the JD implies them indirectly.
 
 ## Implied skills
 - Surface skills the role clearly requires but doesn't state explicitly

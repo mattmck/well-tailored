@@ -30,90 +30,180 @@ export function useTailorQueue() {
       dispatch({ type: 'UPDATE_JOB', id: jobId, patch: { status: 'tailoring', error: null } });
       dispatch({
         type: 'SET_RUN_FEEDBACK',
-        feedback: { text: `Tailoring ${currentJob.company} - ${currentJob.title}...`, type: 'working' },
+        feedback: { text: `Creating tailoring task for ${currentJob.company}`, type: 'working' },
+      });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Preparing ${currentJob.company} — ${currentJob.title || 'role'} for tailoring.`,
+        logType: 'working',
+      });
+      console.info('[workbench] Preparing tailoring task', {
+        frontendJobId: jobId,
+        company: currentJob.company,
+        title: currentJob.title,
       });
 
-      let nextStatus: 'tailored' | 'error' = 'tailored';
-      let nextError: string | null = null;
-      let nextResult = currentJob.result;
-      let nextEditorData = null;
-
       try {
-        const body: api.ManualTailorBody = {
-          resume: state.sourceResume,
-          bio: state.sourceBio,
-          baseCoverLetter: state.sourceCoverLetter,
-          resumeSupplemental: state.sourceSupplemental,
+        // Ensure a DB workspace exists for this session
+        let workspaceId = stateRef.current.activeWorkspaceId;
+        if (!workspaceId) {
+          const wsName = stateRef.current.workspaceName.trim() || 'Default';
+          const ws = await api.createWorkspace({
+            name: wsName,
+            sourceResume: stateRef.current.sourceResume,
+            sourceBio: stateRef.current.sourceBio,
+            sourceCoverLetter: stateRef.current.sourceCoverLetter,
+            sourceSupplemental: stateRef.current.sourceSupplemental,
+            promptResumeSystem: stateRef.current.promptSources.resumeSystem ?? '',
+            promptCoverLetterSystem: stateRef.current.promptSources.coverLetterSystem ?? '',
+            promptScoringSystem: stateRef.current.promptSources.scoringSystem ?? '',
+            agentConfigJson: JSON.stringify({
+              tailoringProvider: stateRef.current.tailorProvider,
+              tailoringModel: stateRef.current.tailorModel,
+              scoringProvider: stateRef.current.scoreProvider,
+              scoringModel: stateRef.current.scoreModel,
+            }),
+          });
+          workspaceId = ws.id;
+          dispatch({ type: 'SET_ACTIVE_WORKSPACE', id: ws.id });
+          dispatch({ type: 'SET_WORKSPACE_NAME', name: ws.name });
+          dispatch({
+            type: 'ADD_ACTIVITY_LOG',
+            message: `Created workspace "${ws.name}" for queued jobs.`,
+            logType: 'done',
+          });
+          console.info('[workbench] Created workspace for tailoring', { workspaceId: ws.id, name: ws.name });
+        } else {
+          await api.updateWorkspace(workspaceId, {
+            sourceResume: stateRef.current.sourceResume,
+            sourceBio: stateRef.current.sourceBio,
+            sourceCoverLetter: stateRef.current.sourceCoverLetter,
+            sourceSupplemental: stateRef.current.sourceSupplemental,
+            promptResumeSystem: stateRef.current.promptSources.resumeSystem ?? '',
+            promptCoverLetterSystem: stateRef.current.promptSources.coverLetterSystem ?? '',
+            promptScoringSystem: stateRef.current.promptSources.scoringSystem ?? '',
+            agentConfigJson: JSON.stringify({
+              tailoringProvider: stateRef.current.tailorProvider,
+              tailoringModel: stateRef.current.tailorModel,
+              scoringProvider: stateRef.current.scoreProvider,
+              scoringModel: stateRef.current.scoreModel,
+            }),
+          });
+        }
+
+        const jobPayload = {
           company: currentJob.company,
-          title: currentJob.title,
-          jd: currentJob.jd,
-          provider: state.tailorProvider !== 'auto' ? state.tailorProvider : undefined,
-          model: state.tailorModel !== 'auto' ? state.tailorModel : undefined,
-          scoreProvider: state.scoreProvider !== 'auto' ? state.scoreProvider : undefined,
-          scoreModel: state.scoreModel !== 'auto' ? state.scoreModel : undefined,
-          prompts: state.promptSources as Record<string, string>,
+          title: currentJob.title || undefined,
+          jd: currentJob.jd || undefined,
+          stage: currentJob.stage || 'wishlist',
+          source: currentJob.source ?? (currentJob.stage === 'manual' ? 'manual' : 'huntr'),
+          huntrId: currentJob.huntrId ?? (currentJob.source === 'manual' ? undefined : currentJob.id),
+          listAddedAt: currentJob.listAddedAt ?? null,
         };
 
-        const tailorResult = await api.runManualTailor(body);
-        nextResult = {
-          output: tailorResult.output,
-          scorecard: tailorResult.scorecard,
-          gapAnalysis: tailorResult.gapAnalysis,
-        };
+        let dbJobId = currentJob.dbJobId;
+        if (dbJobId) {
+          const updatedJob = await api.updateJob(workspaceId, dbJobId, jobPayload);
+          dbJobId = updatedJob.id;
+          dispatch({
+            type: 'UPDATE_JOB',
+            id: jobId,
+            patch: {
+              dbJobId: updatedJob.id,
+              huntrId: updatedJob.huntrId
+                ?? currentJob.huntrId
+                ?? (currentJob.source === 'manual' ? null : currentJob.id),
+            },
+          });
+          console.info('[workbench] Updated existing DB job for tailoring', {
+            frontendJobId: jobId,
+            dbJobId: updatedJob.id,
+            workspaceId,
+          });
+        } else {
+          const dbJob = await api.createJob(workspaceId, jobPayload);
+          dbJobId = dbJob.id;
+          console.info('[workbench] Created DB job for tailoring', {
+            frontendJobId: jobId,
+            dbJobId: dbJob.id,
+            workspaceId,
+          });
+          dispatch({
+            type: 'UPDATE_JOB',
+            id: jobId,
+            patch: {
+              dbJobId: dbJob.id,
+              huntrId: dbJob.huntrId
+                ?? currentJob.huntrId
+                ?? (currentJob.source === 'manual' ? null : currentJob.id),
+            },
+          });
+        }
+
+        // Enqueue the tailor task; store the frontend job ID so the poll callback can map back
+        const task = await api.enqueueTask({
+          workspaceId,
+          jobId: dbJobId,
+          type: 'tailor',
+          agents: {
+            tailoringProvider: stateRef.current.tailorProvider !== 'auto' ? stateRef.current.tailorProvider : undefined,
+            tailoringModel: stateRef.current.tailorModel !== 'auto' ? stateRef.current.tailorModel : undefined,
+            scoringProvider: stateRef.current.scoreProvider !== 'auto' ? stateRef.current.scoreProvider : undefined,
+            scoringModel: stateRef.current.scoreModel !== 'auto' ? stateRef.current.scoreModel : undefined,
+          },
+          promptOverrides: stateRef.current.promptSources as Record<string, string>,
+          includeScoring: true,
+          input: {
+            resume: stateRef.current.sourceResume,
+            bio: stateRef.current.sourceBio,
+            company: currentJob.company,
+            jobTitle: currentJob.title,
+            jobDescription: currentJob.jd,
+            baseCoverLetter: stateRef.current.sourceCoverLetter,
+            resumeSupplemental: stateRef.current.sourceSupplemental,
+            _frontendJobId: jobId,
+          },
+        });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Task ${task.id.slice(0, 8)} is generating resume and cover letter for ${currentJob.company}.`,
+          logType: 'working',
+        });
+        console.info('[workbench] Enqueued tailoring task', {
+          taskId: task.id,
+          frontendJobId: jobId,
+          dbJobId,
+        });
+
+        // Remove from queue; tailorRunning stays set until the poll callback clears it
+        const latestState = stateRef.current;
+        const nextQueue =
+          latestState.tailorQueue[0] === jobId
+            ? latestState.tailorQueue.slice(1)
+            : latestState.tailorQueue.filter((id) => id !== jobId);
+        dispatch({ type: 'SET_TAILOR_QUEUE', queue: nextQueue });
 
         dispatch({
-          type: 'UPDATE_JOB',
-          id: jobId,
-          patch: {
-            status: 'tailored',
-            result: nextResult,
-            scoresStale: false,
-            _editorData: nextEditorData,
-          },
+          type: 'SET_RUN_FEEDBACK',
+          feedback: { text: `Generating draft for ${currentJob.company}`, type: 'working' },
         });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
-        nextStatus = 'error';
-        nextError = errorMessage;
-        nextResult = currentJob.result;
-        dispatch({
-          type: 'UPDATE_JOB',
-          id: jobId,
-          patch: { status: 'error', error: errorMessage },
-        });
-      }
-
-      const latestState = stateRef.current;
-      const nextQueue =
-        latestState.tailorQueue[0] === jobId
-          ? latestState.tailorQueue.slice(1)
-          : latestState.tailorQueue.filter((id) => id !== jobId);
-
-      dispatch({ type: 'SET_TAILOR_QUEUE', queue: nextQueue });
-      dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
-
-      if (nextQueue.length === 0) {
-        const jobs = latestState.jobs.map((candidate) =>
-          candidate.id === jobId
-            ? {
-                ...candidate,
-                status: nextStatus,
-                error: nextError,
-                result: nextResult,
-                scoresStale: false,
-                _editorData: nextEditorData,
-              }
-            : candidate,
-        );
-        const tailored = jobs.filter((candidate) => candidate.status === 'tailored').length;
-        const failed = jobs.filter((candidate) => candidate.status === 'error').length;
-        dispatch({
-          type: 'SET_TAILOR_SUMMARY',
-          summary: { tailored, failed },
-        });
+        dispatch({ type: 'UPDATE_JOB', id: jobId, patch: { status: 'error', error: errorMessage } });
+        dispatch({ type: 'SET_TAILOR_RUNNING', id: null });
         dispatch({
           type: 'SET_RUN_FEEDBACK',
-          feedback: { text: 'Tailoring complete', type: failed > 0 ? 'error' : 'done' },
+          feedback: { text: 'Failed to queue tailoring', type: 'error' },
+        });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Failed to queue ${currentJob.company}: ${errorMessage}`,
+          logType: 'error',
+        });
+        console.error('[workbench] Failed to queue tailoring task', {
+          frontendJobId: jobId,
+          company: currentJob.company,
+          error: errorMessage,
         });
       }
 
@@ -121,19 +211,5 @@ export function useTailorQueue() {
     }
 
     void processJob();
-  }, [
-    state.tailorQueue,
-    state.tailorRunning,
-    state.jobs,
-    state.sourceResume,
-    state.sourceBio,
-    state.sourceCoverLetter,
-    state.sourceSupplemental,
-    state.tailorProvider,
-    state.tailorModel,
-    state.scoreProvider,
-    state.scoreModel,
-    state.promptSources,
-    dispatch,
-  ]);
+  }, [state.tailorQueue, state.tailorRunning, state.jobs, dispatch]);
 }

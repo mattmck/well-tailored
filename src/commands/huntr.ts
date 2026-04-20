@@ -126,37 +126,39 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-const JOB_BOARD_DOMAINS = new Set([
-  'linkedin.com', 'indeed.com', 'glassdoor.com', 'ziprecruiter.com',
-  'dice.com', 'monster.com', 'simplyhired.com', 'careerbuilder.com',
-  'greenhouse.io', 'boards.greenhouse.io', 'lever.co', 'jobs.lever.co',
-]);
+// Reserved for future use
+// const JOB_BOARD_DOMAINS = new Set([
+//   'linkedin.com', 'indeed.com', 'glassdoor.com', 'ziprecruiter.com',
+//   'dice.com', 'monster.com', 'simplyhired.com', 'careerbuilder.com',
+//   'greenhouse.io', 'boards.greenhouse.io', 'lever.co', 'jobs.lever.co',
+// ]);
 
 /**
  * Try to extract the hiring company name from a plain-text job description.
  * Matches patterns like "At Acme," / "Acme is hiring" / "About Acme\n".
+ * Reserved for future use.
  */
-function extractCompanyFromDescription(text: string): string | null {
-  const snippet = text.slice(0, 800);
-  // Company name: 1-4 words, may start with digit (1Password), lowercase (eBay),
-  // or capital; allow apostrophes (O'Reilly) and periods (e.g. Inc.) in words;
-  // each word must end on an alphanumeric to avoid trailing punctuation;
-  // optionally preceded by "The " (The New York Times).
-  const NAME = '((?:The )?[A-Za-z0-9][A-Za-z0-9&\'.]*[A-Za-z0-9](?:[\\s-][A-Za-z0-9&\'.]*[A-Za-z0-9]){0,3}?)';
-  const NOT_COMMON = '(?!This |Our |We |You |All |With |When |As |If )';
-  const patterns = [
-    new RegExp(`\\bAt ${NOT_COMMON}${NAME},`),
-    new RegExp(`\\b${NOT_COMMON}${NAME} is (?:hiring|a leading|a platform|building|an )`),
-    new RegExp(`^About ${NAME}\\s*$`, 'm'),
-    new RegExp(`\\bJoin ${NOT_COMMON}${NAME} (?:in|and|if|to)\\b`),
-    new RegExp(`\\b${NOT_COMMON}${NAME}\\b (?:is |,|\\(|-)`),
-  ];
-  for (const re of patterns) {
-    const m = snippet.match(re);
-    if (m?.[1]) return m[1].trim().replace(/[,.]$/, '');
-  }
-  return null;
-}
+// function extractCompanyFromDescription(text: string): string | null {
+//   const snippet = text.slice(0, 800);
+//   // Company name: 1-4 words, may start with digit (1Password), lowercase (eBay),
+//   // or capital; allow apostrophes (O'Reilly) and periods (e.g. Inc.) in words;
+//   // each word must end on an alphanumeric to avoid trailing punctuation;
+//   // optionally preceded by "The " (The New York Times).
+//   const NAME = '((?:The )?[A-Za-z0-9][A-Za-z0-9&\'.]*[A-Za-z0-9](?:[\\s-][A-Za-z0-9&\'.]*[A-Za-z0-9]){0,3}?)';
+//   const NOT_COMMON = '(?!This |Our |We |You |All |With |When |As |If )';
+//   const patterns = [
+//     new RegExp(`\\bAt ${NOT_COMMON}${NAME},`),
+//     new RegExp(`\\b${NOT_COMMON}${NAME} is (?:hiring|a leading|a platform|building|an )`),
+//     new RegExp(`^About ${NAME}\\s*$`, 'm'),
+//     new RegExp(`\\bJoin ${NOT_COMMON}${NAME} (?:in|and|if|to)\\b`),
+//     new RegExp(`\\b${NOT_COMMON}${NAME}\\b (?:is |,|\\(|-)`),
+//   ];
+//   for (const re of patterns) {
+//     const m = snippet.match(re);
+//     if (m?.[1]) return m[1].trim().replace(/[,.]$/, '');
+//   }
+//   return null;
+// }
 
 function extractCompanyName(job: HuntrJob): string {
   return extractSharedCompanyName(job);
@@ -200,34 +202,36 @@ async function getListsForBoard(
 /**
  * Find the wishlist list ID for a board.
  * Huntr's built-in "Wishlist" list has no fixed ID, so we match by name.
+ * Reserved for future use.
  */
-async function findWishlistId(
-  client: HuntrApiClient,
-  boardId: string,
-): Promise<string | null> {
-  const lists = await getListsForBoard(client, boardId);
-  const entry = Object.entries(lists).find(
-    ([, list]) => list.name.toLowerCase() === 'wishlist',
-  );
-  return entry ? entry[0] : null;
-}
+// async function findWishlistId(
+//   client: HuntrApiClient,
+//   boardId: string,
+// ): Promise<string | null> {
+//   const lists = await getListsForBoard(client, boardId);
+//   const entry = Object.entries(lists).find(
+//     ([, list]) => list.name.toLowerCase() === 'wishlist',
+//   );
+//   return entry ? entry[0] : null;
+// }
 
 /**
  * Find a specific job by ID across all active boards.
  * Returns the job and the board ID it was found in, or null.
+ * Reserved for future use.
  */
-async function findJobAcrossBoards(
-  client: HuntrApiClient,
-  jobId: string,
-): Promise<{ job: HuntrJob; boardId: string } | null> {
-  const boards = await getBoards(client);
-  for (const board of boards) {
-    const jobs = await getJobsForBoard(client, board.id);
-    const job = jobs.find((j) => j.id === jobId);
-    if (job) return { job, boardId: board.id };
-  }
-  return null;
-}
+// async function findJobAcrossBoards(
+//   client: HuntrApiClient,
+//   jobId: string,
+// ): Promise<{ job: HuntrJob; boardId: string } | null> {
+//   const boards = await getBoards(client);
+//   for (const board of boards) {
+//     const jobs = await getJobsForBoard(client, board.id);
+//     const job = jobs.find((j) => j.id === jobId);
+//     if (job) return { job, boardId: board.id };
+//   }
+//   return null;
+// }
 
 // ---------------------------------------------------------------------------
 // Commands

@@ -232,6 +232,7 @@ export interface WorkspaceSnapshot {
     company: string;
     title: string;
     jd: string;
+    stage?: string;
     source: 'huntr' | 'manual';
     status: string;
     result?: TailorRunResult | null;

@@ -4,6 +4,12 @@ export interface Job {
   title: string;
   jd: string;
   stage: string;
+  source?: 'huntr' | 'manual';
+  dbJobId?: string | null;
+  huntrId?: string | null;
+  boardId?: string | null;
+  listAddedAt?: string | null;
+  listPosition?: number | null;
   status: 'loaded' | 'tailoring' | 'tailored' | 'reviewed' | 'error';
   checked: boolean;
   scoresStale: boolean;
@@ -68,6 +74,8 @@ export interface JobEntry {
   location: string;
   date: string;
   bullets: BulletItem[];
+  detailsMode?: 'bullets' | 'text';
+  detailsText?: string;
 }
 
 export type SectionType = 'text' | 'bullets' | 'jobs';
@@ -86,6 +94,7 @@ export interface EditorSection {
   items: BulletItem[];  // for type='bullets'
   jobs: JobEntry[];     // for type='jobs'
   accepted: boolean;
+  sortOrder?: 'relevance' | 'chronological';
 }
 
 export interface ResumeHeaderFields {
@@ -108,7 +117,7 @@ export interface PromptSources {
   scoringSystem?: string;
 }
 
-export type ActivePanel = 'jobs' | 'sources' | 'config' | 'prompts' | null;
+export type ActivePanel = 'jobs' | 'sources' | 'config' | 'prompts' | 'jd' | null;
 export type ActiveDoc = 'resume' | 'cover';
 export type ViewMode = 'preview' | 'diff';
 export type KnownJobStage =
@@ -119,7 +128,8 @@ export type KnownJobStage =
   | 'rejected'
   | 'timeout'
   | 'old wishlist'
-  | 'manual';
+  | 'manual'
+  | 'other';
 export type JobListFilter = 'all' | KnownJobStage | (string & {});
 
 export interface WorkspaceState {
@@ -135,6 +145,7 @@ export interface WorkspaceState {
   tailorModel: string;
   scoreProvider: string;
   scoreModel: string;
+  dbPath: string;
   sourceResume: string;
   sourceBio: string;
   sourceCoverLetter: string;
@@ -156,4 +167,12 @@ export interface WorkspaceState {
   activePanel: ActivePanel;
   activeScoreDetailsId: string | null;
   runFeedback: { text: string; type: 'working' | 'done' | 'error' } | null;
+  activityLog: ActivityLogEntry[];
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  timestamp: number;
+  message: string;
+  type: 'info' | 'working' | 'done' | 'error';
 }

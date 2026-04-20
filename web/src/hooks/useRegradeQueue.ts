@@ -33,6 +33,16 @@ export function useRegradeQueue() {
 
     async function processJob() {
       dispatch({ type: 'SET_REGRADE_RUNNING', id: jobId });
+      dispatch({
+        type: 'ADD_ACTIVITY_LOG',
+        message: `Re-scoring ${currentJob.company} — ${currentJob.title || 'role'}.`,
+        logType: 'working',
+      });
+      console.info('[workbench] Starting re-grade', {
+        jobId,
+        company: currentJob.company,
+        title: currentJob.title,
+      });
 
       const documents = getJobDocumentsForRegrade(currentJob);
       if (!documents) {
@@ -46,6 +56,11 @@ export function useRegradeQueue() {
         dispatch({
           type: 'SET_RUN_FEEDBACK',
           feedback: { text: `Re-grade skipped for ${currentJob.company}: no documents available`, type: 'error' },
+        });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Skipped re-grade for ${currentJob.company}: no documents available.`,
+          logType: 'error',
         });
         dispatch({ type: 'SET_REGRADE_QUEUE', queue: nextQueue });
         dispatch({ type: 'SET_REGRADE_RUNNING', id: null });
@@ -87,6 +102,12 @@ export function useRegradeQueue() {
             },
           },
         });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Updated scorecard and keyword gap for ${currentJob.company}.`,
+          logType: 'done',
+        });
+        console.info('[workbench] Re-grade complete', { jobId: currentJob.id, company: currentJob.company });
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         hadFailureRef.current = true;
@@ -99,6 +120,11 @@ export function useRegradeQueue() {
         dispatch({
           type: 'SET_RUN_FEEDBACK',
           feedback: { text: `Re-grade failed for ${currentJob.company}`, type: 'error' },
+        });
+        dispatch({
+          type: 'ADD_ACTIVITY_LOG',
+          message: `Re-grade failed for ${currentJob.company}: ${errorMessage}`,
+          logType: 'error',
         });
       }
 

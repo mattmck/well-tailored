@@ -34,7 +34,7 @@ import { runTailorWorkflow } from './services/runs.js';
 import { analyzeGapWithAI } from './services/gap.js';
 import { regenerateResumeSection } from './services/review.js';
 import { scoreTailoredOutput } from './services/scoring.js';
-import { deleteSavedWorkspace, listSavedWorkspaces, loadSavedWorkspace, saveWorkspaceSnapshot } from './services/workspace-store.js';
+import { saveWorkspaceSnapshot } from './services/workspace-store.js';
 import { resolveWorkspaceDocuments } from './services/workspace.js';
 import {
   AgentSelection,
@@ -43,9 +43,22 @@ import {
   TailorInput,
   WorkspaceSnapshot,
 } from './types/index.js';
+import { getDb, getDbPath } from './db/instance.js';
+import { createWorker } from './worker.js';
+import { WorkspaceRepo } from './repositories/workspaces.js';
+import { JobRepo } from './repositories/jobs.js';
+import { DocumentRepo } from './repositories/documents.js';
+import { TaskRepo } from './repositories/tasks.js';
+import { ScoreRepo } from './repositories/scores.js';
+import { GapRepo } from './repositories/gap.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PORT = 4312;
+
+function safeJsonParse<T>(raw: string | null | undefined, fallback: T): T {
+  if (!raw) return fallback;
+  try { return JSON.parse(raw) as T; } catch { return fallback; }
+}
 
 interface ManualRunBody {
   input: TailorInput;
@@ -121,6 +134,7 @@ interface RegenerateSectionBody {
   jobDescription: string;
   jobTitle?: string;
   sectionId: string;
+  sectionHeading?: string;
   model?: string;
   verbose?: boolean;
 }
@@ -329,6 +343,7 @@ function resolveWorkspacePayload(body?: HuntrRunBody['workspace']) {
 async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const method = req.method ?? 'GET';
   const url = new URL(req.url ?? '/', 'http://localhost');
+  const pathname = url.pathname;
 
   if (method === 'GET' && url.pathname === '/health') {
     sendJson(res, 200, { status: 'ok', now: new Date().toISOString() });
@@ -355,6 +370,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
         providers: config.providers,
         tailoringModels: config.tailoringModels,
         scoringModels: config.scoringModels,
+      },
+      persistence: {
+        dbPath: getDbPath(),
       },
     });
     return;
@@ -400,42 +418,34 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
-  if (method === 'GET' && url.pathname === '/api/workspaces') {
-    sendJson(res, 200, { workspaces: listSavedWorkspaces() });
+  // ── DB-backed workspace routes ────────────────────────────────────────────
+  if (method === 'GET' && pathname === '/api/workspaces') {
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    sendJson(res, 200, { workspaces: workspaceRepo.list() });
     return;
   }
 
-  if (method === 'GET' && url.pathname.startsWith('/api/workspaces/')) {
-    const id = decodeURIComponent(url.pathname.slice('/api/workspaces/'.length));
-    try {
-      const workspace = loadSavedWorkspace(id);
-      sendJson(res, 200, workspace);
-    } catch (error) {
-      const err = error as Error;
-      const message = err.message || 'Workspace error';
-      const lowerMessage = message.toLowerCase();
-
-      // Heuristic mapping of expected errors to HTTP status codes
-      if (lowerMessage.includes('not found') || lowerMessage.includes('no such workspace')) {
-        sendJson(res, 404, { error: message });
-      } else if (
-        lowerMessage.includes('invalid') ||
-        lowerMessage.includes('bad request') ||
-        lowerMessage.includes('malformed') ||
-        err.name === 'SyntaxError' ||
-        err.name === 'TypeError'
-      ) {
-        sendJson(res, 400, { error: message });
-      } else {
-        // Unexpected error: avoid leaking internals
-        console.error('Error loading workspace:', err);
-        sendJson(res, 500, { error: 'Internal server error' });
-      }
-    }
+  if (method === 'POST' && pathname === '/api/workspaces') {
+    const body = await readJsonBody<{
+      name: string;
+      sourceResume?: string;
+      sourceBio?: string;
+      sourceCoverLetter?: string;
+      sourceSupplemental?: string;
+      promptResumeSystem?: string;
+      promptCoverLetterSystem?: string;
+      promptScoringSystem?: string;
+      themeJson?: string;
+      agentConfigJson?: string;
+    }>(req);
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    const ws = workspaceRepo.create({ ...body, name: body.name ?? 'Untitled' });
+    sendJson(res, 201, ws);
     return;
   }
 
-  if (method === 'POST' && url.pathname === '/api/workspaces/save') {
+  // Keep legacy save endpoint for backward compatibility
+  if (method === 'POST' && pathname === '/api/workspaces/save') {
     const body = await readJsonBody<SaveWorkspaceBody>(req);
     if (!body.snapshot) {
       throw new Error('Workspace save requires a snapshot payload.');
@@ -444,18 +454,162 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
     return;
   }
 
-  if (method === 'DELETE' && url.pathname.startsWith('/api/workspaces/')) {
-    const id = decodeURIComponent(url.pathname.slice('/api/workspaces/'.length));
-    try {
-      deleteSavedWorkspace(id);
-      sendJson(res, 200, { ok: true, id });
-    } catch (error) {
-      const message = (error as Error).message || 'Workspace error';
-      const lowerMessage = message.toLowerCase();
-      sendJson(res, lowerMessage.includes('not found') ? 404 : 400, { error: message });
-    }
+  const wsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)$/);
+
+  if (method === 'GET' && wsMatch) {
+    const db = getDb();
+    const ws = new WorkspaceRepo(db).findById(wsMatch[1]);
+    if (!ws) { sendJson(res, 404, { error: 'Not found' }); return; }
+    const jobs = new JobRepo(db).listByWorkspace(ws.id);
+    const jobIds = jobs.map(j => j.id);
+    const docs = new DocumentRepo(db).findLatestForJobs(jobIds);
+    const scores = new ScoreRepo(db).findLatestForJobs(jobIds);
+    const gaps = new GapRepo(db).findLatestWithKeywordsForJobs(jobIds);
+    const jobsWithDocs = jobs.map((j) => {
+      const score = scores[j.id];
+      const gap = gaps[j.id];
+      let scorecard: unknown = undefined;
+      if (score) {
+        const categories = safeJsonParse(score.categoriesJson, {}) as Record<string, number>;
+        const documents = safeJsonParse(score.documentsJson, []);
+        const notes = safeJsonParse(score.notesJson, []);
+        const blockingIssues = safeJsonParse(score.blockingIssuesJson, []);
+        scorecard = {
+          ...categories,
+          overall: score.overall ?? undefined,
+          verdict: score.verdict ?? undefined,
+          confidence: score.confidence != null ? Number(score.confidence) : undefined,
+          summary: score.summary ?? undefined,
+          notes,
+          blockingIssues,
+          documents,
+        };
+      }
+      let gapAnalysis: unknown = undefined;
+      if (gap) {
+        const matched = gap.keywords.filter((k) => k.status === 'matched')
+          .map((k) => ({ term: k.term, category: k.category ?? 'other' }));
+        const missing = gap.keywords.filter((k) => k.status === 'missing')
+          .map((k) => ({ term: k.term, category: k.category ?? 'other' }));
+        const partial = gap.keywords.filter((k) => k.status === 'partial')
+          .map((k) => ({ jdTerm: k.term, resumeTerm: k.category ?? '', relationship: 'related' }));
+        gapAnalysis = {
+          matchedKeywords: matched,
+          missingKeywords: missing,
+          partialMatches: partial,
+          overallFit: gap.analysis.overallFit ?? 'moderate',
+          narrative: gap.analysis.narrative ?? '',
+        };
+      }
+      return { ...j, documents: docs[j.id] ?? {}, scorecard, gapAnalysis };
+    });
+    sendJson(res, 200, { ...ws, jobs: jobsWithDocs });
     return;
   }
+
+  if (method === 'PATCH' && wsMatch) {
+    const body = await readJsonBody<Record<string, unknown>>(req);
+    const workspaceRepo = new WorkspaceRepo(getDb());
+    const updated = workspaceRepo.update(wsMatch[1], body as never);
+    if (!updated) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, updated);
+    return;
+  }
+
+  if (method === 'DELETE' && wsMatch) {
+    new WorkspaceRepo(getDb()).delete(wsMatch[1]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  // ── DB-backed job routes ──────────────────────────────────────────────────
+  const wsJobsMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)\/jobs$/);
+  if (method === 'POST' && wsJobsMatch) {
+    const body = await readJsonBody<{ company: string; title?: string; jd?: string; stage?: string; source?: string; huntrId?: string; listAddedAt?: string | null }>(req);
+    const job = new JobRepo(getDb()).createOrUpdate({ workspaceId: wsJobsMatch[1], ...body });
+    sendJson(res, 201, job);
+    return;
+  }
+
+  const wsJobMatch = pathname.match(/^\/api\/workspaces\/([a-z0-9-]+)\/jobs\/([a-z0-9-]+)$/);
+  if (method === 'PATCH' && wsJobMatch) {
+    const body = await readJsonBody<Record<string, unknown>>(req);
+    const updated = new JobRepo(getDb()).update(wsJobMatch[2], body as never);
+    if (!updated) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, updated);
+    return;
+  }
+
+  if (method === 'DELETE' && wsJobMatch) {
+    new JobRepo(getDb()).delete(wsJobMatch[2]);
+    sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  // ── DB-backed document routes ─────────────────────────────────────────────
+  const docMatch = pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/documents\/(resume|cover)$/);
+  if (method === 'GET' && docMatch) {
+    const doc = new DocumentRepo(getDb()).findLatest(docMatch[1], docMatch[2] as 'resume' | 'cover');
+    if (!doc) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, doc);
+    return;
+  }
+
+  if (method === 'PUT' && docMatch) {
+    const body = await readJsonBody<{ markdown: string; editorDataJson?: string }>(req);
+    const doc = new DocumentRepo(getDb()).save({ jobId: docMatch[1], docType: docMatch[2] as 'resume' | 'cover', ...body });
+    sendJson(res, 200, doc);
+    return;
+  }
+
+  const versionsMatch = pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/documents\/(resume|cover)\/versions$/);
+  if (method === 'GET' && versionsMatch) {
+    const versions = new DocumentRepo(getDb()).listVersions(versionsMatch[1], versionsMatch[2] as 'resume' | 'cover');
+    sendJson(res, 200, { versions });
+    return;
+  }
+
+  // ── DB-backed task routes ─────────────────────────────────────────────────
+  if (method === 'GET' && pathname === '/api/tasks') {
+    const workspaceId = url.searchParams.get('workspaceId');
+    if (!workspaceId) { sendJson(res, 400, { error: 'workspaceId required' }); return; }
+    sendJson(res, 200, { tasks: new TaskRepo(getDb()).listByWorkspace(workspaceId) });
+    return;
+  }
+
+  if (method === 'POST' && pathname === '/api/tasks') {
+    const body = await readJsonBody<{
+      workspaceId: string;
+      jobId: string;
+      type: string;
+      input: unknown;
+      agents?: unknown;
+      promptOverrides?: PromptOverrides;
+      includeScoring?: boolean;
+    }>(req);
+    const task = new TaskRepo(getDb()).create({
+      workspaceId: body.workspaceId,
+      jobId: body.jobId,
+      type: body.type as 'tailor' | 'score' | 'gap' | 'regenerate-section',
+      inputJson: JSON.stringify({
+        input: body.input,
+        agents: body.agents,
+        promptOverrides: body.promptOverrides,
+        includeScoring: body.includeScoring ?? true,
+      }),
+    });
+    sendJson(res, 201, task);
+    return;
+  }
+
+  const taskMatch = pathname.match(/^\/api\/tasks\/([a-z0-9-]+)$/);
+  if (method === 'GET' && taskMatch) {
+    const task = new TaskRepo(getDb()).findById(taskMatch[1]);
+    if (!task) { sendJson(res, 404, { error: 'Not found' }); return; }
+    sendJson(res, 200, task);
+    return;
+  }
+  // ── End DB-backed routes ──────────────────────────────────────────────────
 
   if (method === 'GET' && url.pathname === '/api/huntr/jobs') {
     const client = await requireHuntrClient();
@@ -476,6 +630,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
         url: entry.job.url ?? '',
         listName: entry.listName ?? '',
         descriptionText: entry.descriptionText,
+        listAddedAt: entry.listAddedAt ?? '',
+        listPosition: entry.listPosition ?? null,
       })),
     });
     return;
@@ -628,6 +784,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
         url: entry.job.url ?? '',
         listName: entry.listName ?? 'Wishlist',
         descriptionText: entry.descriptionText,
+        listAddedAt: entry.listAddedAt ?? '',
+        listPosition: entry.listPosition ?? null,
       })),
     });
     return;
@@ -726,6 +884,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
       jobDescription: body.jobDescription ?? '',
       jobTitle: body.jobTitle,
       sectionId: body.sectionId,
+      sectionHeading: body.sectionHeading,
       model: body.model ?? config.tailoringModel,
       verbose: body.verbose ?? false,
     });
@@ -823,6 +982,24 @@ export async function startWorkbenchServer(
       });
     }
   });
+
+  // --- DB + Worker startup ---
+  const db = getDb();
+  // Reset any tasks that were mid-flight when server last stopped
+  new TaskRepo(db).resetStuck();
+  const worker = createWorker(db, {
+    runTailor: (input, agents, options) => runTailorWorkflow({
+      input,
+      agents: resolveAgents(agents as AgentSelection | undefined),
+      promptOverrides: options?.promptOverrides,
+      includeScoring: options?.includeScoring ?? true,
+    }),
+  });
+  const { stop: stopWorker } = worker.start(2000);
+
+  process.on('SIGTERM', () => { stopWorker(); process.exit(0); });
+  process.on('SIGINT',  () => { stopWorker(); process.exit(0); });
+  // --- end DB + Worker startup ---
 
   await new Promise<void>((resolve) => {
     server.listen(port, host, () => resolve());

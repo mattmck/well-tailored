@@ -9,6 +9,7 @@ const STAGE_ORDER = [
   'timeout',
   'old wishlist',
   'manual',
+  'other',
 ] as const;
 
 const STAGE_LABELS: Record<string, string> = {
@@ -20,10 +21,30 @@ const STAGE_LABELS: Record<string, string> = {
   timeout: 'Timeout',
   'old wishlist': 'Old Wishlist',
   manual: 'Manual',
+  other: 'Other',
 };
+
+const STATUS_LIKE_STAGE_VALUES = new Set([
+  'loaded',
+  'drafted',
+  'tailored',
+  'reviewed',
+  'tailoring',
+  'error',
+]);
 
 export function normalizeStage(stage: string | null | undefined): string {
   return (stage ?? '').trim().toLowerCase();
+}
+
+export function isStatusLikeStage(stage: string | null | undefined): boolean {
+  return STATUS_LIKE_STAGE_VALUES.has(normalizeStage(stage));
+}
+
+export function getDisplayStage(job: Pick<Job, 'stage'> & { source?: string }): string {
+  const normalized = normalizeStage(job.stage);
+  if (normalized && !isStatusLikeStage(normalized)) return normalized;
+  return normalizeStage(job.source) === 'manual' ? 'manual' : 'other';
 }
 
 export function formatStageLabel(stage: string): string {
@@ -35,7 +56,7 @@ export function formatStageLabel(stage: string): string {
 export function getStageFilterValues(jobs: Job[]): JobListFilter[] {
   const uniqueStages = new Set(
     jobs
-      .map((job) => normalizeStage(job.stage))
+      .map((job) => getDisplayStage(job))
       .filter(Boolean),
   );
 
@@ -53,7 +74,7 @@ export function getStageFilterValues(jobs: Job[]): JobListFilter[] {
 }
 
 export function matchesJobFilter(job: Job, filter: JobListFilter): boolean {
-  return filter === 'all' || normalizeStage(job.stage) === normalizeStage(filter);
+  return filter === 'all' || getDisplayStage(job) === normalizeStage(filter);
 }
 
 export function getStageBadgeClass(stage: string): string {

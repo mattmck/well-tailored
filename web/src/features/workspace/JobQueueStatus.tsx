@@ -9,6 +9,7 @@ interface JobQueueStatusProps {
   queue: string[];
   total: number;
   verb: string;
+  detail?: string;
   progressClassName: string;
   containerClassName: string;
 }
@@ -19,6 +20,7 @@ export function JobQueueStatus({
   queue,
   total,
   verb,
+  detail,
   progressClassName,
   containerClassName,
 }: JobQueueStatusProps) {
@@ -60,6 +62,11 @@ export function JobQueueStatus({
           {currentJob?.title && (
             <span className="text-muted-foreground">
               {' '}· {currentJob.title}
+            </span>
+          )}
+          {detail && (
+            <span className="text-muted-foreground">
+              {' '}· {detail}
             </span>
           )}
         </div>

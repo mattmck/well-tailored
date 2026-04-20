@@ -121,6 +121,61 @@ function buildMetricCategories(
     );
 }
 
+function normalizeHeuristicScorecard(heuristic: Record<string, unknown>): Scorecard | undefined {
+  if (typeof heuristic.overall !== 'number') return undefined;
+
+  const warnings = asStringArray(heuristic.warnings);
+  const categories = [
+    buildCategory(
+      'Keyword Alignment',
+      heuristic.keywordAlignment,
+      'How much high-signal role language appears in the tailored resume.',
+      warnings,
+    ),
+    buildCategory(
+      'Quantified Impact',
+      heuristic.quantifiedImpact,
+      'How consistently resume bullets include measurable outcomes.',
+    ),
+    buildCategory(
+      'Structure',
+      heuristic.structure,
+      'How cleanly the draft is organized for review and parsing.',
+    ),
+    buildCategory(
+      'Cover Letter Specificity',
+      heuristic.coverLetterSpecificity,
+      'How specifically the cover letter connects to the company and role.',
+    ),
+    buildCategory(
+      'AI Obviousness',
+      typeof heuristic.aiObviousnessRisk === 'number' ? 100 - heuristic.aiObviousnessRisk : undefined,
+      'How much the writing avoids generic or templated language.',
+    ),
+  ].filter((category) => category.score > 0);
+  const overall = asNumber(heuristic.overall);
+  const summary = warnings[0] ?? 'Heuristic score generated from the tailored draft.';
+
+  return {
+    overall,
+    verdict: '',
+    confidence: 0,
+    summary,
+    categories,
+    documents: [
+      buildDocumentFallback(
+        'Resume',
+        overall,
+        summary,
+        categories,
+        warnings,
+      ),
+    ],
+    notes: warnings,
+    blockingIssues: [],
+  };
+}
+
 function normalizeCategory(value: unknown, index: number): ScorecardCategory | null {
   const category = asRecord(value);
   if (!category) return null;
@@ -229,8 +284,9 @@ export function normalizeScorecard(value: unknown): Scorecard | undefined {
   }
 
   const evaluator = asRecord(scorecard.evaluator) ?? scorecard;
+  const heuristic = asRecord(scorecard.heuristic);
   if (typeof evaluator.overall !== 'number' && !Array.isArray(evaluator.documents)) {
-    return undefined;
+    return heuristic ? normalizeHeuristicScorecard(heuristic) : undefined;
   }
 
   const notes = asStringArray(evaluator.notes);

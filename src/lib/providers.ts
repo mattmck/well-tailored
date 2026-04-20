@@ -4,7 +4,7 @@ export interface ResolvedProvider extends ProviderOption {
   apiKey: string;
 }
 
-const LEGACY_PROVIDER_PRIORITY: ProviderKind[] = ['gemini', 'azure', 'openai', 'anthropic'];
+const LEGACY_PROVIDER_PRIORITY: ProviderKind[] = ['azure', 'openai', 'anthropic', 'gemini'];
 
 function parseList(raw?: string): string[] {
   if (!raw) return [];
@@ -85,11 +85,11 @@ function legacyProviderModels(kind: ProviderKind): string[] {
 
 function legacyProviders(): ResolvedProvider[] {
   const sharedModels = sharedModelChoices();
-  const providers: ResolvedProvider[] = [];
+  const byKind = new Map<ProviderKind, ResolvedProvider>();
 
   if (process.env.GEMINI_API_KEY) {
     const defaultModel = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash-lite';
-    providers.push({
+    byKind.set('gemini', {
       id: 'gemini',
       kind: 'gemini',
       label: 'Gemini',
@@ -101,7 +101,7 @@ function legacyProviders(): ResolvedProvider[] {
 
   if (process.env.AZURE_OPENAI_ENDPOINT && process.env.AZURE_OPENAI_API_KEY) {
     const defaultModel = process.env.AZURE_OPENAI_DEPLOYMENT ?? 'gpt-4o-mini';
-    providers.push({
+    byKind.set('azure', {
       id: 'azure',
       kind: 'azure',
       label: 'Azure OpenAI',
@@ -116,7 +116,7 @@ function legacyProviders(): ResolvedProvider[] {
   if (process.env.OPENAI_API_KEY) {
     const defaultModel = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
     const baseURL = process.env.OPENAI_BASE_URL;
-    providers.push({
+    byKind.set('openai', {
       id: 'openai',
       kind: 'openai',
       label: process.env.OPENAI_PROVIDER_NAME?.trim() || kindLabel('openai', baseURL),
@@ -129,7 +129,7 @@ function legacyProviders(): ResolvedProvider[] {
 
   if (process.env.ANTHROPIC_API_KEY) {
     const defaultModel = process.env.ANTHROPIC_MODEL ?? 'claude-haiku-4-5-20251001';
-    providers.push({
+    byKind.set('anthropic', {
       id: 'anthropic',
       kind: 'anthropic',
       label: 'Anthropic',
@@ -139,7 +139,9 @@ function legacyProviders(): ResolvedProvider[] {
     });
   }
 
-  return providers;
+  return LEGACY_PROVIDER_PRIORITY
+    .map((kind) => byKind.get(kind))
+    .filter((provider): provider is ResolvedProvider => Boolean(provider));
 }
 
 function namedProvider(id: string): ResolvedProvider | undefined {
