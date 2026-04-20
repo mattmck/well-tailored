@@ -103,10 +103,29 @@ export class ScoreRepo {
   }
 
   findLatestForJobs(jobIds: string[]): Record<string, ScoreRow> {
+    if (jobIds.length === 0) return {};
+
+    const placeholders = jobIds.map(() => '?').join(', ');
+    const rows = this.db
+      .all<Record<string, unknown>>(
+        `SELECT js.*
+           FROM job_scores js
+           INNER JOIN (
+             SELECT job_id, MAX(rowid) AS max_rowid
+             FROM job_scores
+             WHERE job_id IN (${placeholders})
+             GROUP BY job_id
+           ) latest
+             ON latest.job_id = js.job_id
+            AND latest.max_rowid = js.rowid
+          WHERE js.job_id IN (${placeholders})`,
+        [...jobIds, ...jobIds],
+      )
+      .map(toRow);
+
     const out: Record<string, ScoreRow> = {};
-    for (const jobId of jobIds) {
-      const row = this.findLatestForJob(jobId);
-      if (row) out[jobId] = row;
+    for (const row of rows) {
+      out[row.jobId] = row;
     }
     return out;
   }
