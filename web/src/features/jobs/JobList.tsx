@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/components/ui/utils';
 import { formatStageLabel, getDisplayStage, getStageBadgeClass, matchesJobFilter } from './stages';
+import { sortJobs, type SortField, type SortDir } from './sort';
 
 const STAGE_ORDER = [
   'wishlist', 'applied', 'interview', 'offer', 'rejected', 'timeout', 'old wishlist', 'manual', 'other',
@@ -46,57 +47,6 @@ function getScorecardWarning(job: Job): 'error' | 'warn' | null {
   if (scorecard.verdict === 'do_not_submit' || scorecard.blockingIssues.length > 0) return 'error';
   if (scorecard.verdict === 'needs_revision') return 'warn';
   return null;
-}
-
-type SortField = 'company' | 'title' | 'status' | 'listAddedAt';
-type SortDir = 'asc' | 'desc';
-
-const STATUS_ORDER: Record<Job['status'], number> = {
-  loaded: 0, tailored: 1, reviewed: 2, tailoring: 3, error: 4,
-};
-
-function sortJobs(jobs: Job[], field: SortField | null, dir: SortDir): Job[] {
-  if (!field) return jobs;
-  return [...jobs].sort((a, b) => {
-    let cmp: number;
-    if (field === 'status') {
-      cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
-    } else if (field === 'listAddedAt') {
-      return compareByAddedDate(a, b, dir);
-    } else {
-      cmp = (a[field] ?? '').localeCompare(b[field] ?? '');
-    }
-    return dir === 'asc' ? cmp : -cmp;
-  });
-}
-
-function getAddedTime(job: Job): number | null {
-  const time = Date.parse(job.listAddedAt ?? '');
-  return Number.isFinite(time) ? time : null;
-}
-
-function compareByAddedDate(a: Job, b: Job, dir: SortDir): number {
-  const aTime = getAddedTime(a);
-  const bTime = getAddedTime(b);
-
-  // Jobs without Huntr timestamps should not jump to the top in either direction.
-  if (aTime === null && bTime === null) return compareByStableFallback(a, b);
-  if (aTime === null) return 1;
-  if (bTime === null) return -1;
-
-  const dateCmp = dir === 'asc' ? aTime - bTime : bTime - aTime;
-  if (dateCmp !== 0) return dateCmp;
-
-  const positionCmp = (a.listPosition ?? Number.MAX_SAFE_INTEGER) - (b.listPosition ?? Number.MAX_SAFE_INTEGER);
-  if (positionCmp !== 0) return positionCmp;
-
-  return compareByStableFallback(a, b);
-}
-
-function compareByStableFallback(a: Job, b: Job): number {
-  const companyCmp = (a.company ?? '').localeCompare(b.company ?? '');
-  if (companyCmp !== 0) return companyCmp;
-  return (a.title ?? '').localeCompare(b.title ?? '');
 }
 
 function formatAddedDate(value: string | null | undefined): string | null {
