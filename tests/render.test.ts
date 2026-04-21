@@ -126,7 +126,18 @@ jane@example.com | mattmcknight.com
   it('uses the lighter default resume background theme', () => {
     const html = renderResumeHtml(SAMPLE);
     expect(html).toContain('background: var(--resume-background, #E5F2FF);');
-    expect(html).toContain('html, body, .resume { background: #E5F2FF; }');
+    expect(html).toContain(':root { --resume-background: #E5F2FF; }');
+    expect(html).toContain('html, body, .resume { background: var(--resume-background, #E5F2FF); }');
+  });
+
+  it('sets the resume background variable so print and PDF styles use the chosen theme color', () => {
+    const html = renderResumeHtml(SAMPLE, undefined, false, {
+      background: '#F6F0E4',
+    });
+
+    expect(html).toContain(':root { --resume-background: #F6F0E4; }');
+    expect(html).toContain('@page {\n    margin: 1cm;\n    size: letter portrait;\n    background: var(--resume-background, #E5F2FF);');
+    expect(html).toContain('html, body, .resume { background: var(--resume-background, #E5F2FF); }');
   });
 
   it('keeps compact date rows flush with the job heading', () => {

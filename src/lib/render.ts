@@ -389,7 +389,8 @@ function buildThemeCss(theme?: Partial<ResumeTheme>): string {
     link: safeColor(merged.link, DEFAULT_RESUME_THEME.link),
   };
   return `
-html, body, .resume { background: ${resolved.background}; }
+:root { --resume-background: ${resolved.background}; }
+html, body, .resume { background: var(--resume-background, ${DEFAULT_RESUME_THEME.background}); }
 body, li, p, ul { color: ${resolved.body}; }
 h1, h2.section { color: ${resolved.accent}; }
 h2.role, .job-company { color: ${resolved.subheading}; }
