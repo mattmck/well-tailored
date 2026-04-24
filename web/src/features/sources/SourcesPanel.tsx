@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import type { Action } from '../../state';
+import { getSourceStatusLabel } from './sourceStatus.js';
 
 type SourceField = 'sourceResume' | 'sourceBio' | 'sourceCoverLetter' | 'sourceSupplemental';
 
@@ -22,11 +23,13 @@ function SourceItemRow({
   item,
   value,
   filePath,
+  hasSavedWorkspace,
   dispatch,
 }: {
   item: SourceItem;
   value: string;
   filePath: string | undefined;
+  hasSavedWorkspace: boolean;
   dispatch: React.Dispatch<Action>;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,11 +55,11 @@ function SourceItemRow({
     dispatch({ type: 'SET_SOURCE', field: item.field, value: e.target.value });
   }
 
-  const statusText = filePath
-    ? `Loaded from ${filePath}`
-    : value
-    ? 'Loaded (edited)'
-    : 'Not loaded';
+  const statusText = getSourceStatusLabel({
+    filePath,
+    value,
+    hasSavedWorkspace,
+  });
 
   return (
     <div className="border-b border-border" style={{ padding: '10px 8px' }}>
@@ -82,13 +85,9 @@ function SourceItemRow({
         />
       </div>
 
-      {/* File path */}
-      <div className="font-mono text-[11px] text-muted-foreground mb-1 break-all leading-snug">
-        {filePath || (value ? '(edited in place)' : 'Not loaded')}
+      <div className="font-mono text-[11px] text-muted-foreground mb-2 break-all leading-snug">
+        {statusText}
       </div>
-
-      {/* Status */}
-      <div className="text-[11px] text-muted-foreground mb-2">{statusText}</div>
 
       {/* Textarea */}
       <textarea
@@ -105,6 +104,7 @@ function SourceItemRow({
 
 export function SourcesPanel() {
   const { state, dispatch } = useWorkspace();
+  const hasSavedWorkspace = Boolean(state.activeWorkspaceId);
 
   return (
     <div className="flex flex-col overflow-y-auto flex-1 min-h-0">
@@ -114,6 +114,7 @@ export function SourcesPanel() {
           item={item}
           value={state[item.field]}
           filePath={state.sourcePaths[item.pathKey]}
+          hasSavedWorkspace={hasSavedWorkspace}
           dispatch={dispatch}
         />
       ))}
