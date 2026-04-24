@@ -323,7 +323,7 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         ...state,
         tailorQueue: action.queue,
         tailorQueueTotal:
-          action.queue.length === 0
+          action.queue.length === 0 && state.tailorRunning === null
             ? 0
             : action.total ?? state.tailorQueueTotal,
       };
@@ -334,6 +334,10 @@ export function reducer(state: WorkspaceState, action: Action): WorkspaceState {
         tailorRunning: action.id,
         tailorRunningStartedAt:
           action.id == null ? 0 : action.startedAt ?? Date.now(),
+        tailorQueueTotal:
+          action.id == null && state.tailorQueue.length === 0
+            ? 0
+            : state.tailorQueueTotal,
       };
 
     case 'SET_TAILOR_SUMMARY':

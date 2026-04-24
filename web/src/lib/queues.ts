@@ -11,6 +11,20 @@ export interface AppendJobIdsResult {
   added: string[];
 }
 
+export interface QueueProgressOptions {
+  queue: string[];
+  total: number;
+  hasRunning: boolean;
+  queueIncludesRunning?: boolean;
+}
+
+export interface QueueProgressResult {
+  resolvedTotal: number;
+  currentPosition: number;
+  queuedAfterCurrent: number;
+  progress: number;
+}
+
 export function appendUniqueJobIdsToQueue({
   queue,
   runningId,
@@ -39,5 +53,33 @@ export function appendUniqueJobIdsToQueue({
     queue: nextQueue,
     total: Math.max(total, activeCount) + added.length,
     added,
+  };
+}
+
+export function getQueueProgress({
+  queue,
+  total,
+  hasRunning,
+  queueIncludesRunning = true,
+}: QueueProgressOptions): QueueProgressResult {
+  const activeCount = queue.length + (hasRunning && !queueIncludesRunning ? 1 : 0);
+  const resolvedTotal = Math.max(total, activeCount, hasRunning ? 1 : 0);
+  const remainingIncludingCurrent = hasRunning ? activeCount : 0;
+  const currentPosition = hasRunning
+    ? Math.max(1, resolvedTotal - remainingIncludingCurrent + 1)
+    : 0;
+  const queuedAfterCurrent = Math.max(
+    queueIncludesRunning ? queue.length - (hasRunning ? 1 : 0) : queue.length,
+    0,
+  );
+  const progress = hasRunning && resolvedTotal > 0
+    ? Math.max(0, Math.min(100, (currentPosition / resolvedTotal) * 100))
+    : 0;
+
+  return {
+    resolvedTotal,
+    currentPosition,
+    queuedAfterCurrent,
+    progress,
   };
 }

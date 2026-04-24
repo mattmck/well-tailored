@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { useWorkspace } from '@/context';
 import { formatElapsed } from '@/lib/markdown';
+import { getQueueProgress } from '@/lib/queues';
 
 interface JobQueueStatusProps {
   runningId: string | null;
@@ -12,6 +13,7 @@ interface JobQueueStatusProps {
   detail?: string;
   progressClassName: string;
   containerClassName: string;
+  queueIncludesRunning?: boolean;
 }
 
 export function JobQueueStatus({
@@ -23,6 +25,7 @@ export function JobQueueStatus({
   detail,
   progressClassName,
   containerClassName,
+  queueIncludesRunning = true,
 }: JobQueueStatusProps) {
   const { state } = useWorkspace();
   const [elapsed, setElapsed] = useState('0s');
@@ -43,11 +46,17 @@ export function JobQueueStatus({
   if (!runningId) return null;
 
   const currentJob = state.jobs.find((job) => job.id === runningId);
-  const resolvedTotal = Math.max(total, queue.length, 1);
-  const queuedCount = queue.length;
-  const currentPosition = Math.min(resolvedTotal, resolvedTotal - queuedCount + 1);
-  const queuedAfterCurrent = Math.max(queue.length - 1, 0);
-  const progress = Math.max(0, Math.min(100, (currentPosition / resolvedTotal) * 100));
+  const {
+    resolvedTotal,
+    currentPosition,
+    queuedAfterCurrent,
+    progress,
+  } = getQueueProgress({
+    queue,
+    total,
+    hasRunning: Boolean(runningId),
+    queueIncludesRunning,
+  });
 
   return (
     <div className={containerClassName}>
