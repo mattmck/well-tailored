@@ -3,6 +3,7 @@ import { Upload } from 'lucide-react';
 import { useWorkspace } from '../../context';
 import type { Action } from '../../state';
 import { getSourceStatusLabel } from './sourceStatus.js';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
 type SourceField = 'sourceResume' | 'sourceBio' | 'sourceCoverLetter' | 'sourceSupplemental';
 
@@ -51,8 +52,8 @@ function SourceItemRow({
     e.target.value = '';
   }
 
-  function handleTextareaChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    dispatch({ type: 'SET_SOURCE', field: item.field, value: e.target.value });
+  function handleValueChange(next: string) {
+    dispatch({ type: 'SET_SOURCE', field: item.field, value: next });
   }
 
   const statusText = getSourceStatusLabel({
@@ -89,14 +90,11 @@ function SourceItemRow({
         {statusText}
       </div>
 
-      {/* Textarea */}
-      <textarea
+      <MarkdownEditor
         value={value}
-        onChange={handleTextareaChange}
-        className="bg-background border border-border rounded text-xs font-mono leading-relaxed p-2 w-full resize-y outline-none focus:ring-1 focus:ring-ring transition-colors text-foreground placeholder:text-muted-foreground"
-        style={{ minHeight: '140px' }}
+        onChange={handleValueChange}
         placeholder={`Paste ${item.label.toLowerCase()} content here…`}
-        spellCheck={false}
+        ariaLabel={item.label}
       />
     </div>
   );

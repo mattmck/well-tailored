@@ -104,86 +104,86 @@ export function RightColumn() {
     }
   }, [showEditor, showPreview]);
 
+  if (showPanel) {
+    return (
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden min-h-0">
+        <PanelContainer />
+      </section>
+    );
+  }
+
   return (
     <section className="panel-surface flex min-w-0 flex-1 flex-col overflow-hidden rounded-[1.65rem] min-h-0">
-      <div className={`flex flex-1 min-h-0 overflow-hidden px-3 pb-3 gap-3 ${showPanel ? 'pt-3' : ''}`}>
-        {showPanel && <PanelContainer />}
-
-        <div ref={splitRef} className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          {editorCollapsed && (
-            <div className="mr-2 flex min-h-0 w-11 shrink-0 items-center justify-center rounded-[1.1rem] border border-border/80 bg-white/60">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Show editor"
-                onClick={() => setEditorCollapsed(false)}
-              >
-                <FilePenLine className="size-4" />
-              </Button>
-            </div>
-          )}
-
-          {showEditor && (
-            <div
-              className="min-h-0 min-w-0 flex"
-              style={{
-                flexBasis: previewCollapsed ? '100%' : `${editorPercent}%`,
-                flexGrow: previewCollapsed ? 1 : 0,
-                flexShrink: previewCollapsed ? 1 : 0,
-              }}
+      <div ref={splitRef} className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+        {editorCollapsed && (
+          <div className="m-3 flex min-h-0 w-11 shrink-0 items-center justify-center rounded-[1.1rem] border border-border/80 bg-white/60">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Show editor"
+              onClick={() => setEditorCollapsed(false)}
             >
-              <div className="h-full min-h-0 flex w-full overflow-hidden rounded-[1.25rem] border border-border/70 bg-white/40">
-                <EditorColumn onCollapse={collapseEditor} />
-              </div>
-            </div>
-          )}
+              <FilePenLine className="size-4" />
+            </Button>
+          </div>
+        )}
 
-          {showEditor && showPreview && (
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              tabIndex={0}
-              aria-valuemin={MIN_EDITOR_PERCENT}
-              aria-valuemax={MAX_EDITOR_PERCENT}
-              aria-valuenow={Math.round(editorPercent)}
-              onPointerDown={handleResizeStart}
-              onKeyDown={handleResizeKeyDown}
-              className="group relative mx-1 flex w-4 shrink-0 cursor-col-resize touch-none items-center justify-center bg-transparent"
+        {showEditor && (
+          <div
+            className="min-h-0 min-w-0 flex"
+            style={{
+              flexBasis: previewCollapsed ? '100%' : `${editorPercent}%`,
+              flexGrow: previewCollapsed ? 1 : 0,
+              flexShrink: previewCollapsed ? 1 : 0,
+            }}
+          >
+            <EditorColumn onCollapse={collapseEditor} />
+          </div>
+        )}
+
+        {showEditor && showPreview && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            tabIndex={0}
+            aria-valuemin={MIN_EDITOR_PERCENT}
+            aria-valuemax={MAX_EDITOR_PERCENT}
+            aria-valuenow={Math.round(editorPercent)}
+            onPointerDown={handleResizeStart}
+            onKeyDown={handleResizeKeyDown}
+            className="group relative flex w-3 shrink-0 cursor-col-resize touch-none items-center justify-center border-x border-border/50 bg-transparent"
+          >
+            <div className="h-24 w-[3px] rounded-full bg-border/70 transition-colors duration-200 group-hover:bg-primary/35" />
+          </div>
+        )}
+
+        {showPreview && (
+          <div
+            className="min-h-0 min-w-0 flex"
+            style={{
+              flexBasis: editorCollapsed ? '100%' : `${100 - editorPercent}%`,
+              flexGrow: editorCollapsed ? 1 : 0,
+              flexShrink: editorCollapsed ? 1 : 0,
+            }}
+          >
+            <PreviewColumn onCollapse={collapsePreview} />
+          </div>
+        )}
+
+        {previewCollapsed && (
+          <div className="m-3 flex min-h-0 w-11 shrink-0 items-center justify-center rounded-[1.1rem] border border-border/80 bg-white/60">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title="Show preview"
+              onClick={() => setPreviewCollapsed(false)}
             >
-              <div className="h-24 w-[3px] rounded-full bg-border/90 transition-colors duration-200 group-hover:bg-primary/35" />
-            </div>
-          )}
-
-          {showPreview && (
-            <div
-              className="min-h-0 min-w-0 flex"
-              style={{
-                flexBasis: editorCollapsed ? '100%' : `${100 - editorPercent}%`,
-                flexGrow: editorCollapsed ? 1 : 0,
-                flexShrink: editorCollapsed ? 1 : 0,
-              }}
-            >
-              <div className="h-full min-h-0 flex w-full overflow-hidden rounded-[1.25rem] border border-border/70 bg-white/40">
-                <PreviewColumn onCollapse={collapsePreview} />
-              </div>
-            </div>
-          )}
-
-          {previewCollapsed && (
-            <div className="ml-2 flex min-h-0 w-11 shrink-0 items-center justify-center rounded-[1.1rem] border border-border/80 bg-white/60">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                title="Show preview"
-                onClick={() => setPreviewCollapsed(false)}
-              >
-                <Eye className="size-4" />
-              </Button>
-            </div>
-          )}
-        </div>
+              <Eye className="size-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

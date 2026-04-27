@@ -380,4 +380,83 @@
     animation: orb-drift 6s ease-in-out infinite;
     pointer-events: none;
   }
+
+  .md-preview {
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    word-wrap: break-word;
+  }
+  .md-preview > *:first-child { margin-top: 0; }
+  .md-preview > *:last-child { margin-bottom: 0; }
+  .md-preview h1,
+  .md-preview h2,
+  .md-preview h3,
+  .md-preview h4,
+  .md-preview h5,
+  .md-preview h6 {
+    margin: 1.25em 0 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--foreground);
+  }
+  .md-preview h1 { font-size: 1.4em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+  .md-preview h2 { font-size: 1.2em; border-bottom: 1px solid var(--border); padding-bottom: 0.25em; }
+  .md-preview h3 { font-size: 1.05em; }
+  .md-preview h4 { font-size: 1em; }
+  .md-preview p { margin: 0 0 0.8em; }
+  .md-preview ul,
+  .md-preview ol {
+    margin: 0 0 0.8em;
+    padding-left: 1.4em;
+  }
+  .md-preview li { margin: 0.15em 0; }
+  .md-preview li > p { margin: 0.2em 0; }
+  .md-preview blockquote {
+    margin: 0 0 0.8em;
+    padding: 0 0.9em;
+    border-left: 3px solid var(--border);
+    color: var(--muted-foreground);
+  }
+  .md-preview code {
+    padding: 0.15em 0.35em;
+    margin: 0;
+    font-size: 0.85em;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .md-preview pre {
+    margin: 0 0 0.8em;
+    padding: 0.75em 0.9em;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    overflow: auto;
+  }
+  .md-preview pre code {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+  .md-preview a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .md-preview hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.2em 0;
+  }
+  .md-preview table {
+    border-collapse: collapse;
+    margin: 0 0 0.8em;
+    font-size: 0.95em;
+  }
+  .md-preview th,
+  .md-preview td {
+    padding: 0.4em 0.7em;
+    border: 1px solid var(--border);
+  }
+  .md-preview img { max-width: 100%; }
 }

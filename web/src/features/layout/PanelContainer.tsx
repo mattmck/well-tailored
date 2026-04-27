@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { X, RotateCcw } from 'lucide-react';
 import { useWorkspace } from '../../context';
@@ -84,10 +84,7 @@ export function PanelContainer() {
   }
 
   return (
-    <div
-      className="panel-surface flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[1.65rem] lg:w-[var(--panel-width)]"
-      style={{ '--panel-width': `${config.width}px` } as CSSProperties}
-    >
+    <div className="panel-surface flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[1.65rem]">
       <div className="flex items-start justify-between gap-3 border-b border-border/70 px-4 py-3 shrink-0">
         <div className="min-w-0">
           <p className="editorial-label">Workbench Panel</p>
