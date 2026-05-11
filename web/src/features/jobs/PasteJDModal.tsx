@@ -47,7 +47,7 @@ export function PasteJDModal({ open, onOpenChange }: PasteJDModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add Job Description</DialogTitle>
           <DialogDescription>
@@ -85,7 +85,7 @@ export function PasteJDModal({ open, onOpenChange }: PasteJDModalProps) {
               value={jd}
               onChange={(e) => setJd(e.target.value)}
               placeholder="Paste the full job description here…"
-              className="min-h-[200px] text-sm font-mono"
+              className="min-h-[200px] max-h-[50vh] text-sm font-mono"
             />
           </div>
         </div>
